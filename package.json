@@ -1,0 +1,49 @@
+{
+    "name": "k8s-charm",
+    "version": "0.1.0",
+    "description": "",
+    "main": "dist/backend/index.js",
+    "scripts": {
+        "start": "electron .",
+        "watch": "parcel watch",
+        "build": "parcel build",
+        "format": "prettier --config .prettierrc 'src/**/*.ts' --write",
+        "dev": "npm run build && concurrently 'npm run watch' 'npm run start'"
+    },
+    "author": "Sebastiaan Besselsen <sebastiaan.besselsen@gmail.com>",
+    "license": "UNLICENSED",
+    "dependencies": {
+        "electron": "^16.0.5"
+    },
+    "browserslist": [
+        "chrome 90"
+    ],
+    "devDependencies": {
+        "concurrently": "^6.5.0",
+        "husky": "^7.0.4",
+        "parcel": "^2.0.1",
+        "prettier": "^2.5.1"
+    },
+    "targets": {
+        "renderer": {
+            "source": "src/renderer/index.html"
+        },
+        "preload": {
+            "source": "src/preload/index.ts",
+            "engines": {
+                "node": ">= 12"
+            }
+        },
+        "backend": {
+            "source": "src/backend/index.ts",
+            "engines": {
+                "node": ">= 12"
+            }
+        }
+    },
+    "husky": {
+        "hooks": {
+            "pre-commit": "npm run format && npm run lint"
+        }
+    }
+}
