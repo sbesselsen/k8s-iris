@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { Context } from "../types/k8s";
 import { IpcCalls } from "../types/ipc";
-import { ipcRendererAsyncInvoker } from "../common/ipc";
+import { ipcRendererAsyncInvoker } from "../common/ipc/async-function";
 
 const asyncInvoker = ipcRendererAsyncInvoker(ipcRenderer);
 

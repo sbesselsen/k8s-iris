@@ -3,12 +3,11 @@ import { IpcMain, IpcRenderer } from "electron";
 export function ipcMainAsyncRegister(
     ipcMain: IpcMain
 ): <T, U>(name: string, f: (args: T) => Promise<U>) => void {
-    return function asyncMainRegister<T, U>(
+    return function asyncRegister<T, U>(
         name: string,
         f: (args: T) => Promise<U>
     ) {
         ipcMain.on(`asyncInvoker:${name}`, async (e, listenerKey, args) => {
-            console.log("Request", listenerKey);
             let result;
             let err = null;
             try {
@@ -31,7 +30,6 @@ export function ipcRendererAsyncInvoker(
     ipcRenderer.on(
         "asyncInvoker:response",
         (event, listenerKey, error, result) => {
-            console.log("Response", listenerKey);
             listeners[listenerKey](error, result);
             delete listeners[listenerKey];
         }

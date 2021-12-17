@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Context } from "../types/k8s";
-import { useIpcCalls } from "./contexts/ipc";
+import { useIpcCalls } from "../common/ipc/renderer-context";
 
 export const App: React.FC<{}> = () => {
     const ipcCalls = useIpcCalls();

@@ -1,5 +1,5 @@
 import { IpcMain } from "electron";
-import { ipcMainAsyncRegister } from "../../common/ipc";
+import { ipcMainAsyncRegister } from "../../common/ipc/async-function";
 import { K8sConnector } from "../k8s";
 
 type IpcComponents = {
