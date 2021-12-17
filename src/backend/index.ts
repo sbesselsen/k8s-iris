@@ -1,11 +1,15 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
 import * as path from "path";
+import { initIpc } from "./ipc";
+
+import { k8sConnector } from "./k8s";
 
 // modify your existing createWindow() function
 const createWindow = () => {
     const win = new BrowserWindow({
         width: 800,
         height: 600,
+        title: "Charm",
         webPreferences: {
             preload: path.join(__dirname, "..", "preload", "index.js"),
         },
@@ -14,11 +18,16 @@ const createWindow = () => {
     win.loadFile(path.join(__dirname, "..", "renderer", "index.html"));
 };
 
-console.log("backend");
-
 (async () => {
     await app.whenReady();
 
+    // Load our components.
+    const k8sConn = await k8sConnector();
+
+    // Initialize IPC.
+    initIpc(ipcMain, { k8sConnector: k8sConn });
+
+    // Open our main window.
     createWindow();
 
     app.on("activate", () => {

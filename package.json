@@ -13,6 +13,7 @@
     "author": "Sebastiaan Besselsen <sebastiaan.besselsen@gmail.com>",
     "license": "UNLICENSED",
     "dependencies": {
+        "@kubernetes/client-node": "^0.16.1",
         "electron": "^16.0.5"
     },
     "browserslist": [
