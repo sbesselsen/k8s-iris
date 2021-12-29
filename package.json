@@ -6,9 +6,7 @@
     "scripts": {
         "start": "electron .",
         "watch": "parcel watch",
-        "build": "npm run build:code && npm run build:icons",
-        "build:code": "parcel build",
-        "build:icons": "syncdir --quiet node_modules/@fluentui/font-icons-mdl2/fonts dist/renderer/fluentui-fonts",
+        "build": "parcel build",
         "format": "prettier --config .prettierrc 'src/**/*.ts' --write",
         "dev": "npm run build && concurrently 'npm run watch' 'npm run start'"
     },
@@ -22,16 +20,13 @@
         "chrome 90"
     ],
     "devDependencies": {
-        "@fluentui/react": "^8.48.0",
         "@types/react": "^17.0.37",
         "@types/react-dom": "^17.0.11",
         "concurrently": "^6.5.0",
-        "husky": "^7.0.4",
         "parcel": "^2.0.1",
         "prettier": "^2.5.1",
         "react": "^17.0.2",
-        "react-dom": "^17.0.2",
-        "sync-directory": "^4.0.7"
+        "react-dom": "^17.0.2"
     },
     "targets": {
         "renderer": {
@@ -49,11 +44,6 @@
             "engines": {
                 "node": ">= 12"
             }
-        }
-    },
-    "husky": {
-        "hooks": {
-            "pre-commit": "npm run format && npm run lint"
         }
     }
 }
