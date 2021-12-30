@@ -21,14 +21,15 @@ export async function k8sConnector(): Promise<K8sConnector> {
 
     const client = createClient(kc);
 
-    console.log(
-        (
-            await client.list({
-                apiVersion: "v1",
-                kind: "Pod",
-                namespace: "kube-system",
-            })
-        ).items.map((item) => item.metadata)
+    const watch = client.listWatch(
+        {
+            apiVersion: "v1",
+            kind: "Namespace",
+        },
+        (list, update) => {
+            console.log(update);
+            console.log(list.items.map((item) => item.metadata));
+        }
     );
 
     return {

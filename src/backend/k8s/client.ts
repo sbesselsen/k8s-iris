@@ -7,6 +7,8 @@ import {
     K8sObject,
     K8sObjectList,
     K8sObjectListQuery,
+    K8sObjectListWatch,
+    K8sObjectListWatcher,
     K8sRemoveOptions,
     K8sRemoveStatus,
 } from "../../common/k8s/client";
@@ -147,9 +149,8 @@ export function createClient(
         }
         return {};
     };
-    const list = async <T extends K8sObject = K8sObject>(
-        spec: K8sObjectListQuery
-    ): Promise<K8sObjectList<T>> => {
+
+    const listPath = async (spec: K8sObjectListQuery): Promise<string> => {
         const resourceInfo = await listableResourceInfo(spec);
         if (resourceInfo === null) {
             throw new Error(
@@ -157,41 +158,159 @@ export function createClient(
             );
         }
 
+        const pathParts = [
+            resourceInfo.api.apiVersion === "v1" ? "api" : "apis",
+            resourceInfo.api.apiVersion,
+        ];
+        if (spec.namespace) {
+            if (!resourceInfo.namespaced) {
+                throw new Error(
+                    `Resource ${spec.apiVersion}.${spec.kind} is not namespaced`
+                );
+            }
+            pathParts.push("namespaces");
+            pathParts.push(encodeURIComponent(spec.namespace));
+        }
+        pathParts.push(encodeURIComponent(resourceInfo.name));
+
+        const path = pathParts.join("/");
+
+        return path;
+    };
+
+    const list = async <T extends K8sObject = K8sObject>(
+        spec: K8sObjectListQuery
+    ): Promise<K8sObjectList<T>> => {
+        const path = await listPath(spec);
+
         return new Promise((resolve, reject) => {
             const opts: any = {};
             kubeConfig.applyToRequest(opts);
 
-            const urlParts = [
-                kubeConfig.getCurrentCluster().server,
-                resourceInfo.api.apiVersion === "v1" ? "api" : "apis",
-                resourceInfo.api.apiVersion,
-            ];
-            if (spec.namespace) {
-                if (!resourceInfo.namespaced) {
-                    throw new Error(
-                        `Resource ${spec.apiVersion}.${spec.kind} is not namespaced`
-                    );
-                }
-                urlParts.push("namespaces");
-                urlParts.push(encodeURIComponent(spec.namespace));
-            }
-            urlParts.push(encodeURIComponent(resourceInfo.name));
-
-            const url = urlParts.join("/");
-
-            request.get(url, opts, (err, _res, body) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    try {
-                        const data = JSON.parse(body);
-                        resolve(data);
-                    } catch (e) {
-                        reject(e);
+            request.get(
+                `${kubeConfig.getCurrentCluster().server}/${path}`,
+                opts,
+                (err, _res, body) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        try {
+                            const data = JSON.parse(body);
+                            resolve(data);
+                        } catch (e) {
+                            reject(e);
+                        }
                     }
                 }
+            );
+        });
+    };
+
+    const listWatch = async <T extends K8sObject = K8sObject>(
+        spec: K8sObjectListQuery,
+        watcher: K8sObjectListWatcher<T>
+    ): Promise<K8sObjectListWatch> => {
+        const path = await listPath(spec);
+
+        let list: K8sObjectList<T> = {
+            apiVersion: spec.apiVersion,
+            kind: spec.kind,
+            items: [],
+        };
+
+        const listFn = () => {
+            return new Promise((resolve, reject) => {
+                const opts: any = {};
+                kubeConfig.applyToRequest(opts);
+
+                request.get(
+                    `${kubeConfig.getCurrentCluster().server}/${path}`,
+                    opts,
+                    (err, response, body) => {
+                        if (err) {
+                            reject(err);
+                        } else {
+                            try {
+                                const data = JSON.parse(body);
+                                list.items = data.items;
+                                watcher(data);
+                                resolve({ response, body: data });
+                            } catch (e) {
+                                reject(e);
+                            }
+                        }
+                    }
+                );
+            });
+        };
+
+        const informer = k8s.makeInformer(
+            kubeConfig,
+            `/${path}`,
+            listFn as any
+        );
+
+        const objSameRef = (obj1: K8sObject, obj2: K8sObject): boolean => {
+            if (!obj1) {
+                return !obj2;
+            }
+            return (
+                obj1.apiVersion === obj2.apiVersion &&
+                obj1.kind === obj2.kind &&
+                obj1.metadata.name === obj2.metadata.name &&
+                obj1.metadata.namespace === obj2.metadata.namespace
+            );
+        };
+
+        informer.on("add", (obj: any) => {
+            if (list.items.findIndex((item) => objSameRef(item, obj)) !== -1) {
+                // The item is already in the list.
+                return;
+            }
+            list = { ...list, items: [...list.items, obj] };
+            watcher(list, {
+                type: "add",
+                object: obj as any,
             });
         });
+        informer.on("update", (obj: any) => {
+            list = {
+                ...list,
+                items: list.items.map((item) =>
+                    objSameRef(item, obj) ? obj : item
+                ),
+            };
+            watcher(list, {
+                type: "update",
+                object: obj,
+            });
+        });
+        informer.on("delete", (obj: any) => {
+            list = {
+                ...list,
+                items: list.items.filter((item) => !objSameRef(item, obj)),
+            };
+            watcher(list, {
+                type: "remove",
+                object: obj,
+            });
+        });
+        informer.on("error", (err: KubernetesObject) => {
+            console.error(err);
+            // TODO: make this configurable or handlable somehow?
+            // Restart informer after 5sec.
+            setTimeout(() => {
+                informer.start();
+            }, 5000);
+        });
+
+        informer.start();
+
+        return {
+            stop() {
+                informer.stop();
+            },
+        };
     };
 
     return {
@@ -201,5 +320,6 @@ export function createClient(
         replace,
         remove,
         list,
+        listWatch,
     };
 }

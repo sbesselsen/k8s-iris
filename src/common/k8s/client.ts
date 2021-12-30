@@ -29,6 +29,20 @@ export type K8sRemoveOptions = {
 
 export type K8sRemoveStatus = {};
 
+export type K8sObjectListWatch = {
+    stop(): void;
+};
+
+export type K8sObjectListUpdate<T extends K8sObject> = {
+    type: "update" | "remove" | "add";
+    object: T;
+};
+
+export type K8sObjectListWatcher<T extends K8sObject = K8sObject> = (
+    list: K8sObjectList<T>,
+    update?: K8sObjectListUpdate<T>
+) => void;
+
 export type K8sClient = {
     read(spec: K8sObject): Promise<K8sObject | null>;
     apply(spec: K8sObject): Promise<K8sObject>;
@@ -41,5 +55,8 @@ export type K8sClient = {
     list<T extends K8sObject = K8sObject>(
         spec: K8sObjectListQuery
     ): Promise<K8sObjectList<T>>;
-    // watch<T extends K8sObject = K8sObject>(spec: K8sObjectListQuery): Promise<K8sObjectWatch>;
+    listWatch<T extends K8sObject = K8sObject>(
+        spec: K8sObjectListQuery,
+        watcher: K8sObjectListWatcher<T>
+    ): Promise<K8sObjectListWatch>;
 };
