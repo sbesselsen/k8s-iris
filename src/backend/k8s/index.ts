@@ -21,40 +21,14 @@ export async function k8sConnector(): Promise<K8sConnector> {
 
     const client = createClient(kc);
 
-    await client.apply({
-        apiVersion: "v1",
-        kind: "Namespace",
-        metadata: {
-            name: "k8s-client-demo",
-            labels: {
-                aap: "schaap",
-            },
-        },
-    });
     console.log(
-        await client.read({
-            apiVersion: "v1",
-            kind: "Namespace",
-            metadata: {
-                name: "k8s-client-demo",
-            },
-        })
-    );
-    await client.remove({
-        apiVersion: "v1",
-        kind: "Namespace",
-        metadata: {
-            name: "k8s-client-demo",
-        },
-    });
-    console.log(
-        await client.read({
-            apiVersion: "v1",
-            kind: "Namespace",
-            metadata: {
-                name: "k8s-client-demo",
-            },
-        })
+        (
+            await client.list({
+                apiVersion: "v1",
+                kind: "Pod",
+                namespace: "kube-system",
+            })
+        ).items.map((item) => item.metadata)
     );
 
     return {

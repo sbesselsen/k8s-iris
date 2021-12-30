@@ -19,7 +19,9 @@ export type K8sObjectList<T extends K8sObject = K8sObject> =
         items: T[];
     };
 
-export type K8sObjectListQuery = K8sResourceTypeIdentifier & {};
+export type K8sObjectListQuery = K8sResourceTypeIdentifier & {
+    namespace?: string;
+};
 
 export type K8sRemoveOptions = {
     waitForCompletion?: boolean;
