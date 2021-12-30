@@ -1,11 +1,12 @@
 import { app, BrowserWindow, ipcMain } from "electron";
 import * as path from "path";
-import { initIpc } from "./ipc";
 
 import { k8sConnector } from "./k8s";
 
 // modify your existing createWindow() function
 const createWindow = () => {
+    return;
+
     const win = new BrowserWindow({
         width: 800,
         height: 600,
@@ -23,9 +24,6 @@ const createWindow = () => {
 
     // Load our components.
     const k8sConn = await k8sConnector();
-
-    // Initialize IPC.
-    initIpc(ipcMain, { k8sConnector: k8sConn });
 
     // Open our main window.
     createWindow();
