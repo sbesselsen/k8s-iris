@@ -19,18 +19,18 @@ export async function k8sConnector(): Promise<K8sConnector> {
         }
     }
 
-    const client = createClient(kc);
+    // const client = createClient(kc);
 
-    const watch = client.listWatch(
-        {
-            apiVersion: "v1",
-            kind: "Namespace",
-        },
-        (list, update) => {
-            console.log(update);
-            console.log(list.items.map((item) => item.metadata));
-        }
-    );
+    // const watch = client.listWatch(
+    //     {
+    //         apiVersion: "v1",
+    //         kind: "Namespace",
+    //     },
+    //     (list, update) => {
+    //         console.log(update);
+    //         console.log(list.items.map((item) => item.metadata));
+    //     }
+    // );
 
     return {
         async availableContexts() {

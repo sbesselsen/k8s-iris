@@ -5,47 +5,21 @@ import React, {
     useMemo,
     useState,
 } from "react";
-
-import { Context } from "../types/k8s";
-import { useIpcCalls } from "./contexts/ipc";
+import { K8sLocation } from "../common/k8s/location";
 
 export const App: React.FunctionComponent = () => {
-    const ipcCalls = useIpcCalls();
-
-    const [contexts, setContexts] = useState<Context[]>([]);
-    const [selectedContext, setSelectedContext] = useState<
-        string | undefined
-    >();
-
-    useEffect(() => {
-        (async () => {
-            setContexts(await ipcCalls.k8s.availableContexts());
-        })();
-    }, []);
-
-    const onChange = useCallback(
-        (event: ChangeEvent<HTMLSelectElement>) => {
-            setSelectedContext(event.target.value);
-        },
-        [contexts]
-    );
-
-    const onClick = useCallback(() => {
-        ipcCalls.app.openContext(selectedContext);
-    }, [selectedContext]);
+    const searchString = window.location.search;
+    const initialLocation: K8sLocation = useMemo(() => {
+        let location: K8sLocation = {};
+        if (searchString) {
+            location = JSON.parse(atob(searchString.slice(1)));
+        }
+        return location;
+    }, [searchString]);
 
     return (
         <div>
-            <select onChange={onChange}>
-                {contexts.map((ctx) => (
-                    <option key={ctx.name} value={ctx.name}>
-                        {ctx.name}
-                    </option>
-                ))}
-            </select>
-            {selectedContext && (
-                <button onClick={onClick}>Go to {selectedContext}</button>
-            )}
+            {initialLocation.context} / {initialLocation.namespace}
         </div>
     );
 };
