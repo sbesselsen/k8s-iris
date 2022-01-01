@@ -6,6 +6,4 @@ if (searchString) {
     kubeContext = JSON.parse(atob(searchString.slice(1))).context ?? null;
 }
 
-export const [useKubeContextStore, useKubeContext] = create<string | null>(
-    kubeContext
-);
+export const [useKubeContextStore, useKubeContext] = create(kubeContext);

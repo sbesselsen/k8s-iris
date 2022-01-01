@@ -2,6 +2,8 @@ import * as k8s from "@kubernetes/client-node";
 import { KubernetesObject } from "@kubernetes/client-node";
 import * as request from "request";
 
+import { sleep } from "../../common/util/async";
+
 import {
     K8sClient,
     K8sObject,
@@ -26,14 +28,6 @@ function onlyFullObject(body: KubernetesObject): K8sObject | null {
     return isFullObject(body) ? body : null;
 }
 
-async function sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve();
-        }, ms);
-    });
-}
-
 export type K8sClientOptions = {
     readonly?: boolean;
 };
@@ -50,6 +44,13 @@ export function createClient(
         ...defaultClientOptions,
         ...options,
     };
+
+    // TEMPORARY SAFETY MEASURE
+    // TODO: REMOVE
+    if (kubeConfig.getCurrentContext() !== "colima") {
+        opts.readonly = true;
+    }
+
     const objectApi = kubeConfig.makeApiClient(k8s.KubernetesObjectApi);
 
     const exists = async (spec: K8sObject): Promise<boolean> => {

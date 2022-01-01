@@ -1,40 +1,32 @@
 import * as k8s from "@kubernetes/client-node";
-import { Context } from "../../types/k8s";
-import { createClient } from "./client";
+import { K8sContext } from "../../common/k8s/client";
 
-const kc = new k8s.KubeConfig();
-kc.loadFromDefault();
+export { createClient } from "./client";
 
-export type K8sConnector = {
-    availableContexts(): Promise<Context[]>;
-};
+const sharedKubeConfig = getKubeConfigFromDefault();
 
-export async function k8sConnector(): Promise<K8sConnector> {
+function getKubeConfigFromDefault(): k8s.KubeConfig {
     const kc = new k8s.KubeConfig();
     kc.loadFromDefault();
 
-    for (const context of kc.getContexts()) {
-        if (context.name !== "colima") {
-            throw new Error("Running against real clusters is not safe");
+    return kc;
+}
+
+export async function listContexts(): Promise<K8sContext[]> {
+    return sharedKubeConfig.getContexts();
+}
+
+export function getDefaultContext(): string | undefined {
+    return sharedKubeConfig.getCurrentContext();
+}
+
+export function getDefaultNamespaces(): string[] | undefined {
+    const defaultContext = sharedKubeConfig.getCurrentContext();
+    if (defaultContext) {
+        const defaultNamespace =
+            sharedKubeConfig.getContextObject(defaultContext)?.namespace;
+        if (defaultNamespace) {
+            return [defaultNamespace];
         }
     }
-
-    // const client = createClient(kc);
-
-    // const watch = client.listWatch(
-    //     {
-    //         apiVersion: "v1",
-    //         kind: "Namespace",
-    //     },
-    //     (list, update) => {
-    //         console.log(update);
-    //         console.log(list.items.map((item) => item.metadata));
-    //     }
-    // );
-
-    return {
-        async availableContexts() {
-            return kc.getContexts();
-        },
-    };
 }

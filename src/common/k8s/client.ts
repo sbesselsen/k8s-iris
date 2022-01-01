@@ -43,6 +43,13 @@ export type K8sObjectListWatcher<T extends K8sObject = K8sObject> = (
     update?: K8sObjectListUpdate<T>
 ) => void;
 
+export type K8sContext = {
+    name: string;
+    cluster: string;
+    user: string;
+    namespace?: string;
+};
+
 export type K8sClient = {
     read(spec: K8sObject): Promise<K8sObject | null>;
     apply(spec: K8sObject): Promise<K8sObject>;

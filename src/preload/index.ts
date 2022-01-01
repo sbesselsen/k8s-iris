@@ -1,16 +1,11 @@
 import { contextBridge, ipcRenderer } from "electron";
-import { Context } from "../types/k8s";
+import { ipcInvoker } from "../common/ipc/renderer";
 import { IpcCalls } from "../types/ipc";
 
-// const asyncInvoker = ipcRendererAsyncInvoker(ipcRenderer);
+const listContexts = ipcInvoker("k8s:listContexts");
 
-// contextBridge.exposeInMainWorld("charm", {
-//     k8s: {
-//         availableContexts: asyncInvoker<void, Context[]>(
-//             "k8s:availableContexts"
-//         ),
-//     },
-//     app: {
-//         openContext: asyncInvoker<string, void>("app:openContext"),
-//     },
-// } as IpcCalls);
+contextBridge.exposeInMainWorld("charm", {
+    k8s: {
+        listContexts,
+    },
+} as IpcCalls);

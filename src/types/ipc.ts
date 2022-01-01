@@ -1,10 +1,7 @@
-import { Context } from "./k8s";
+import { K8sContext } from "../common/k8s/client";
 
 export type IpcCalls = {
     k8s: {
-        availableContexts(): Promise<Context[]>;
-    };
-    app: {
-        openContext(name: string): Promise<void>;
+        listContexts(): Promise<K8sContext[]>;
     };
 };

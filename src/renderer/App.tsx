@@ -1,25 +1,14 @@
-import React, {
-    ChangeEvent,
-    useCallback,
-    useEffect,
-    useMemo,
-    useState,
-} from "react";
-import { K8sLocation } from "../common/k8s/location";
+import React from "react";
+import { ClusterSelector } from "./container/ClusterSelector";
+import { useKubeContext } from "./context/kube-context";
 
 export const App: React.FunctionComponent = () => {
-    const searchString = window.location.search;
-    const initialLocation: K8sLocation = useMemo(() => {
-        let location: K8sLocation = {};
-        if (searchString) {
-            location = JSON.parse(atob(searchString.slice(1)));
-        }
-        return location;
-    }, [searchString]);
+    const kubeContext = useKubeContext();
 
     return (
         <div>
-            {initialLocation.context} / {initialLocation.namespace}
+            <h1>{kubeContext}</h1>
+            <ClusterSelector />
         </div>
     );
 };
