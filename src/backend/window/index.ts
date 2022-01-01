@@ -1,10 +1,13 @@
 import { BrowserWindow } from "electron";
 import * as path from "path";
 
-import { K8sLocation } from "../../common/k8s/location";
-
 export type WindowManager = {
-    createClusterWindow(location?: K8sLocation): Promise<string>;
+    createClusterWindow(location?: WindowLocation): Promise<string>;
+};
+
+export type WindowLocation = {
+    context?: string;
+    namespaces?: string[];
 };
 
 type WindowHandle = {
@@ -20,7 +23,7 @@ export function createWindowManager(): WindowManager {
     })();
 
     const createClusterWindow = async (
-        location: K8sLocation = {}
+        location: WindowLocation = {}
     ): Promise<string> => {
         const win = new BrowserWindow({
             width: 800,
