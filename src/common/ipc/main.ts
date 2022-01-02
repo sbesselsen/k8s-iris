@@ -6,7 +6,11 @@ export function ipcHandle<T, U>(
     handler: (data: T) => Promise<U> | U
 ): void {
     ipcMain.handle(prefixHandlerChannel(name), async (_, data) => {
-        return await handler(data);
+        try {
+            return { value: await handler(data) };
+        } catch (e) {
+            return { err: String(e) };
+        }
     });
 }
 

@@ -184,10 +184,10 @@ export function createClient(
     ): Promise<K8sObjectList<T>> => {
         const path = await listPath(spec);
 
-        return new Promise((resolve, reject) => {
-            const opts: any = {};
-            kubeConfig.applyToRequest(opts);
+        const opts: any = {};
+        await kubeConfig.applyToRequest(opts);
 
+        return new Promise((resolve, reject) => {
             request.get(
                 `${kubeConfig.getCurrentCluster().server}/${path}`,
                 opts,
@@ -197,6 +197,14 @@ export function createClient(
                     } else {
                         try {
                             const data = JSON.parse(body);
+                            if (
+                                data &&
+                                data.kind === "Status" &&
+                                data.status === "Failure"
+                            ) {
+                                reject(data);
+                                return;
+                            }
                             resolve(data);
                         } catch (e) {
                             reject(e);
@@ -219,11 +227,11 @@ export function createClient(
             items: [],
         };
 
+        const opts: any = {};
+        await kubeConfig.applyToRequest(opts);
+
         const listFn = () => {
             return new Promise((resolve, reject) => {
-                const opts: any = {};
-                kubeConfig.applyToRequest(opts);
-
                 request.get(
                     `${kubeConfig.getCurrentCluster().server}/${path}`,
                     opts,
@@ -233,6 +241,14 @@ export function createClient(
                         } else {
                             try {
                                 const data = JSON.parse(body);
+                                if (
+                                    data &&
+                                    data.kind === "Status" &&
+                                    data.status === "Failure"
+                                ) {
+                                    reject(data);
+                                    return;
+                                }
                                 list.items = data.items;
                                 watcher(data);
                                 resolve({ response, body: data });

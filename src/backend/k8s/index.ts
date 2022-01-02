@@ -1,9 +1,14 @@
 import * as k8s from "@kubernetes/client-node";
-import { K8sContext } from "../../common/k8s/client";
+import { K8sClient, K8sContext } from "../../common/k8s/client";
 
-export { createClient } from "./client";
+import { createClient } from "./client";
 
-const sharedKubeConfig = getKubeConfigFromDefault();
+export type K8sClientManager = {
+    listContexts(): K8sContext[];
+    clientForContext(context: string): K8sClient;
+    defaultContext(): string | undefined;
+    defaultNamespaces(): string[] | undefined;
+};
 
 function getKubeConfigFromDefault(): k8s.KubeConfig {
     const kc = new k8s.KubeConfig();
@@ -12,21 +17,37 @@ function getKubeConfigFromDefault(): k8s.KubeConfig {
     return kc;
 }
 
-export async function listContexts(): Promise<K8sContext[]> {
-    return sharedKubeConfig.getContexts();
-}
+export function createClientManager(
+    kubeConfig?: k8s.KubeConfig
+): K8sClientManager {
+    const kc = kubeConfig ?? getKubeConfigFromDefault();
 
-export function getDefaultContext(): string | undefined {
-    return sharedKubeConfig.getCurrentContext();
-}
+    const clients: Record<string, K8sClient> = {};
 
-export function getDefaultNamespaces(): string[] | undefined {
-    const defaultContext = sharedKubeConfig.getCurrentContext();
-    if (defaultContext) {
-        const defaultNamespace =
-            sharedKubeConfig.getContextObject(defaultContext)?.namespace;
-        if (defaultNamespace) {
-            return [defaultNamespace];
+    const listContexts = () => kc.getContexts();
+    const defaultContext = () => kc.getCurrentContext();
+    const defaultNamespaces = () => {
+        const context = defaultContext();
+        if (context) {
+            const namespace = kc.getContextObject(context)?.namespace;
+            if (namespace) {
+                return [namespace];
+            }
         }
-    }
+    };
+    const clientForContext = (context: string) => {
+        if (!clients[context]) {
+            const clientConfig = new k8s.KubeConfig();
+            clientConfig.loadFromString(kc.exportConfig());
+            clientConfig.setCurrentContext(context);
+            clients[context] = createClient(clientConfig);
+        }
+        return clients[context];
+    };
+    return {
+        listContexts,
+        clientForContext,
+        defaultContext,
+        defaultNamespaces,
+    };
 }

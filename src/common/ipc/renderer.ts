@@ -2,7 +2,16 @@ import { ipcRenderer } from "electron";
 import { prefixHandlerChannel, prefixSubscriptionChannel } from "./shared";
 
 function ipcInvoke<T, U>(name: string, data: T): Promise<U> {
-    return ipcRenderer.invoke(prefixHandlerChannel(name), data);
+    return ipcRenderer
+        .invoke(prefixHandlerChannel(name), data)
+        .then((result) => {
+            if (result.err) {
+                // Pass errors down by ourselves because .invoke() will include too much info in its error messages.
+                console.error(`Error invoking ${name}:`, result.err);
+                throw result.err;
+            }
+            return result.value;
+        });
 }
 
 export function ipcInvoker<T, U>(name: string): (data: T) => Promise<U> {

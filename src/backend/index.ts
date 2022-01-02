@@ -1,20 +1,21 @@
 import { app, BrowserWindow } from "electron";
-import { ipcHandle } from "../common/ipc/main";
-import { getDefaultContext, getDefaultNamespaces, listContexts } from "./k8s";
+import { createClientManager } from "./k8s";
+import { wireK8sClientIpc } from "./k8s/ipc";
 import { createWindowManager } from "./window";
 
 (async () => {
     await app.whenReady();
 
-    // Hook up IPC calls.
-    ipcHandle("k8s:listContexts", listContexts);
-
+    const k8sClientManager = createClientManager();
     const windowManager = createWindowManager();
+
+    // Hook up IPC calls.
+    wireK8sClientIpc(k8sClientManager);
 
     // Set default params for new windows.
     windowManager.setDefaultWindowParameters({
-        context: getDefaultContext(),
-        namespaces: getDefaultNamespaces(),
+        context: k8sClientManager.defaultContext(),
+        namespaces: k8sClientManager.defaultNamespaces(),
     });
 
     // Open our main window.

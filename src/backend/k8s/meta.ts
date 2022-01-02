@@ -15,13 +15,13 @@ export type K8sApiResource = {
     misc: Record<string, any>;
 };
 
-export function fetchApiList(
+export async function fetchApiList(
     kubeConfig: k8s.KubeConfig
 ): Promise<Array<K8sApi>> {
-    return new Promise((resolve, reject) => {
-        const opts: any = {};
-        kubeConfig.applyToRequest(opts);
+    const opts: any = {};
+    await kubeConfig.applyToRequest(opts);
 
+    return new Promise((resolve, reject) => {
         request.get(
             kubeConfig.getCurrentCluster().server,
             opts,
@@ -31,6 +31,14 @@ export function fetchApiList(
                 } else {
                     try {
                         const data = JSON.parse(body);
+                        if (
+                            data &&
+                            data.kind === "Status" &&
+                            data.status === "Failure"
+                        ) {
+                            reject(data);
+                            return;
+                        }
                         const apis: K8sApi[] = [
                             {
                                 version: "v1",
@@ -67,14 +75,14 @@ export async function fetchApiIndex(
     );
 }
 
-export function fetchApiResourceList(
+export async function fetchApiResourceList(
     kubeConfig: k8s.KubeConfig,
     api: K8sApi
 ): Promise<Array<K8sApiResource>> {
-    return new Promise((resolve, reject) => {
-        const opts: any = {};
-        kubeConfig.applyToRequest(opts);
+    const opts: any = {};
+    await kubeConfig.applyToRequest(opts);
 
+    return new Promise((resolve, reject) => {
         const pathParts = [];
         if (api.group) {
             pathParts.push("apis");
@@ -94,6 +102,14 @@ export function fetchApiResourceList(
                 } else {
                     try {
                         const data = JSON.parse(body);
+                        if (
+                            data &&
+                            data.kind === "Status" &&
+                            data.status === "Failure"
+                        ) {
+                            reject(data);
+                            return;
+                        }
                         const resources: K8sApiResource[] = data.resources.map(
                             (resource) => ({
                                 api,
