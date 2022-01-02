@@ -1,6 +1,10 @@
 import { K8sClientManager } from "./index";
-import { ipcHandle } from "../../common/ipc/main";
-import { K8sObject, K8sObjectListQuery } from "../../common/k8s/client";
+import { ipcHandle, ipcProvideSubscription } from "../../common/ipc/main";
+import {
+    K8sObject,
+    K8sObjectListQuery,
+    K8sObjectListWatch,
+} from "../../common/k8s/client";
 
 export const wireK8sClientIpc = (clientManager: K8sClientManager): void => {
     ipcHandle("k8s:listContexts", () => clientManager.listContexts());
@@ -33,5 +37,41 @@ export const wireK8sClientIpc = (clientManager: K8sClientManager): void => {
             context: string;
             spec: K8sObjectListQuery;
         }) => clientManager.clientForContext(context).list(spec)
+    );
+    ipcProvideSubscription(
+        "k8s:client:listWatch",
+        (
+            {
+                context,
+                spec,
+            }: {
+                context: string;
+                spec: K8sObjectListQuery;
+            },
+            send
+        ) => {
+            let stopped = false;
+            let subscription: K8sObjectListWatch | undefined;
+            (async () => {
+                subscription = await clientManager
+                    .clientForContext(context)
+                    .listWatch(spec, (list, update) => {
+                        if (stopped) {
+                            // Race condition: stop() was called before the first update. Stop here.
+                            subscription.stop();
+                            return;
+                        }
+                        send({ list, update });
+                    });
+            })();
+            return {
+                stop() {
+                    stopped = true;
+                    if (subscription) {
+                        subscription.stop();
+                    }
+                },
+            };
+        }
     );
 };

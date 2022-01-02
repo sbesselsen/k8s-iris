@@ -3,9 +3,15 @@ import {
     K8sObject,
     K8sObjectList,
     K8sObjectListQuery,
+    K8sObjectListUpdate,
     K8sRemoveOptions,
     K8sRemoveStatus,
 } from "../common/k8s/client";
+
+type K8sListUpdate<T extends K8sObject = K8sObject> = {
+    list: K8sObjectList<T>;
+    update?: K8sObjectListUpdate<T>;
+};
 
 export type IpcCalls = {
     k8s: {
@@ -29,5 +35,12 @@ export type IpcCalls = {
             context: string;
             spec: K8sObjectListQuery;
         }): Promise<K8sObjectList<T>>;
+        listWatch<T extends K8sObject = K8sObject>(
+            params: {
+                context: string;
+                spec: K8sObjectListQuery;
+            },
+            watcher: (update: K8sListUpdate<T>) => void
+        ): { stop: () => void };
     };
 };

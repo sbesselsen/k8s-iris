@@ -1,27 +1,40 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { K8sObjectListWatch } from "../common/k8s/client";
 import { ClusterSelector } from "./container/ClusterSelector";
 import { useKubeContext } from "./context/kube-context";
 import { useAsync } from "./hook/async";
-import { useIpc } from "./hook/ipc";
+import { useK8sClient } from "./k8s/client";
 
 export const App: React.FunctionComponent = () => {
     const kubeContext = useKubeContext();
+    const client = useK8sClient();
 
-    const ipc = useIpc();
+    const [namespaces, setNamespaces] = useState<string[]>([]);
 
-    const [loading, namespaces, error] = useAsync(async () => {
-        if (!kubeContext) {
-            return [];
-        }
-        const namespaceObjects = await ipc.k8s.list({
-            context: kubeContext,
-            spec: {
+    const prevListWatch = useRef<K8sObjectListWatch | undefined>();
+
+    const [loading, listWatch, error] = useAsync(async () => {
+        return await client.listWatch(
+            {
                 apiVersion: "v1",
                 kind: "Namespace",
             },
-        });
-        return namespaceObjects.items.map((item) => item.metadata.name);
-    }, [ipc, kubeContext]);
+            (list, update) => {
+                console.log("did receive update");
+                setNamespaces(list.items.map((item) => item.metadata.name));
+            }
+        );
+    }, [client, setNamespaces]);
+
+    console.log(loading, listWatch);
+    if (error) {
+        console.error(error);
+    }
+
+    if (prevListWatch.current && prevListWatch.current !== listWatch) {
+        prevListWatch.current.stop();
+    }
+    prevListWatch.current = listWatch;
 
     return (
         <div>

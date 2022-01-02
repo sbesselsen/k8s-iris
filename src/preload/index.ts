@@ -1,5 +1,5 @@
-import { contextBridge, ipcRenderer } from "electron";
-import { ipcInvoker } from "../common/ipc/renderer";
+import { contextBridge } from "electron";
+import { ipcInvoker, ipcSubscriber } from "../common/ipc/renderer";
 import { IpcCalls } from "../types/ipc";
 
 const listContexts = ipcInvoker("k8s:listContexts");
@@ -9,6 +9,7 @@ const patch = ipcInvoker("k8s:client:patch");
 const replace = ipcInvoker("k8s:client:replace");
 const remove = ipcInvoker("k8s:client:remove");
 const list = ipcInvoker("k8s:client:list");
+const listWatch = ipcSubscriber("k8s:client:listWatch");
 
 contextBridge.exposeInMainWorld("charm", {
     k8s: {
@@ -19,5 +20,6 @@ contextBridge.exposeInMainWorld("charm", {
         replace,
         remove,
         list,
+        listWatch,
     },
 } as IpcCalls);

@@ -15,6 +15,11 @@ import {
     K8sRemoveStatus,
 } from "../../common/k8s/client";
 import { fetchApiResourceList, K8sApi, K8sApiResource } from "./meta";
+import {
+    addListObject,
+    deleteListObject,
+    updateListObject,
+} from "../../common/k8s/util";
 
 const defaultRemoveOptions: K8sRemoveOptions = {
     waitForCompletion: true,
@@ -267,46 +272,22 @@ export function createClient(
             listFn as any
         );
 
-        const objSameRef = (obj1: K8sObject, obj2: K8sObject): boolean => {
-            if (!obj1) {
-                return !obj2;
-            }
-            return (
-                obj1.apiVersion === obj2.apiVersion &&
-                obj1.kind === obj2.kind &&
-                obj1.metadata.name === obj2.metadata.name &&
-                obj1.metadata.namespace === obj2.metadata.namespace
-            );
-        };
-
         informer.on("add", (obj: any) => {
-            if (list.items.findIndex((item) => objSameRef(item, obj)) !== -1) {
-                // The item is already in the list.
-                return;
-            }
-            list = { ...list, items: [...list.items, obj] };
+            list = addListObject(list, obj);
             watcher(list, {
                 type: "add",
                 object: obj as any,
             });
         });
         informer.on("update", (obj: any) => {
-            list = {
-                ...list,
-                items: list.items.map((item) =>
-                    objSameRef(item, obj) ? obj : item
-                ),
-            };
+            list = updateListObject(list, obj);
             watcher(list, {
                 type: "update",
                 object: obj,
             });
         });
         informer.on("delete", (obj: any) => {
-            list = {
-                ...list,
-                items: list.items.filter((item) => !objSameRef(item, obj)),
-            };
+            list = deleteListObject(list, obj);
             watcher(list, {
                 type: "remove",
                 object: obj,
