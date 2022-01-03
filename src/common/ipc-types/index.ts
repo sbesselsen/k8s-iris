@@ -1,3 +1,4 @@
+import { CloudK8sContextInfo } from "../cloud/k8s";
 import {
     K8sContext,
     K8sObject,
@@ -14,6 +15,11 @@ type K8sListUpdate<T extends K8sObject = K8sObject> = {
 };
 
 export type IpcCalls = {
+    cloud: {
+        augmentK8sContexts(
+            contexts: K8sContext[]
+        ): Promise<Record<string, CloudK8sContextInfo>>;
+    };
     k8s: {
         listContexts(): Promise<K8sContext[]>;
         read(params: {

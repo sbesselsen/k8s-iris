@@ -9,7 +9,17 @@ export const ContextSelector: React.FC = () => {
 
     const ipc = useIpc();
 
-    const [loading, allContexts] = useAsync(() => ipc.k8s.listContexts(), []);
+    const [loadingContexts, allContexts] = useAsync(
+        () => ipc.k8s.listContexts(),
+        []
+    );
+    const [loadingCloudInfo, cloudInfo] = useAsync(
+        async () =>
+            allContexts ? ipc.cloud.augmentK8sContexts(allContexts) : {},
+        [allContexts]
+    );
+
+    const loading = loadingContexts || loadingCloudInfo;
 
     const onChange = useCallback(
         (e: ChangeEvent<HTMLSelectElement>) => {
@@ -29,6 +39,9 @@ export const ContextSelector: React.FC = () => {
                         selected={context.name === kubeContext}
                     >
                         {context.name}
+                        {cloudInfo[context.name]
+                            ? ` (${cloudInfo[context.name].localClusterName})`
+                            : ""}
                     </option>
                 ))}
         </select>

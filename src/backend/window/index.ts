@@ -4,6 +4,7 @@ import * as path from "path";
 export type WindowManager = {
     closeWindow(windowId?: string): void;
     createWindow(params?: WindowParameters): Promise<string>;
+    openDevTools(): void;
     setDefaultWindowParameters(params: WindowParameters): void;
 };
 
@@ -73,6 +74,10 @@ export function createWindowManager(): WindowManager {
         window.close();
     };
 
+    const openDevTools = () => {
+        BrowserWindow.getFocusedWindow()?.webContents.openDevTools();
+    };
+
     const setDefaultWindowParameters = (params: WindowParameters): void => {
         defaultWindowParameters = params;
     };
@@ -80,6 +85,7 @@ export function createWindowManager(): WindowManager {
     return {
         closeWindow,
         createWindow,
+        openDevTools,
         setDefaultWindowParameters,
     };
 }

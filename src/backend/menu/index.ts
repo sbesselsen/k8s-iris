@@ -1,8 +1,9 @@
 import { Menu } from "electron";
-import { WindowManager } from "../window";
 
 export type MenuManagerOptions = {
-    windowManager: WindowManager;
+    createWindow: () => void;
+    closeWindow: () => void;
+    openDevTools: () => void;
 };
 
 export type MenuManager = {
@@ -10,7 +11,7 @@ export type MenuManager = {
 };
 
 export function createMenuManager(options: MenuManagerOptions): MenuManager {
-    const { windowManager } = options;
+    const { createWindow, closeWindow, openDevTools } = options;
     const initialize = () => {
         // TODO: multiplatform shit
         Menu.setApplicationMenu(
@@ -30,7 +31,7 @@ export function createMenuManager(options: MenuManagerOptions): MenuManager {
                                     ? "Shift+Cmd+N"
                                     : "Shift+Ctrl+N",
                             click: () => {
-                                windowManager.createWindow();
+                                createWindow();
                             },
                         },
                         {
@@ -40,7 +41,7 @@ export function createMenuManager(options: MenuManagerOptions): MenuManager {
                                     ? "Cmd+W"
                                     : "Ctrl+W",
                             click: () => {
-                                windowManager.closeWindow();
+                                closeWindow();
                             },
                         },
                     ],
@@ -48,6 +49,19 @@ export function createMenuManager(options: MenuManagerOptions): MenuManager {
                 {
                     label: "Edit",
                     role: "editMenu",
+                },
+                {
+                    label: "Developer",
+                    submenu: [
+                        {
+                            // TODO: this is bad and should be temporary!
+                            label: "Open Development Tools",
+                            accelerator: "Option+Cmd+I",
+                            click: () => {
+                                openDevTools();
+                            },
+                        },
+                    ],
                 },
                 {
                     label: "Window",

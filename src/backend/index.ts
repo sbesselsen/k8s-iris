@@ -1,4 +1,6 @@
-import { app, BrowserWindow, Menu } from "electron";
+import { app, BrowserWindow } from "electron";
+import { createCloudManager } from "./cloud";
+import { wireCloudIpc } from "./cloud/ipc";
 import { createClientManager } from "./k8s";
 import { wireK8sClientIpc } from "./k8s/ipc";
 import { createMenuManager } from "./menu";
@@ -7,16 +9,26 @@ import { createWindowManager } from "./window";
 (async () => {
     await app.whenReady();
 
+    const cloudManager = createCloudManager();
     const k8sClientManager = createClientManager();
     const windowManager = createWindowManager();
     const menuManager = createMenuManager({
-        windowManager,
+        createWindow: () => {
+            windowManager.createWindow();
+        },
+        closeWindow: () => {
+            windowManager.closeWindow();
+        },
+        openDevTools: () => {
+            windowManager.openDevTools();
+        },
     });
 
     // Initialize the main menu.
     menuManager.initialize();
 
     // Hook up IPC calls.
+    wireCloudIpc(cloudManager);
     wireK8sClientIpc(k8sClientManager);
 
     // Set default params for new windows.
