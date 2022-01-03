@@ -1,9 +1,9 @@
 import React, { useEffect } from "react";
-import { ContextSelector } from "../ContextSelector";
 import { NamespaceList } from "../NamespaceList";
 import { useK8sContext } from "../../context/k8s-context";
 
 import { useBreakpointValue } from "@chakra-ui/react";
+import { K8sContextSelector } from "../K8sContextSelector";
 
 export const RootAppUI: React.FunctionComponent = () => {
     const kubeContext = useK8sContext();
@@ -22,9 +22,7 @@ export const RootAppUI: React.FunctionComponent = () => {
 
     return (
         <div>
-            <h1>{kubeContext}</h1>
-            <h2>{breakpoint}</h2>
-            <ContextSelector />
+            <K8sContextSelector />
             <NamespaceList />
         </div>
     );
