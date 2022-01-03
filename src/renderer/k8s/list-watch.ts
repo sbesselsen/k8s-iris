@@ -35,17 +35,16 @@ export function useK8sListWatch<T extends K8sObject = K8sObject>(
 
     useEffect(() => {
         const myListWatchId = ++listWatchId.current;
+        setValue(loadingValue);
         (async () => {
             try {
                 const listWatch = await client.listWatch<T>(
                     spec,
                     (list, update) => {
-                        console.log("useK8sListWatch did receive update");
                         setValue([false, list, undefined]);
                         options?.onUpdate?.(list, update);
                     }
                 );
-                console.log("hae list watch");
                 if (myListWatchId !== listWatchId.current) {
                     // This request is already expired.
                     listWatch.stop();
