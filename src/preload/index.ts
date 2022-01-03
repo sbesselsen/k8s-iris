@@ -1,6 +1,6 @@
 import { contextBridge } from "electron";
 import { ipcInvoker, ipcSubscriber } from "../common/ipc/renderer";
-import { IpcCalls } from "../types/ipc";
+import { IpcCalls } from "../common/ipc-types";
 
 const listContexts = ipcInvoker("k8s:listContexts");
 const read = ipcInvoker("k8s:client:read");
