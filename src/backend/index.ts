@@ -1,55 +1,20 @@
 import { app, BrowserWindow, Menu } from "electron";
 import { createClientManager } from "./k8s";
 import { wireK8sClientIpc } from "./k8s/ipc";
+import { createMenuManager } from "./menu";
 import { createWindowManager } from "./window";
 
 (async () => {
     await app.whenReady();
 
-    // TODO: multiplatform shit
-    Menu.setApplicationMenu(
-        Menu.buildFromTemplate([
-            {
-                label: "Charm",
-                role: "appMenu",
-            },
-            {
-                label: "File",
-                role: "fileMenu",
-                submenu: [
-                    {
-                        label: "New Window",
-                        accelerator:
-                            process.platform === "darwin"
-                                ? "Shift+Cmd+N"
-                                : "Shift+Ctrl+N",
-                        click: () => {
-                            windowManager.createWindow();
-                        },
-                    },
-                    {
-                        label: "Close Window",
-                        accelerator:
-                            process.platform === "darwin" ? "Cmd+W" : "Ctrl+W",
-                        click: () => {
-                            windowManager.closeWindow();
-                        },
-                    },
-                ],
-            },
-            {
-                label: "Edit",
-                role: "editMenu",
-            },
-            {
-                label: "Window",
-                role: "windowMenu",
-            },
-        ])
-    );
-
     const k8sClientManager = createClientManager();
     const windowManager = createWindowManager();
+    const menuManager = createMenuManager({
+        windowManager,
+    });
+
+    // Initialize the main menu.
+    menuManager.initialize();
 
     // Hook up IPC calls.
     wireK8sClientIpc(k8sClientManager);
@@ -62,29 +27,6 @@ import { createWindowManager } from "./window";
 
     // Open our main window.
     windowManager.createWindow();
-
-    // Menu.setApplicationMenu(appMenu);
-
-    // console.log(Menu.getApplicationMenu().items);
-    // menu.append(
-    //     new MenuItem({
-    //         label: "Electron",
-    //         submenu: [
-    //             {
-    //                 role: "help",
-    //                 accelerator:
-    //                     process.platform === "darwin"
-    //                         ? "Alt+Cmd+I"
-    //                         : "Alt+Shift+I",
-    //                 click: () => {
-    //                     console.log("Electron rocks!");
-    //                 },
-    //             },
-    //         ],
-    //     })
-    // );
-
-    // Menu.setApplicationMenu(menu);
 
     app.on("activate", () => {
         // On macOS it's common to re-create a window in the app when the
