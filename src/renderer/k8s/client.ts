@@ -14,11 +14,11 @@ import {
     K8sObjectListWatcher,
     K8sRemoveOptions,
 } from "../../common/k8s/client";
-import { useKubeContext } from "../context/kube-context";
+import { useK8sContext } from "../context/k8s-context";
 import { useIpc } from "../hook/ipc";
 
 export function useK8sClient(kubeContext?: string): K8sClient {
-    const sharedKubeContext = useKubeContext();
+    const sharedKubeContext = useK8sContext();
     const context = kubeContext ?? sharedKubeContext;
 
     const ipc = useIpc();

@@ -1,11 +1,11 @@
 import React, { ChangeEvent, useCallback } from "react";
-import { useKubeContext, useKubeContextStore } from "../context/kube-context";
+import { useK8sContext, useK8sContextStore } from "../context/k8s-context";
 import { useAsync } from "../hook/async";
 import { useIpc } from "../hook/ipc";
 
-export const ClusterSelector: React.FC = () => {
-    const kubeContext = useKubeContext();
-    const kubeContextStore = useKubeContextStore();
+export const ContextSelector: React.FC = () => {
+    const kubeContext = useK8sContext();
+    const kubeContextStore = useK8sContextStore();
 
     const ipc = useIpc();
 

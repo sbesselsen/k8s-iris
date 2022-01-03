@@ -1,15 +1,15 @@
 import React from "react";
-import { ClusterSelector } from "./container/ClusterSelector";
+import { ContextSelector } from "./container/ContextSelector";
 import { NamespaceList } from "./container/NamespaceList";
-import { useKubeContext } from "./context/kube-context";
+import { useK8sContext } from "./context/k8s-context";
 
 export const App: React.FunctionComponent = () => {
-    const kubeContext = useKubeContext();
+    const kubeContext = useK8sContext();
 
     return (
         <div>
             <h1>{kubeContext}</h1>
-            <ClusterSelector />
+            <ContextSelector />
             <NamespaceList />
         </div>
     );
