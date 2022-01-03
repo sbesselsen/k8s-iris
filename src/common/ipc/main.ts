@@ -51,8 +51,8 @@ export function ipcProvideSubscription<T, U>(
                 stop();
             };
 
-            webContents.on("destroyed", webContentsDestroyListener);
-            webContents.on("did-navigate", webContentsDidNavigateListener);
+            webContents.once("destroyed", webContentsDestroyListener);
+            webContents.once("did-navigate", webContentsDidNavigateListener);
             ipcMain.once(`${subscriptionChannel}:stop`, () => {
                 // The subscriber says they want to stop.
                 webContents.off("destroyed", webContentsDestroyListener);

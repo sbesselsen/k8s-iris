@@ -225,6 +225,7 @@ export function createClient(
         watcher: K8sObjectListWatcher<T>
     ): Promise<K8sObjectListWatch> => {
         const path = await listPath(spec);
+        let stopped = false;
 
         let list: K8sObjectList<T> = {
             apiVersion: spec.apiVersion,
@@ -294,6 +295,9 @@ export function createClient(
             });
         });
         informer.on("error", (err: KubernetesObject) => {
+            if (stopped) {
+                return;
+            }
             console.error(err);
             // TODO: make this configurable or handlable somehow?
             // Restart informer after 5sec.
@@ -306,6 +310,7 @@ export function createClient(
 
         return {
             stop() {
+                stopped = true;
                 informer.stop();
             },
         };
