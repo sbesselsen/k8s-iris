@@ -1,18 +1,10 @@
-import {
-    Box,
-    Heading,
-    Icon,
-    Spinner,
-    StackDivider,
-    Tag,
-    Text,
-    VStack,
-} from "@chakra-ui/react";
+import { Box, Button, Heading, Icon, Text, VStack } from "@chakra-ui/react";
 import React, { useCallback, useMemo } from "react";
-import { FaAws, FaCode } from "react-icons/fa";
+import { MdCheckCircle } from "react-icons/md";
 import { CloudK8sContextInfo } from "../../common/cloud/k8s";
 import { K8sContext } from "../../common/k8s/client";
-import { K8sContextLabel } from "../component/K8sContextLabel";
+import { groupByKeys } from "../../common/util/group";
+import { k8sSmartCompare } from "../../common/util/sort";
 import { useK8sContext, useK8sContextStore } from "../context/k8s-context";
 import { useAsync } from "../hook/async";
 import { useIpc } from "../hook/ipc";
@@ -36,8 +28,12 @@ export const K8sContextSelector: React.FC = () => {
     const loading = loadingContexts || loadingCloudInfo;
 
     const onSelect = useCallback(
-        (context: string) => {
-            kubeContextStore.set(context);
+        (context: string, requestNewWindow: boolean) => {
+            if (requestNewWindow) {
+                ipc.app.createWindow({ context });
+            } else {
+                kubeContextStore.set(context);
+            }
         },
         [kubeContextStore]
     );
@@ -46,7 +42,6 @@ export const K8sContextSelector: React.FC = () => {
         <>
             {loading && (
                 <>
-                    <Spinner />
                     <Text color="gray.500">{kubeContext}</Text>
                 </>
             )}
@@ -66,94 +61,70 @@ type K8sContextSelectorListProps = {
     kubeContext: string;
     contexts: K8sContext[];
     cloudInfo: Record<string, CloudK8sContextInfo>;
-    onSelect: (context: string) => void;
+    onSelect: (context: string, requestNewWindow: boolean) => void;
 };
 
-const chooseBestAccount = (
-    accounts: CloudK8sContextInfo["accounts"]
-): CloudK8sContextInfo["accounts"][number] => {
-    // TODO
-    const [account] = accounts;
-    return account;
-};
+type ContextWithCloudInfo = K8sContext &
+    Partial<CloudK8sContextInfo> & {
+        bestAccountId?: string;
+        bestAccountName?: string;
+    };
 
-export const K8sContextSelectorList: React.FC<K8sContextSelectorListProps> = (
+const K8sContextSelectorList: React.FC<K8sContextSelectorListProps> = (
     props
 ) => {
     const { kubeContext, contexts, cloudInfo, onSelect } = props;
 
-    // Group the items.
-    const groupedContexts = useMemo(() => {
-        const groups: Record<
-            string,
-            {
-                group: CloudK8sContextInfo;
-                sortId: string;
-                contexts: K8sContext[];
-            }
-        > = {};
+    const contextsWithCloudInfo: ContextWithCloudInfo[] = useMemo(
+        () =>
+            contexts.map((context) => ({
+                ...context,
+                ...(cloudInfo[context.name] ?? null),
+                bestAccountId: cloudInfo[context.name]?.accounts?.[0].accountId,
+                bestAccountName:
+                    cloudInfo[context.name]?.accounts?.[0].accountName,
+            })),
+        [contexts, cloudInfo]
+    );
 
-        for (const context of contexts) {
-            const contextCloudInfo = cloudInfo[context.name] ?? {};
-            const bestAccount =
-                contextCloudInfo.accounts?.length > 0
-                    ? chooseBestAccount(contextCloudInfo.accounts)
-                    : null;
-            const groupIdParts = [
-                contextCloudInfo.cloudProvider ?? "",
-                contextCloudInfo.cloudService ?? "",
-                contextCloudInfo.region ?? "",
-                bestAccount?.accountId ?? "",
-            ];
-            const groupId = groupIdParts.join("/");
-            const sortId = bestAccount?.accountName ?? "ZZZZZZZZZZZZZZZZ";
-            const accounts = bestAccount
-                ? [
-                      bestAccount,
-                      ...(contextCloudInfo?.accounts.filter(
-                          (account) =>
-                              account.accountId !== bestAccount.accountId
-                      ) ?? []),
-                  ]
-                : [];
-            const group: CloudK8sContextInfo = {
-                ...contextCloudInfo,
-                accounts,
-            };
-            if (!groups[groupId]) {
-                groups[groupId] = {
-                    group,
-                    sortId,
-                    contexts: [],
-                };
-            }
-            groups[groupId].contexts.push(context);
-        }
-
-        return Object.entries(groups)
-            .sort(([_k1, a], [_k2, b]) =>
-                a.sortId.localeCompare(b.sortId, undefined, {
-                    sensitivity: "base",
-                    ignorePunctuation: true,
-                    numeric: true,
-                })
-            )
-            .map(([_, v]) => v);
-    }, [contexts, cloudInfo]);
+    const groupedContexts = useMemo(
+        () =>
+            groupByKeys(
+                contextsWithCloudInfo,
+                [
+                    "cloudProvider",
+                    "cloudService",
+                    "bestAccountName",
+                    "bestAccountId",
+                    "region",
+                ],
+                (_, a, b) => k8sSmartCompare(a, b)
+            ).map(
+                ([group, contexts]) =>
+                    [
+                        group,
+                        contexts.sort((a, b) =>
+                            k8sSmartCompare(
+                                a.localClusterName ?? a.name,
+                                b.localClusterName ?? b.name
+                            )
+                        ),
+                    ] as [Partial<CloudK8sContextInfo>, ContextWithCloudInfo[]]
+            ),
+        [contextsWithCloudInfo]
+    );
 
     return (
-        <VStack spacing={0} divider={<StackDivider />}>
-            {groupedContexts.map((group) => (
+        <VStack spacing={0}>
+            {groupedContexts.map(([group, contexts]) => (
                 <Box width="100%">
-                    <K8sContextSelectorGroupHeading group={group.group} />
+                    <K8sContextSelectorGroupHeading group={group} />
                     <VStack spacing={0}>
-                        {group.contexts.map((context) => (
+                        {contexts.map((context) => (
                             <K8sContextSelectorItem
                                 key={context.name}
                                 kubeContext={kubeContext}
-                                contexts={contexts}
-                                context={context}
-                                cloudInfo={cloudInfo}
+                                contextWithCloudInfo={context}
                                 onSelect={onSelect}
                             />
                         ))}
@@ -164,78 +135,72 @@ export const K8sContextSelectorList: React.FC<K8sContextSelectorListProps> = (
     );
 };
 
-export const K8sContextSelectorGroupHeading: React.FC<{
-    group: CloudK8sContextInfo;
+const K8sContextSelectorGroupHeading: React.FC<{
+    group: Partial<ContextWithCloudInfo>;
 }> = (props) => {
     const { group } = props;
-    if (!group.cloudProvider) {
+    if (Object.keys(group).length === 0) {
+        // This group has no identity of its own.
         return null;
     }
 
-    const icon = useMemo(() => {
-        switch (group.cloudProvider) {
-            case "aws":
-                return <Icon as={FaAws} marginEnd={1} />;
-            case "local":
-                return <Icon as={FaCode} marginEnd={1} />;
-            default:
-                return null;
-        }
-    }, [group]);
-
-    const tags = useMemo(() => {
-        const tags: React.ReactElement[] = [];
-        if (group.cloudService) {
-            tags.push(<Tag key="cloudService">{group.cloudService}</Tag>);
-        }
-        if (group.region) {
-            tags.push(<Tag key="region">{group.region}</Tag>);
-        }
-        if (group.accounts?.length > 0) {
-            const [, ...otherAccounts] = group.accounts;
-            tags.push(
-                ...otherAccounts.map(({ accountId, accountName }) => (
-                    <Tag key={`account-${accountId}`}>
-                        {accountName
-                            ? `${accountName} (${accountId})`
-                            : accountId}
-                    </Tag>
-                ))
-            );
-        }
-        return tags;
-    }, [group]);
-
-    let name = [group.cloudProvider, group.cloudService]
-        .filter((x) => x)
-        .join(" ");
-    if (group.accounts?.length > 0) {
-        const [{ accountId, accountName }] = group.accounts;
-        name = accountName ? `${accountName} (${accountId})` : accountId;
-    }
-
+    const headingParts: string[] = [
+        group.cloudProvider,
+        group.cloudService,
+        group.bestAccountName ?? group.bestAccountId,
+        group.region,
+    ].filter((x) => x);
     return (
-        <Heading size={"xs"} verticalAlign="middle">
-            {icon} {name} {tags}
+        <Heading
+            color="gray.500"
+            letterSpacing="wide"
+            textTransform="uppercase"
+            size="xs"
+            fontSize="xs"
+            marginTop={3}
+            marginBottom={1}
+            marginStart={2}
+            isTruncated
+        >
+            {headingParts.join(" • ")}
         </Heading>
     );
 };
 
-export const K8sContextSelectorItem: React.FC<
-    K8sContextSelectorListProps & { context: K8sContext }
-> = (props) => {
-    const { kubeContext, context, cloudInfo, onSelect } = props;
+const K8sContextSelectorItem: React.FC<{
+    kubeContext: string;
+    contextWithCloudInfo: ContextWithCloudInfo;
+    onSelect?: (name: string, requestNewWindow: boolean) => void;
+}> = (props) => {
+    const { kubeContext, contextWithCloudInfo: context, onSelect } = props;
 
-    const onClick = useCallback(() => {
-        onSelect(context.name);
-    }, [onSelect, context]);
+    const onClick = useCallback(
+        (e: React.MouseEvent<HTMLButtonElement>) => {
+            onSelect(context.name, e.getModifierState("Meta"));
+        },
+        [onSelect, context]
+    );
+
+    const isSelected = context.name === kubeContext;
+    const localName = context.localClusterName ?? context.name;
+    const icon = isSelected ? (
+        <Icon as={MdCheckCircle} color="green.500" />
+    ) : null;
 
     return (
-        <K8sContextLabel
-            context={context}
-            cloudInfo={cloudInfo[context.name]}
-            isSelected={context.name === kubeContext}
+        <Button
             onClick={onClick}
-        />
+            bgColor="transparent"
+            borderRadius={0}
+            isFullWidth={true}
+            size="xs"
+            padingY={2}
+            paddingStart={4}
+            fontWeight="normal"
+            justifyContent="flex-start"
+            leftIcon={icon}
+        >
+            {localName}
+        </Button>
     );
 };

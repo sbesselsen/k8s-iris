@@ -42,7 +42,6 @@ export function useK8sListWatch<T extends K8sObject = K8sObject>(
                 const listWatch = await client.listWatch<T>(
                     spec,
                     (error, message) => {
-                        console.log("Did receive", { error, message });
                         if (error) {
                             if (value[0] === true) {
                                 // We were still loading and now we get an error. Make this the result.

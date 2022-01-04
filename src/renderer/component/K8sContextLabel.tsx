@@ -27,9 +27,7 @@ export const K8sContextLabel: React.FC<K8sContextLabelProps> = (props) => {
         }
     }, [cloudInfo]);
 
-    const localName = useMemo(() => {
-        return cloudInfo?.localClusterName ?? context.name;
-    }, [context, cloudInfo]);
+    const localName = cloudInfo?.localClusterName ?? context.name;
 
     return (
         <Button

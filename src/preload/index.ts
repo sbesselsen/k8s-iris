@@ -2,6 +2,7 @@ import { contextBridge } from "electron";
 import { ipcInvoker, ipcSubscriber } from "../common/ipc/renderer";
 import { IpcCalls } from "../common/ipc-types";
 
+const createWindow = ipcInvoker("app:createWindow");
 const augmentK8sContexts = ipcInvoker("cloud:augmentK8sContexts");
 const listContexts = ipcInvoker("k8s:listContexts");
 const read = ipcInvoker("k8s:client:read");
@@ -13,6 +14,9 @@ const list = ipcInvoker("k8s:client:list");
 const listWatch = ipcSubscriber("k8s:client:listWatch");
 
 contextBridge.exposeInMainWorld("charm", {
+    app: {
+        createWindow,
+    },
     cloud: {
         augmentK8sContexts,
     },

@@ -1,10 +1,11 @@
 import { app, BrowserWindow } from "electron";
+import { ipcHandle } from "../common/ipc/main";
 import { createCloudManager } from "./cloud";
 import { wireCloudIpc } from "./cloud/ipc";
 import { createClientManager } from "./k8s";
 import { wireK8sClientIpc } from "./k8s/ipc";
 import { createMenuManager } from "./menu";
-import { createWindowManager } from "./window";
+import { createWindowManager, WindowParameters } from "./window";
 
 (async () => {
     await app.whenReady();
@@ -30,6 +31,10 @@ import { createWindowManager } from "./window";
     // Hook up IPC calls.
     wireCloudIpc(cloudManager);
     wireK8sClientIpc(k8sClientManager);
+
+    ipcHandle("app:createWindow", (params?: WindowParameters) => {
+        windowManager.createWindow(params);
+    });
 
     // Set default params for new windows.
     windowManager.setDefaultWindowParameters({

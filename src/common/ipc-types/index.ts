@@ -16,6 +16,12 @@ type K8sListUpdate<T extends K8sObject = K8sObject> = {
 };
 
 export type IpcCalls = {
+    app: {
+        createWindow(parameters?: {
+            context?: string;
+            namespaces?: string[];
+        }): Promise<void>;
+    };
     cloud: {
         augmentK8sContexts(
             contexts: K8sContext[]
