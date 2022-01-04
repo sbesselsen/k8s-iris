@@ -256,9 +256,10 @@ export function createClient(
                                     return;
                                 }
                                 list.items = data.items;
-                                watcher(data);
+                                watcher(undefined, { list: data });
                                 resolve({ response, body: data });
                             } catch (e) {
+                                watcher(e);
                                 reject(e);
                             }
                         }
@@ -274,30 +275,44 @@ export function createClient(
         );
 
         informer.on("add", (obj: any) => {
-            list = addListObject(list, obj);
-            watcher(list, {
-                type: "add",
-                object: obj as any,
+            const newList = addListObject(list, obj);
+            if (list === newList) {
+                // No rerender needed.
+                return;
+            }
+            watcher(undefined, {
+                list: newList,
+                update: {
+                    type: "add",
+                    object: obj as any,
+                },
             });
         });
         informer.on("update", (obj: any) => {
             list = updateListObject(list, obj);
-            watcher(list, {
-                type: "update",
-                object: obj,
+            watcher(undefined, {
+                list,
+                update: {
+                    type: "update",
+                    object: obj,
+                },
             });
         });
         informer.on("delete", (obj: any) => {
             list = deleteListObject(list, obj);
-            watcher(list, {
-                type: "remove",
-                object: obj,
+            watcher(undefined, {
+                list,
+                update: {
+                    type: "remove",
+                    object: obj,
+                },
             });
         });
         informer.on("error", (err: KubernetesObject) => {
             if (stopped) {
                 return;
             }
+            watcher(err);
             console.error(err);
             // TODO: make this configurable or handlable somehow?
             // Restart informer after 5sec.

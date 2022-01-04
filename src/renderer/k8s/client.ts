@@ -47,7 +47,11 @@ export function useK8sClient(kubeContext?: string): K8sClient {
             // Subscribe to list updates.
             const subscription = ipc.k8s.listWatch(
                 { context, spec },
-                (message) => {
+                (error, message) => {
+                    if (error) {
+                        watcher(error);
+                        return;
+                    }
                     if (message.update !== undefined) {
                         // Process the update.
                         const update = message.update as K8sObjectListUpdate<T>;
@@ -55,25 +59,35 @@ export function useK8sClient(kubeContext?: string): K8sClient {
                         switch (type) {
                             case "add":
                                 objectList = addListObject(objectList, object);
-                                watcher(objectList, update);
+                                watcher(undefined, {
+                                    list: objectList,
+                                    update,
+                                });
                                 break;
                             case "remove":
                                 objectList = deleteListObject(
                                     objectList,
                                     object
                                 );
-                                watcher(objectList, update);
+                                watcher(undefined, {
+                                    list: objectList,
+                                    update,
+                                });
                                 break;
                             case "update":
                                 objectList = updateListObject(
                                     objectList,
                                     object
                                 );
-                                watcher(objectList, update);
+                                watcher(undefined, {
+                                    list: objectList,
+                                    update,
+                                });
                                 break;
                         }
                     } else {
                         objectList = message.list as K8sObjectList<T>;
+                        watcher(undefined, { list: objectList });
                     }
                 }
             );

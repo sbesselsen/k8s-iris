@@ -5,6 +5,7 @@ import {
     K8sObjectList,
     K8sObjectListQuery,
     K8sObjectListUpdate,
+    K8sObjectListWatcher,
     K8sRemoveOptions,
     K8sRemoveStatus,
 } from "../k8s/client";
@@ -46,7 +47,7 @@ export type IpcCalls = {
                 context: string;
                 spec: K8sObjectListQuery;
             },
-            watcher: (update: K8sListUpdate<T>) => void
+            watcher: K8sObjectListWatcher<T>
         ): { stop: () => void };
     };
 };

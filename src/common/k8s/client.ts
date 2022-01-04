@@ -38,9 +38,14 @@ export type K8sObjectListUpdate<T extends K8sObject> = {
     object: T;
 };
 
+export type K8sObjectListWatcherMessage<T extends K8sObject = K8sObject> = {
+    list: K8sObjectList<T>;
+    update?: K8sObjectListUpdate<T>;
+};
+
 export type K8sObjectListWatcher<T extends K8sObject = K8sObject> = (
-    list: K8sObjectList<T>,
-    update?: K8sObjectListUpdate<T>
+    error: any | undefined,
+    message?: K8sObjectListWatcherMessage<T> | undefined
 ) => void;
 
 export type K8sContext = {

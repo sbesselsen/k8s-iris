@@ -9,7 +9,7 @@ export function ipcHandle<T, U>(
         try {
             return { value: await handler(data) };
         } catch (e) {
-            return { err: String(e) };
+            return { error: String(e) };
         }
     });
 }
@@ -20,7 +20,7 @@ export function ipcProvideSubscription<T, U>(
     name: string,
     handler: (
         data: T,
-        send: (data: U | undefined) => void
+        send: (error: any | undefined, data: U | undefined) => void
     ) => { stop: () => void }
 ): void {
     ipcMain.handle(prefixSubscriptionChannel(name), async (_, data) => {
@@ -33,14 +33,14 @@ export function ipcProvideSubscription<T, U>(
             // The subscriber says they are ready.
             const webContents = e.sender;
 
-            const { stop } = handler(data, (message) => {
+            const { stop } = handler(data, (error, message) => {
                 // We have received a message from the handler.
-                if (message === undefined) {
+                if (message === undefined && error === undefined) {
                     // This is the last message. Send a termination message down the chute.
                     webContents.send(subscriptionChannel, null);
                     return;
                 }
-                webContents.send(subscriptionChannel, { message });
+                webContents.send(subscriptionChannel, { error, message });
             });
 
             const webContentsDestroyListener = () => {

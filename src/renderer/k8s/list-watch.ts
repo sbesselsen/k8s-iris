@@ -3,14 +3,15 @@ import {
     K8sObject,
     K8sObjectList,
     K8sObjectListQuery,
-    K8sObjectListUpdate,
     K8sObjectListWatch,
+    K8sObjectListWatcherMessage,
 } from "../../common/k8s/client";
 import { useK8sClient } from "./client";
 
 export type K8sListWatchHookOptions<T extends K8sObject = K8sObject> = {
     kubeContext?: string;
-    onUpdate?: (list: K8sObjectList<T>, update: K8sObjectListUpdate<T>) => void;
+    onUpdate?: (message: K8sObjectListWatcherMessage<T>) => void;
+    onWatchError?: (error: any) => void;
 };
 
 const loadingValue: [boolean, undefined, undefined] = [
@@ -40,9 +41,19 @@ export function useK8sListWatch<T extends K8sObject = K8sObject>(
             try {
                 const listWatch = await client.listWatch<T>(
                     spec,
-                    (list, update) => {
-                        setValue([false, list, undefined]);
-                        options?.onUpdate?.(list, update);
+                    (error, message) => {
+                        console.log("Did receive", { error, message });
+                        if (error) {
+                            if (value[0] === true) {
+                                // We were still loading and now we get an error. Make this the result.
+                                setValue([false, undefined, error]);
+                            } else {
+                                options?.onWatchError?.(error);
+                            }
+                            return;
+                        }
+                        setValue([false, message.list, undefined]);
+                        options?.onUpdate?.(message);
                     }
                 );
                 if (myListWatchId !== listWatchId.current) {

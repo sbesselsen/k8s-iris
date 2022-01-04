@@ -5,10 +5,10 @@ function ipcInvoke<T, U>(name: string, data: T): Promise<U> {
     return ipcRenderer
         .invoke(prefixHandlerChannel(name), data)
         .then((result) => {
-            if (result.err) {
+            if (result.error) {
                 // Pass errors down by ourselves because .invoke() will include too much info in its error messages.
-                console.error(`Error invoking ${name}:`, result.err);
-                throw result.err;
+                console.error(`Error invoking ${name}:`, result.error);
+                throw result.error;
             }
             return result.value;
         });
@@ -25,7 +25,7 @@ export type IpcSubscription = {
 function ipcSubscribe<T, U>(
     name: string,
     data: T,
-    handler: (message: U) => void
+    handler: (error: any | undefined, message?: U | undefined) => void
 ): IpcSubscription {
     let stopped = false;
     let stopSubscription: () => void | undefined;
@@ -40,7 +40,7 @@ function ipcSubscribe<T, U>(
                 stopSubscription();
                 return;
             }
-            handler(data.message);
+            handler(data.error, data.message);
         };
         ipcRenderer.on(subscriptionChannel, listener);
         stopSubscription = () => {
@@ -64,6 +64,9 @@ function ipcSubscribe<T, U>(
 
 export function ipcSubscriber<T, U>(
     name: string
-): (data: T, handler: (message: U) => void) => IpcSubscription {
+): (
+    data: T,
+    handler: (error: any | undefined, message?: U | undefined) => void
+) => IpcSubscription {
     return (data, handler) => ipcSubscribe(name, data, handler);
 }
