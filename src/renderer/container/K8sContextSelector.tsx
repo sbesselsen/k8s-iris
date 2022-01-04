@@ -1,15 +1,36 @@
-import { Box, Button, Heading, Icon, Text, VStack } from "@chakra-ui/react";
-import React, { useCallback, useMemo } from "react";
+import {
+    Box,
+    Button,
+    Center,
+    ChakraComponent,
+    Heading,
+    Icon,
+    Spinner,
+    VStack,
+} from "@chakra-ui/react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { MdCheckCircle } from "react-icons/md";
 import { CloudK8sContextInfo } from "../../common/cloud/k8s";
 import { K8sContext } from "../../common/k8s/client";
+import { sleep } from "../../common/util/async";
 import { groupByKeys } from "../../common/util/group";
 import { k8sSmartCompare } from "../../common/util/sort";
 import { useK8sContext, useK8sContextStore } from "../context/k8s-context";
 import { useAsync } from "../hook/async";
 import { useIpc } from "../hook/ipc";
 
-export const K8sContextSelector: React.FC = () => {
+export const K8sContextSelector: ChakraComponent<
+    "div",
+    {
+        scrollToActiveItem?: boolean;
+    }
+> = (props) => {
+    const { scrollToActiveItem, ...boxProps } = {
+        scrollToActiveItem: true,
+        overflowY: "scroll",
+        ...props,
+    };
+
     const kubeContext = useK8sContext();
     const kubeContextStore = useK8sContextStore();
 
@@ -39,21 +60,22 @@ export const K8sContextSelector: React.FC = () => {
     );
 
     return (
-        <>
+        <Box {...boxProps}>
             {loading && (
-                <>
-                    <Text color="gray.500">{kubeContext}</Text>
-                </>
+                <Center>
+                    <Spinner marginY={4} />
+                </Center>
             )}
             {!loading && (
                 <K8sContextSelectorList
                     kubeContext={kubeContext}
                     contexts={allContexts}
                     cloudInfo={cloudInfo}
+                    scrollToActiveItem={scrollToActiveItem}
                     onSelect={onSelect}
                 />
             )}
-        </>
+        </Box>
     );
 };
 
@@ -61,6 +83,7 @@ type K8sContextSelectorListProps = {
     kubeContext: string;
     contexts: K8sContext[];
     cloudInfo: Record<string, CloudK8sContextInfo>;
+    scrollToActiveItem: boolean;
     onSelect: (context: string, requestNewWindow: boolean) => void;
 };
 
@@ -73,7 +96,8 @@ type ContextWithCloudInfo = K8sContext &
 const K8sContextSelectorList: React.FC<K8sContextSelectorListProps> = (
     props
 ) => {
-    const { kubeContext, contexts, cloudInfo, onSelect } = props;
+    const { kubeContext, contexts, cloudInfo, onSelect, scrollToActiveItem } =
+        props;
 
     const contextsWithCloudInfo: ContextWithCloudInfo[] = useMemo(
         () =>
@@ -125,6 +149,7 @@ const K8sContextSelectorList: React.FC<K8sContextSelectorListProps> = (
                                 key={context.name}
                                 kubeContext={kubeContext}
                                 contextWithCloudInfo={context}
+                                scrollToActiveItem={scrollToActiveItem}
                                 onSelect={onSelect}
                             />
                         ))}
@@ -171,8 +196,16 @@ const K8sContextSelectorItem: React.FC<{
     kubeContext: string;
     contextWithCloudInfo: ContextWithCloudInfo;
     onSelect?: (name: string, requestNewWindow: boolean) => void;
+    scrollToActiveItem: boolean;
 }> = (props) => {
-    const { kubeContext, contextWithCloudInfo: context, onSelect } = props;
+    const {
+        kubeContext,
+        contextWithCloudInfo: context,
+        onSelect,
+        scrollToActiveItem,
+    } = props;
+
+    const ref = useRef<HTMLElement>();
 
     const onClick = useCallback(
         (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -182,6 +215,15 @@ const K8sContextSelectorItem: React.FC<{
     );
 
     const isSelected = context.name === kubeContext;
+
+    useEffect(() => {
+        if (isSelected && scrollToActiveItem) {
+            ref.current?.scrollIntoView({
+                block: "center",
+            });
+        }
+    }, [isSelected, ref]);
+
     const localName = context.localClusterName ?? context.name;
     const icon = isSelected ? (
         <Icon as={MdCheckCircle} color="green.500" />
@@ -189,6 +231,7 @@ const K8sContextSelectorItem: React.FC<{
 
     return (
         <Button
+            ref={ref}
             onClick={onClick}
             bgColor="transparent"
             borderRadius={0}
