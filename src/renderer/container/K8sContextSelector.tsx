@@ -1,23 +1,28 @@
 import {
     Box,
-    Button,
     Center,
     ChakraComponent,
     Heading,
-    Icon,
+    Radio,
+    RadioGroup,
     Spinner,
+    Text,
     VStack,
 } from "@chakra-ui/react";
 import React, { useCallback, useEffect, useMemo, useRef } from "react";
-import { MdCheckCircle } from "react-icons/md";
 import { CloudK8sContextInfo } from "../../common/cloud/k8s";
 import { K8sContext } from "../../common/k8s/client";
-import { sleep } from "../../common/util/async";
 import { groupByKeys } from "../../common/util/group";
 import { k8sSmartCompare } from "../../common/util/sort";
 import { useK8sContext, useK8sContextStore } from "../context/k8s-context";
 import { useAsync } from "../hook/async";
 import { useIpc } from "../hook/ipc";
+
+type ContextWithCloudInfo = K8sContext &
+    Partial<CloudK8sContextInfo> & {
+        bestAccountId?: string;
+        bestAccountName?: string;
+    };
 
 export const K8sContextSelector: ChakraComponent<
     "div",
@@ -36,78 +41,32 @@ export const K8sContextSelector: ChakraComponent<
 
     const ipc = useIpc();
 
-    const [loadingContexts, allContexts] = useAsync(
+    const [_loadingContexts, contexts] = useAsync(
         () => ipc.k8s.listContexts(),
         []
     );
-    const [loadingCloudInfo, cloudInfo] = useAsync(
-        async () =>
-            allContexts ? ipc.cloud.augmentK8sContexts(allContexts) : {},
-        [allContexts]
+    const [_loadingCloudInfo, cloudInfo] = useAsync(
+        async () => (contexts ? ipc.cloud.augmentK8sContexts(contexts) : {}),
+        [contexts]
     );
 
-    const loading = loadingContexts || loadingCloudInfo;
-
-    const onSelect = useCallback(
-        (context: string, requestNewWindow: boolean) => {
-            if (requestNewWindow) {
-                ipc.app.createWindow({ context });
-            } else {
-                kubeContextStore.set(context);
-            }
+    const onMetaSelect = useCallback(
+        (context: string) => {
+            ipc.app.createWindow({ context });
         },
-        [kubeContextStore]
+        [ipc]
     );
-
-    return (
-        <Box {...boxProps}>
-            {loading && (
-                <Center>
-                    <Spinner marginY={4} />
-                </Center>
-            )}
-            {!loading && (
-                <K8sContextSelectorList
-                    kubeContext={kubeContext}
-                    contexts={allContexts}
-                    cloudInfo={cloudInfo}
-                    scrollToActiveItem={scrollToActiveItem}
-                    onSelect={onSelect}
-                />
-            )}
-        </Box>
-    );
-};
-
-type K8sContextSelectorListProps = {
-    kubeContext: string;
-    contexts: K8sContext[];
-    cloudInfo: Record<string, CloudK8sContextInfo>;
-    scrollToActiveItem: boolean;
-    onSelect: (context: string, requestNewWindow: boolean) => void;
-};
-
-type ContextWithCloudInfo = K8sContext &
-    Partial<CloudK8sContextInfo> & {
-        bestAccountId?: string;
-        bestAccountName?: string;
-    };
-
-const K8sContextSelectorList: React.FC<K8sContextSelectorListProps> = (
-    props
-) => {
-    const { kubeContext, contexts, cloudInfo, onSelect, scrollToActiveItem } =
-        props;
 
     const contextsWithCloudInfo: ContextWithCloudInfo[] = useMemo(
         () =>
-            contexts.map((context) => ({
+            contexts?.map((context) => ({
                 ...context,
-                ...(cloudInfo[context.name] ?? null),
-                bestAccountId: cloudInfo[context.name]?.accounts?.[0].accountId,
+                ...(cloudInfo?.[context.name] ?? null),
+                bestAccountId:
+                    cloudInfo?.[context.name]?.accounts?.[0].accountId,
                 bestAccountName:
-                    cloudInfo[context.name]?.accounts?.[0].accountName,
-            })),
+                    cloudInfo?.[context.name]?.accounts?.[0].accountName,
+            })) ?? [],
         [contexts, cloudInfo]
     );
 
@@ -139,24 +98,33 @@ const K8sContextSelectorList: React.FC<K8sContextSelectorListProps> = (
     );
 
     return (
-        <VStack spacing={0}>
-            {groupedContexts.map(([group, contexts]) => (
-                <Box width="100%">
-                    <K8sContextSelectorGroupHeading group={group} />
-                    <VStack spacing={0}>
-                        {contexts.map((context) => (
-                            <K8sContextSelectorItem
-                                key={context.name}
-                                kubeContext={kubeContext}
-                                contextWithCloudInfo={context}
-                                scrollToActiveItem={scrollToActiveItem}
-                                onSelect={onSelect}
-                            />
-                        ))}
-                    </VStack>
-                </Box>
-            ))}
-        </VStack>
+        <Box {...boxProps}>
+            <RadioGroup
+                value={kubeContext}
+                onChange={kubeContextStore.set as (value: string) => void}
+            >
+                <VStack spacing={0}>
+                    {groupedContexts.map(([group, contexts]) => (
+                        <Box width="100%">
+                            <K8sContextSelectorGroupHeading group={group} />
+                            <VStack spacing={1}>
+                                {contexts.map((context) => (
+                                    <K8sContextSelectorItem
+                                        key={context.name}
+                                        contextWithCloudInfo={context}
+                                        scrollToItem={
+                                            scrollToActiveItem &&
+                                            context.name === kubeContext
+                                        }
+                                        onMetaSelect={onMetaSelect}
+                                    />
+                                ))}
+                            </VStack>
+                        </Box>
+                    ))}
+                </VStack>
+            </RadioGroup>
+        </Box>
     );
 };
 
@@ -184,7 +152,6 @@ const K8sContextSelectorGroupHeading: React.FC<{
             fontSize="xs"
             marginTop={3}
             marginBottom={1}
-            marginStart={2}
             isTruncated
         >
             {headingParts.join(" • ")}
@@ -193,57 +160,51 @@ const K8sContextSelectorGroupHeading: React.FC<{
 };
 
 const K8sContextSelectorItem: React.FC<{
-    kubeContext: string;
     contextWithCloudInfo: ContextWithCloudInfo;
-    onSelect?: (name: string, requestNewWindow: boolean) => void;
-    scrollToActiveItem: boolean;
+    onMetaSelect?: (name: string) => void;
+    scrollToItem: boolean;
 }> = (props) => {
-    const {
-        kubeContext,
-        contextWithCloudInfo: context,
-        onSelect,
-        scrollToActiveItem,
-    } = props;
+    const { contextWithCloudInfo: context, onMetaSelect, scrollToItem } = props;
 
-    const ref = useRef<HTMLElement>();
+    const ref = useRef<HTMLInputElement>();
 
     const onClick = useCallback(
-        (e: React.MouseEvent<HTMLButtonElement>) => {
-            onSelect(context.name, e.getModifierState("Meta"));
+        (e: React.MouseEvent<HTMLDivElement>) => {
+            if (e.getModifierState("Meta")) {
+                onMetaSelect(context.name);
+                e.preventDefault();
+                e.stopPropagation();
+            }
         },
-        [onSelect, context]
+        [context, onMetaSelect]
     );
 
-    const isSelected = context.name === kubeContext;
-
     useEffect(() => {
-        if (isSelected && scrollToActiveItem) {
+        if (scrollToItem) {
             ref.current?.scrollIntoView({
                 block: "center",
             });
         }
-    }, [isSelected, ref]);
+    }, [ref, scrollToItem]);
 
     const localName = context.localClusterName ?? context.name;
-    const icon = isSelected ? (
-        <Icon as={MdCheckCircle} color="green.500" />
-    ) : null;
 
     return (
-        <Button
-            ref={ref}
-            onClick={onClick}
-            bgColor="transparent"
-            borderRadius={0}
-            isFullWidth={true}
-            size="xs"
-            padingY={2}
-            paddingStart={4}
-            fontWeight="normal"
+        <Box
+            onClickCapture={onClick}
             justifyContent="flex-start"
-            leftIcon={icon}
+            width="100%"
+            isTruncated
         >
-            {localName}
-        </Button>
+            <Radio
+                ref={ref}
+                bgColor="transparent"
+                fontWeight="normal"
+                justifyContent="flex-start"
+                value={context.name}
+            >
+                {localName}
+            </Radio>
+        </Box>
     );
 };

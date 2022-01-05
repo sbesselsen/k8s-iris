@@ -38,12 +38,16 @@ function createStore<T>(initialValue: T): InternalStore<T> {
             return value;
         },
         set(newValue: T | ((oldValue: T) => T)): T {
+            let oldValue = value;
             if (typeof newValue === "function") {
                 value = (newValue as (oldValue: T) => T)(value);
             } else {
                 value = newValue;
             }
-            listeners.forEach((l) => l(value));
+            if (oldValue !== value) {
+                listeners.forEach((l) => l(value));
+            }
+            return value;
         },
         subscribe(listener: (value: T) => void) {
             listeners.push(listener);
