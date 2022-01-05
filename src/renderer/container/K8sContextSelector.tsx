@@ -1,15 +1,12 @@
 import {
     Box,
-    Center,
     ChakraComponent,
     Heading,
     Radio,
     RadioGroup,
-    Spinner,
-    Text,
     VStack,
 } from "@chakra-ui/react";
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import React, { useCallback, useMemo } from "react";
 import { CloudK8sContextInfo } from "../../common/cloud/k8s";
 import { K8sContext } from "../../common/k8s/client";
 import { groupByKeys } from "../../common/util/group";
@@ -24,17 +21,8 @@ type ContextWithCloudInfo = K8sContext &
         bestAccountName?: string;
     };
 
-export const K8sContextSelector: ChakraComponent<
-    "div",
-    {
-        scrollToActiveItem?: boolean;
-    }
-> = (props) => {
-    const { scrollToActiveItem, ...boxProps } = {
-        scrollToActiveItem: true,
-        overflowY: "scroll",
-        ...props,
-    };
+export const K8sContextSelector: ChakraComponent<"div"> = (props) => {
+    const boxProps = props;
 
     const kubeContext = useK8sContext();
     const kubeContextStore = useK8sContextStore();
@@ -112,10 +100,6 @@ export const K8sContextSelector: ChakraComponent<
                                     <K8sContextSelectorItem
                                         key={context.name}
                                         contextWithCloudInfo={context}
-                                        scrollToItem={
-                                            scrollToActiveItem &&
-                                            context.name === kubeContext
-                                        }
                                         onMetaSelect={onMetaSelect}
                                     />
                                 ))}
@@ -162,11 +146,8 @@ const K8sContextSelectorGroupHeading: React.FC<{
 const K8sContextSelectorItem: React.FC<{
     contextWithCloudInfo: ContextWithCloudInfo;
     onMetaSelect?: (name: string) => void;
-    scrollToItem: boolean;
 }> = (props) => {
-    const { contextWithCloudInfo: context, onMetaSelect, scrollToItem } = props;
-
-    const ref = useRef<HTMLInputElement>();
+    const { contextWithCloudInfo: context, onMetaSelect } = props;
 
     const onClick = useCallback(
         (e: React.MouseEvent<HTMLDivElement>) => {
@@ -179,32 +160,11 @@ const K8sContextSelectorItem: React.FC<{
         [context, onMetaSelect]
     );
 
-    useEffect(() => {
-        if (scrollToItem) {
-            ref.current?.scrollIntoView({
-                block: "center",
-            });
-        }
-    }, [ref, scrollToItem]);
-
     const localName = context.localClusterName ?? context.name;
 
     return (
-        <Box
-            onClickCapture={onClick}
-            justifyContent="flex-start"
-            width="100%"
-            isTruncated
-        >
-            <Radio
-                ref={ref}
-                bgColor="transparent"
-                fontWeight="normal"
-                justifyContent="flex-start"
-                value={context.name}
-            >
-                {localName}
-            </Radio>
+        <Box onClickCapture={onClick} justifyContent="flex-start" width="100%">
+            <Radio value={context.name}>{localName}</Radio>
         </Box>
     );
 };
