@@ -2,7 +2,6 @@ import {
     Button,
     Heading,
     Icon,
-    IconButton,
     Input,
     InputGroup,
     InputRightElement,
@@ -20,6 +19,7 @@ import React, {
     ChangeEvent,
     KeyboardEvent,
     useCallback,
+    useEffect,
     useMemo,
     useRef,
     useState,
@@ -28,6 +28,7 @@ import { MdCheckCircle, MdClose } from "react-icons/md";
 import { CloudK8sContextInfo } from "../../common/cloud/k8s";
 import { K8sContext } from "../../common/k8s/client";
 import { groupByKeys } from "../../common/util/group";
+import { searchMatch } from "../../common/util/search";
 import { k8sSmartCompare } from "../../common/util/sort";
 import { useK8sContext, useK8sContextStore } from "../context/k8s-context";
 import { useAsync } from "../hook/async";
@@ -56,6 +57,8 @@ export const K8sContextSelector: React.FC = () => {
 
     const { isOpen, onOpen, onClose } = useDisclosure();
 
+    const [searchValue, setSearchValue] = useState("");
+
     const onSelectContext = useCallback(
         (context: string, requestNewWindow: boolean) => {
             if (requestNewWindow) {
@@ -67,6 +70,20 @@ export const K8sContextSelector: React.FC = () => {
         },
         [ipc]
     );
+
+    // Listen for Cmd + T.
+    // TODO: probably best to put this somewhere else
+    useEffect(() => {
+        const listener: any = (e: KeyboardEvent) => {
+            if (e.key === "t" && e.getModifierState("Meta")) {
+                onOpen();
+            }
+        };
+        window.addEventListener("keydown", listener);
+        return () => {
+            window.removeEventListener("keydown", listener);
+        };
+    }, [onOpen]);
 
     const contextsWithCloudInfo: ContextWithCloudInfo[] = useMemo(
         () =>
@@ -81,117 +98,10 @@ export const K8sContextSelector: React.FC = () => {
         [contexts, cloudInfo]
     );
 
-    const selectedContextWithCloudInfo = contextsWithCloudInfo.find(
-        (context) => context.name === kubeContext
-    );
-
-    const [searchValue, setSearchValue] = useState("");
-
-    const searchBoxRef = useRef<HTMLInputElement>();
-
-    const onSearchChange = useCallback(
-        (e: ChangeEvent<HTMLInputElement>) => {
-            setSearchValue(e.target.value);
-        },
-        [setSearchValue]
-    );
-
-    const onSearchKeyDown = useCallback(
-        (e: KeyboardEvent<HTMLInputElement>) => {
-            if (e.key === "Escape" && e.currentTarget.value) {
-                setSearchValue("");
-                e.stopPropagation();
-            }
-        },
-        [setSearchValue]
-    );
-
-    const clearSearch = useCallback(() => {
-        setSearchValue("");
-    }, [setSearchValue]);
-
-    return (
-        <>
-            <Button onClick={onOpen}>
-                {selectedContextWithCloudInfo?.localClusterName ?? kubeContext}
-            </Button>
-
-            <Modal
-                onClose={onClose}
-                isOpen={isOpen || !kubeContext}
-                initialFocusRef={searchBoxRef}
-            >
-                <ModalOverlay />
-                <ModalContent>
-                    <ModalHeader>Select context</ModalHeader>
-                    <ModalCloseButton />
-                    <ModalBody>
-                        <InputGroup>
-                            <Input
-                                placeholder="Search"
-                                ref={searchBoxRef}
-                                value={searchValue}
-                                onChange={onSearchChange}
-                                onKeyDown={onSearchKeyDown}
-                            />
-                            <InputRightElement>
-                                {searchValue && (
-                                    <Icon
-                                        aria-label="clear search box"
-                                        onClick={clearSearch}
-                                        as={MdClose}
-                                        color="gray.500"
-                                    />
-                                )}
-                            </InputRightElement>
-                        </InputGroup>
-                        <K8sContextSelectorList
-                            selectedContext={kubeContext}
-                            onSelectContext={onSelectContext}
-                            searchValue={searchValue}
-                            contextsWithCloudInfo={contextsWithCloudInfo ?? []}
-                        />
-                    </ModalBody>
-                    <ModalFooter>
-                        <Button onClick={onClose}>Cancel</Button>
-                    </ModalFooter>
-                </ModalContent>
-            </Modal>
-        </>
-    );
-};
-
-const K8sContextSelectorList: React.FC<{
-    contextsWithCloudInfo: ContextWithCloudInfo[];
-    onSelectContext: (context: string, requestNewWindow: boolean) => void;
-    searchValue: string;
-    selectedContext: string;
-}> = (props) => {
-    const {
-        contextsWithCloudInfo,
-        onSelectContext,
-        searchValue,
-        selectedContext,
-    } = props;
-
-    // TODO: filter after grouping
-    // TODO: filter smarter (otx => ota-taxvice etc.)
-    const filteredContexts = useMemo(
-        () =>
-            contextsWithCloudInfo.filter((context) => {
-                return (
-                    (context?.localClusterName ?? context.name)
-                        .toLocaleLowerCase()
-                        .indexOf(searchValue.toLocaleLowerCase()) !== -1
-                );
-            }),
-        [contextsWithCloudInfo, searchValue]
-    );
-
     const groupedContexts = useMemo(
         () =>
             groupByKeys(
-                filteredContexts,
+                contextsWithCloudInfo,
                 [
                     "cloudProvider",
                     "cloudService",
@@ -212,27 +122,153 @@ const K8sContextSelectorList: React.FC<{
                         ),
                     ] as [Partial<CloudK8sContextInfo>, ContextWithCloudInfo[]]
             ),
-        [filteredContexts]
+        [contextsWithCloudInfo]
     );
 
+    const filteredGroupedContexts = useMemo(
+        () =>
+            groupedContexts
+                .map(
+                    ([group, contexts]) =>
+                        [
+                            group,
+                            contexts.filter((context) =>
+                                searchMatch(
+                                    searchValue,
+                                    [
+                                        context.name,
+                                        context.cloudProvider,
+                                        context.cloudService,
+                                        context.region,
+                                        context.bestAccountId,
+                                        context.bestAccountName,
+                                        context.localClusterName,
+                                    ]
+                                        .filter((x) => x)
+                                        .join(" ")
+                                )
+                            ),
+                        ] as [
+                            Partial<ContextWithCloudInfo>,
+                            ContextWithCloudInfo[]
+                        ]
+                )
+                .filter(([_, contexts]) => contexts.length > 0),
+        [groupedContexts, searchValue]
+    );
+
+    const selectedContextWithCloudInfo = contextsWithCloudInfo.find(
+        (context) => context.name === kubeContext
+    );
+
+    const searchBoxRef = useRef<HTMLInputElement>();
+
+    const onSearchChange = useCallback(
+        (e: ChangeEvent<HTMLInputElement>) => {
+            setSearchValue(e.target.value);
+        },
+        [setSearchValue]
+    );
+
+    const onSearchKeyDown = useCallback(
+        (e: KeyboardEvent<HTMLInputElement>) => {
+            if (e.key === "Escape" && e.currentTarget.value) {
+                setSearchValue("");
+                e.stopPropagation();
+            }
+            if (e.key === "Enter") {
+                const filteredContexts = filteredGroupedContexts.flatMap(
+                    ([_, contexts]) => contexts
+                );
+                if (filteredContexts.length === 1) {
+                    // On press enter, if we have only one result, select it.
+                    onSelectContext(
+                        filteredContexts[0].name,
+                        e.getModifierState("Meta")
+                    );
+                }
+            }
+        },
+        [filteredGroupedContexts, onSelectContext, setSearchValue]
+    );
+
+    const clearSearch = useCallback(() => {
+        setSearchValue("");
+        searchBoxRef.current?.focus();
+    }, [setSearchValue]);
+
     return (
-        <VStack spacing={4} width="100%" alignItems="start">
-            {groupedContexts.map(([group, contexts]) => (
-                <>
-                    <VStack spacing={1} alignItems="start">
-                        <K8sContextSelectorGroupHeading group={group} />
-                        {contexts.map((context) => (
-                            <K8sContextSelectorItem
-                                key={context.name}
-                                isSelected={selectedContext === context.name}
-                                contextWithCloudInfo={context}
-                                onClick={onSelectContext}
+        <>
+            <Button onClick={onOpen}>
+                {selectedContextWithCloudInfo?.localClusterName ?? kubeContext}
+            </Button>
+
+            <Modal
+                onClose={onClose}
+                isOpen={isOpen || !kubeContext}
+                initialFocusRef={searchBoxRef}
+            >
+                <ModalOverlay />
+                <ModalContent>
+                    <ModalHeader>Select context</ModalHeader>
+                    <ModalCloseButton />
+                    <ModalBody>
+                        <InputGroup marginBottom={4}>
+                            <Input
+                                placeholder="Search"
+                                ref={searchBoxRef}
+                                value={searchValue}
+                                onChange={onSearchChange}
+                                onKeyDown={onSearchKeyDown}
                             />
-                        ))}
-                    </VStack>
-                </>
-            ))}
-        </VStack>
+                            <InputRightElement>
+                                {searchValue && (
+                                    <Icon
+                                        aria-label="clear search box"
+                                        onClick={clearSearch}
+                                        as={MdClose}
+                                        color="gray.500"
+                                    />
+                                )}
+                            </InputRightElement>
+                        </InputGroup>
+                        <VStack spacing={4} width="100%" alignItems="start">
+                            {filteredGroupedContexts.map(
+                                ([group, contexts]) => (
+                                    <>
+                                        <VStack
+                                            spacing={1}
+                                            width="100%"
+                                            alignItems="start"
+                                        >
+                                            <K8sContextSelectorGroupHeading
+                                                group={group}
+                                            />
+                                            {contexts.map((context) => (
+                                                <K8sContextSelectorItem
+                                                    key={context.name}
+                                                    isSelected={
+                                                        kubeContext ===
+                                                        context.name
+                                                    }
+                                                    contextWithCloudInfo={
+                                                        context
+                                                    }
+                                                    onClick={onSelectContext}
+                                                />
+                                            ))}
+                                        </VStack>
+                                    </>
+                                )
+                            )}
+                        </VStack>
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button onClick={onClose}>Cancel</Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
+        </>
     );
 };
 
@@ -287,6 +323,8 @@ const K8sContextSelectorItem: React.FC<{
             variant="link"
             fontWeight="normal"
             textColor="gray.800"
+            width="100%"
+            justifyContent="start"
             py={1}
             leftIcon={
                 isSelected ? (
