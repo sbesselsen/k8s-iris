@@ -1,12 +1,12 @@
 import {
-    Box,
+    Button,
     ChakraComponent,
     Heading,
-    Radio,
-    RadioGroup,
+    Icon,
     VStack,
 } from "@chakra-ui/react";
 import React, { useCallback, useMemo } from "react";
+import { MdCheckCircle } from "react-icons/md";
 import { CloudK8sContextInfo } from "../../common/cloud/k8s";
 import { K8sContext } from "../../common/k8s/client";
 import { groupByKeys } from "../../common/util/group";
@@ -38,9 +38,13 @@ export const K8sContextSelector: ChakraComponent<"div"> = (props) => {
         [contexts]
     );
 
-    const onMetaSelect = useCallback(
-        (context: string) => {
-            ipc.app.createWindow({ context });
+    const onClick = useCallback(
+        (context: string, requestNewWindow: boolean) => {
+            if (requestNewWindow) {
+                ipc.app.createWindow({ context });
+            } else {
+                kubeContextStore.set(context);
+            }
         },
         [ipc]
     );
@@ -86,29 +90,23 @@ export const K8sContextSelector: ChakraComponent<"div"> = (props) => {
     );
 
     return (
-        <Box {...boxProps}>
-            <RadioGroup
-                value={kubeContext}
-                onChange={kubeContextStore.set as (value: string) => void}
-            >
-                <VStack spacing={0}>
-                    {groupedContexts.map(([group, contexts]) => (
-                        <Box width="100%">
-                            <K8sContextSelectorGroupHeading group={group} />
-                            <VStack spacing={1}>
-                                {contexts.map((context) => (
-                                    <K8sContextSelectorItem
-                                        key={context.name}
-                                        contextWithCloudInfo={context}
-                                        onMetaSelect={onMetaSelect}
-                                    />
-                                ))}
-                            </VStack>
-                        </Box>
-                    ))}
-                </VStack>
-            </RadioGroup>
-        </Box>
+        <VStack spacing={4} width="100%" alignItems="start">
+            {groupedContexts.map(([group, contexts]) => (
+                <>
+                    <VStack spacing={1} alignItems="start">
+                        <K8sContextSelectorGroupHeading group={group} />
+                        {contexts.map((context) => (
+                            <K8sContextSelectorItem
+                                key={context.name}
+                                currentContext={kubeContext}
+                                contextWithCloudInfo={context}
+                                onClick={onClick}
+                            />
+                        ))}
+                    </VStack>
+                </>
+            ))}
+        </VStack>
     );
 };
 
@@ -134,8 +132,6 @@ const K8sContextSelectorGroupHeading: React.FC<{
             textTransform="uppercase"
             size="xs"
             fontSize="xs"
-            marginTop={3}
-            marginBottom={1}
             isTruncated
         >
             {headingParts.join(" • ")}
@@ -144,27 +140,35 @@ const K8sContextSelectorGroupHeading: React.FC<{
 };
 
 const K8sContextSelectorItem: React.FC<{
+    currentContext: string;
     contextWithCloudInfo: ContextWithCloudInfo;
-    onMetaSelect?: (name: string) => void;
+    onClick?: (name: string, requestNewWindow: boolean) => void;
 }> = (props) => {
-    const { contextWithCloudInfo: context, onMetaSelect } = props;
+    const { contextWithCloudInfo: context, currentContext, onClick } = props;
 
-    const onClick = useCallback(
-        (e: React.MouseEvent<HTMLDivElement>) => {
-            if (e.getModifierState("Meta")) {
-                onMetaSelect(context.name);
-                e.preventDefault();
-                e.stopPropagation();
-            }
+    const onButtonClick = useCallback(
+        (e: React.MouseEvent) => {
+            onClick(context.name, e.getModifierState("Meta"));
         },
-        [context, onMetaSelect]
+        [context, onClick]
     );
 
     const localName = context.localClusterName ?? context.name;
 
     return (
-        <Box onClickCapture={onClick} justifyContent="flex-start" width="100%">
-            <Radio value={context.name}>{localName}</Radio>
-        </Box>
+        <Button
+            onClick={onButtonClick}
+            variant="link"
+            fontWeight="normal"
+            textColor="gray.800"
+            py={1}
+            leftIcon={
+                currentContext === context.name ? (
+                    <Icon as={MdCheckCircle} color="green.500" />
+                ) : null
+            }
+        >
+            {localName}
+        </Button>
     );
 };
