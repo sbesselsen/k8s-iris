@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { useK8sContext } from "../../context/k8s-context";
 
-import { VStack } from "@chakra-ui/react";
+import { Breadcrumb, BreadcrumbItem, VStack } from "@chakra-ui/react";
 import { K8sContextSelector } from "../K8sContextSelector";
 import { K8sNamespaceSelector } from "../K8sNamespaceSelector";
 
@@ -12,9 +12,15 @@ export const RootAppUI: React.FunctionComponent = () => {
     }, [kubeContext]);
 
     return (
-        <VStack spacing={4}>
-            <K8sContextSelector />
-            <K8sNamespaceSelector />
+        <VStack spacing={4} alignItems="start">
+            <Breadcrumb>
+                <BreadcrumbItem>
+                    <K8sContextSelector />
+                </BreadcrumbItem>
+                <BreadcrumbItem>
+                    <K8sNamespaceSelector />
+                </BreadcrumbItem>
+            </Breadcrumb>
         </VStack>
     );
 };

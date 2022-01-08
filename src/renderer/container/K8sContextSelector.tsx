@@ -1,6 +1,6 @@
-import { Box, ChakraComponent, Heading } from "@chakra-ui/react";
-import { Select } from "chakra-react-select";
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import { Text } from "@chakra-ui/react";
+import { ChakraStylesConfig, Select } from "chakra-react-select";
+import React, { Fragment, useCallback, useMemo } from "react";
 import { CloudK8sContextInfo } from "../../common/cloud/k8s";
 import { K8sContext } from "../../common/k8s/client";
 import { groupByKeys } from "../../common/util/group";
@@ -19,12 +19,11 @@ type ContextOption = K8sContext &
         label: string;
     };
 
-export const K8sContextSelector: ChakraComponent<"div", {}> = (props) => {
-    const boxProps = {
-        width: "400px",
-        ...props,
-    };
+const selectComponents = {
+    DropdownIndicator: null,
+};
 
+export const K8sContextSelector: React.FC = () => {
     const kubeContext = useK8sContext();
     const kubeContextStore = useK8sContextStore();
 
@@ -100,18 +99,60 @@ export const K8sContextSelector: ChakraComponent<"div", {}> = (props) => {
         [kubeContextStore]
     );
 
+    const chakraStyles: ChakraStylesConfig = useMemo(
+        () => ({
+            control: (provided, _state) => {
+                const selectedValueText = (
+                    selectValue?.localClusterName ??
+                    selectValue?.name ??
+                    ""
+                ).length;
+                return {
+                    ...provided,
+                    border: 0,
+                    minWidth: selectedValueText + "em",
+                };
+            },
+            menu: (provided, _state) => {
+                return {
+                    ...provided,
+                    minWidth: "min(250px, 100vw)",
+                };
+            },
+        }),
+        [selectValue]
+    );
+
     return (
-        <Box {...boxProps}>
-            <Heading>{selectValue?.localClusterName ?? kubeContext}</Heading>
+        <Fragment>
             <Select
+                size="sm"
                 value={selectValue}
                 onChange={onChangeSelect}
                 options={groupedContextOptions}
                 filterOption={filterOption}
+                formatGroupLabel={formatGroupLabel}
+                chakraStyles={chakraStyles}
+                components={selectComponents}
             ></Select>
-        </Box>
+        </Fragment>
     );
 };
+
+function formatGroupLabel(props: { label: string }): React.ReactNode {
+    const { label } = props;
+    return (
+        <Text
+            color="gray.500"
+            fontWeight="semibold"
+            letterSpacing="wide"
+            fontSize="xs"
+            textTransform="uppercase"
+        >
+            {label}
+        </Text>
+    );
+}
 
 function groupLabel(group: Partial<ContextOption>): string {
     return [
