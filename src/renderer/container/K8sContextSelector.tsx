@@ -124,18 +124,16 @@ export const K8sContextSelector: React.FC = () => {
     );
 
     return (
-        <Fragment>
-            <Select
-                size="sm"
-                value={selectValue}
-                onChange={onChangeSelect}
-                options={groupedContextOptions}
-                filterOption={filterOption}
-                formatGroupLabel={formatGroupLabel}
-                chakraStyles={chakraStyles}
-                components={selectComponents}
-            ></Select>
-        </Fragment>
+        <Select
+            size="sm"
+            value={selectValue}
+            onChange={onChangeSelect}
+            options={groupedContextOptions}
+            filterOption={filterOption}
+            formatGroupLabel={formatGroupLabel}
+            chakraStyles={chakraStyles}
+            components={selectComponents}
+        />
     );
 };
 
