@@ -53,16 +53,22 @@ export const wireK8sClientIpc = (clientManager: K8sClientManager): void => {
             let stopped = false;
             let subscription: K8sObjectListWatch | undefined;
             (async () => {
-                subscription = await clientManager
-                    .clientForContext(context)
-                    .listWatch(spec, (error, message) => {
-                        if (stopped) {
-                            // Race condition: stop() was called before the first update. Stop here.
-                            subscription.stop();
-                            return;
-                        }
-                        send(error, message);
-                    });
+                try {
+                    subscription = await clientManager
+                        .clientForContext(context)
+                        .listWatch(spec, (error, message) => {
+                            if (stopped) {
+                                // Race condition: stop() was called before the first update. Stop here.
+                                subscription.stop();
+                                return;
+                            }
+                            send(error, message);
+                        });
+                } catch (e) {
+                    // Send the error to the client.
+                    send(e, undefined);
+                    stopped = true;
+                }
             })();
             return {
                 stop() {

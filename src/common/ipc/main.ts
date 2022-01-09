@@ -29,19 +29,26 @@ export function ipcProvideSubscription<T, U>(
             `${name}:${subscriptionChannelId++}`
         );
 
+        let stop = () => {};
+
         ipcMain.once(`${subscriptionChannel}:start`, (e) => {
             // The subscriber says they are ready.
             const webContents = e.sender;
 
-            const { stop } = handler(data, (error, message) => {
-                // We have received a message from the handler.
-                if (message === undefined && error === undefined) {
-                    // This is the last message. Send a termination message down the chute.
-                    webContents.send(subscriptionChannel, null);
-                    return;
-                }
-                webContents.send(subscriptionChannel, { error, message });
-            });
+            try {
+                const handlerResult = handler(data, (error, message) => {
+                    // We have received a message from the handler.
+                    if (message === undefined && error === undefined) {
+                        // This is the last message. Send a termination message down the chute.
+                        webContents.send(subscriptionChannel, null);
+                        return;
+                    }
+                    webContents.send(subscriptionChannel, { error, message });
+                });
+                stop = handlerResult.stop;
+            } catch (e) {
+                webContents.send(subscriptionChannel, { error: e });
+            }
 
             const webContentsDestroyListener = () => {
                 stop();
