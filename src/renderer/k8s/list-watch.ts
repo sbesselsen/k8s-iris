@@ -32,44 +32,28 @@ export function useK8sListWatch<T extends K8sObject = K8sObject>(
 
     const client = useK8sClient(options?.kubeContext);
     const listWatchRef = useRef<K8sObjectListWatch | undefined>();
-    const listWatchId = useRef(0);
 
     useEffect(() => {
-        const myListWatchId = ++listWatchId.current;
         setValue(loadingValue);
-        (async () => {
-            try {
-                const listWatch = await client.listWatch<T>(
-                    spec,
-                    (error, message) => {
-                        if (error) {
-                            if (value[0] === true) {
-                                // We were still loading and now we get an error. Make this the result.
-                                setValue([false, undefined, error]);
-                            } else {
-                                options?.onWatchError?.(error);
-                            }
-                            return;
-                        }
-                        setValue([false, message.list, undefined]);
-                        options?.onUpdate?.(message);
+        try {
+            const listWatch = client.listWatch<T>(spec, (error, message) => {
+                if (error) {
+                    if (value[0] === true) {
+                        // We were still loading and now we get an error. Make this the result.
+                        setValue([false, undefined, error]);
+                    } else {
+                        options?.onWatchError?.(error);
                     }
-                );
-                if (myListWatchId !== listWatchId.current) {
-                    // This request is already expired.
-                    listWatch.stop();
                     return;
                 }
+                setValue([false, message.list, undefined]);
+                options?.onUpdate?.(message);
+            });
 
-                listWatchRef.current = listWatch;
-            } catch (e) {
-                if (myListWatchId !== listWatchId.current) {
-                    // This request is already expired.
-                    return;
-                }
-                setValue([false, undefined, e]);
-            }
-        })();
+            listWatchRef.current = listWatch;
+        } catch (e) {
+            setValue([false, undefined, e]);
+        }
         return () => {
             listWatchRef.current?.stop();
         };

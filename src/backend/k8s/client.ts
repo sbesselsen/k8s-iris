@@ -334,7 +334,10 @@ export function createClient(
                 spec.kind
             );
             informer.start();
-        })();
+        })().catch((e) => {
+            // Send error to listener.
+            watcher(e);
+        });
 
         return {
             stop() {

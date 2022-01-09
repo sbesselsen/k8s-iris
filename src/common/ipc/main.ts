@@ -43,7 +43,11 @@ export function ipcProvideSubscription<T, U>(
                         webContents.send(subscriptionChannel, null);
                         return;
                     }
-                    webContents.send(subscriptionChannel, { error, message });
+                    const err = error ? String(error) : undefined;
+                    webContents.send(subscriptionChannel, {
+                        error: err,
+                        message,
+                    });
                 });
                 stop = handlerResult.stop;
             } catch (e) {

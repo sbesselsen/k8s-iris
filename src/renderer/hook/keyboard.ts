@@ -58,7 +58,7 @@ export function useModifierKeyRef(key: string): { current: boolean } {
     return ref;
 }
 
-export function useModifierKeyState(key: string): boolean {
+export function useModifierKey(key: string): boolean {
     const [pressed, setPressed] = useState(false);
     useModifierKeyListener(key, setPressed);
     return pressed;

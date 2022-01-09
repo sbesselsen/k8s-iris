@@ -33,8 +33,6 @@ export const K8sNamespaceSelector: React.FunctionComponent = () => {
         [namespacesList, selectedNamespaces]
     );
 
-    console.log({ namespaceOptions });
-
     const selectValues = useMemo(
         () =>
             namespaceOptions.filter((ns) =>
