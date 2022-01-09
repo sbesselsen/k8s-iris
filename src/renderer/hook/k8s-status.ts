@@ -43,14 +43,12 @@ export const useK8sStatusListener = (listener: (status: K8sStatus) => void) => {
 
     if (prevKubeContextRef.current !== kubeContext) {
         // When switching kubeContext, reset the status.
-        console.log("Reset status");
         prevKubeContextRef.current = kubeContext;
         notifyListener(unknownStatus);
     }
 
     const onUpdate = useCallback(
         (message: K8sObjectListWatcherMessage) => {
-            console.log({ onUpdate: message });
             notifyListener(okStatus);
         },
         [notifyListener]
@@ -109,6 +107,5 @@ export const useK8sStatus = (): K8sStatus => {
         [setStatus]
     );
     useK8sStatusListener(listener);
-    console.log({ status });
     return status;
 };
