@@ -11,6 +11,7 @@ import {
     K8sObjectListQuery,
     K8sObjectListWatch,
     K8sObjectListWatcher,
+    K8sObjectListWatcherMessage,
     K8sRemoveOptions,
     K8sRemoveStatus,
 } from "../../common/k8s/client";
@@ -20,6 +21,7 @@ import {
     deleteListObject,
     updateListObject,
 } from "../../common/k8s/util";
+import { deepEqual } from "../../common/util/deep-equal";
 
 const defaultRemoveOptions: K8sRemoveOptions = {
     waitForCompletion: true,
@@ -220,113 +222,204 @@ export function createClient(
         });
     };
 
-    const listWatch = async <T extends K8sObject = K8sObject>(
+    const baseListWatch = <T extends K8sObject = K8sObject>(
         spec: K8sObjectListQuery,
         watcher: K8sObjectListWatcher<T>
-    ): Promise<K8sObjectListWatch> => {
-        const path = await listPath(spec);
+    ): K8sObjectListWatch => {
         let stopped = false;
+        let informer: k8s.Informer<T> | undefined;
 
-        let list: K8sObjectList<T> = {
-            apiVersion: spec.apiVersion,
-            kind: spec.kind,
-            items: [],
-        };
-
-        const opts: any = {};
-        await kubeConfig.applyToRequest(opts);
-
-        const listFn = () => {
-            return new Promise((resolve, reject) => {
-                request.get(
-                    `${kubeConfig.getCurrentCluster().server}/${path}`,
-                    opts,
-                    (err, response, body) => {
-                        if (err) {
-                            reject(err);
-                        } else {
-                            try {
-                                const data = JSON.parse(body);
-                                if (
-                                    data &&
-                                    data.kind === "Status" &&
-                                    data.status === "Failure"
-                                ) {
-                                    reject(data);
-                                    return;
-                                }
-                                list.items = data.items;
-                                watcher(undefined, { list: data });
-                                resolve({ response, body: data });
-                            } catch (e) {
-                                watcher(e);
-                                reject(e);
-                            }
-                        }
-                    }
-                );
-            });
-        };
-
-        const informer = k8s.makeInformer(
-            kubeConfig,
-            `/${path}`,
-            listFn as any
-        );
-
-        informer.on("add", (obj: any) => {
-            const newList = addListObject(list, obj);
-            if (list === newList) {
-                // No rerender needed.
-                return;
-            }
-            watcher(undefined, {
-                list: newList,
-                update: {
-                    type: "add",
-                    object: obj as any,
-                },
-            });
-        });
-        informer.on("update", (obj: any) => {
-            list = updateListObject(list, obj);
-            watcher(undefined, {
-                list,
-                update: {
-                    type: "update",
-                    object: obj,
-                },
-            });
-        });
-        informer.on("delete", (obj: any) => {
-            list = deleteListObject(list, obj);
-            watcher(undefined, {
-                list,
-                update: {
-                    type: "remove",
-                    object: obj,
-                },
-            });
-        });
-        informer.on("error", (err: KubernetesObject) => {
+        (async () => {
+            const path = await listPath(spec);
             if (stopped) {
                 return;
             }
-            watcher(err);
-            console.error(err);
-            // TODO: make this configurable or handlable somehow?
-            // Restart informer after 5sec.
-            setTimeout(() => {
-                informer.start();
-            }, 5000);
-        });
 
-        informer.start();
+            let list: K8sObjectList<T> = {
+                apiVersion: spec.apiVersion,
+                kind: spec.kind,
+                items: [],
+            };
+
+            const opts: any = {};
+            await kubeConfig.applyToRequest(opts);
+            if (stopped) {
+                return;
+            }
+
+            const listFn = () => {
+                return new Promise((resolve, reject) => {
+                    request.get(
+                        `${kubeConfig.getCurrentCluster().server}/${path}`,
+                        opts,
+                        (err, response, body) => {
+                            if (err) {
+                                reject(err);
+                            } else {
+                                try {
+                                    const data = JSON.parse(body);
+                                    if (
+                                        data &&
+                                        data.kind === "Status" &&
+                                        data.status === "Failure"
+                                    ) {
+                                        reject(data);
+                                        return;
+                                    }
+                                    list.items = data.items;
+                                    watcher(undefined, { list: data });
+                                    resolve({ response, body: data });
+                                } catch (e) {
+                                    watcher(e);
+                                    reject(e);
+                                }
+                            }
+                        }
+                    );
+                });
+            };
+
+            informer = k8s.makeInformer(kubeConfig, `/${path}`, listFn as any);
+
+            informer.on("add", (obj: any) => {
+                const newList = addListObject(list, obj);
+                if (list === newList) {
+                    // No rerender needed.
+                    return;
+                }
+                watcher(undefined, {
+                    list: newList,
+                    update: {
+                        type: "add",
+                        object: obj as any,
+                    },
+                });
+            });
+            informer.on("update", (obj: any) => {
+                list = updateListObject(list, obj);
+                watcher(undefined, {
+                    list,
+                    update: {
+                        type: "update",
+                        object: obj,
+                    },
+                });
+            });
+            informer.on("delete", (obj: any) => {
+                list = deleteListObject(list, obj);
+                watcher(undefined, {
+                    list,
+                    update: {
+                        type: "remove",
+                        object: obj,
+                    },
+                });
+            });
+            informer.on("error", (err: KubernetesObject) => {
+                if (stopped) {
+                    return;
+                }
+                watcher(err);
+                console.error(err);
+                // TODO: make this configurable or handlable somehow?
+                // Restart informer after 5sec.
+                setTimeout(() => {
+                    informer.start();
+                }, 5000);
+            });
+
+            console.log(
+                "Starting listwatch",
+                kubeConfig.getCurrentContext(),
+                spec.kind
+            );
+            informer.start();
+        })();
 
         return {
             stop() {
                 stopped = true;
-                informer.stop();
+                console.log(
+                    "Stopping listwatch",
+                    kubeConfig.getCurrentContext(),
+                    spec.kind
+                );
+                informer?.stop();
+            },
+        };
+    };
+
+    type ReusableListWatchHandle<T extends K8sObject> = {
+        spec: K8sObjectListQuery;
+        watchers: Array<K8sObjectListWatcher<T>>;
+        lastMessage?: {
+            error: any | undefined;
+            message: K8sObjectListWatcherMessage<T> | undefined;
+        };
+        stop: () => void;
+    };
+    type ReusableListWatchHandles = Record<
+        string,
+        Array<ReusableListWatchHandle<K8sObject>>
+    >;
+    const reusableListWatchHandles: ReusableListWatchHandles = {};
+
+    const listWatch = <T extends K8sObject = K8sObject>(
+        spec: K8sObjectListQuery,
+        watcher: K8sObjectListWatcher<T>
+    ): K8sObjectListWatch => {
+        const key = `${spec.apiVersion}::${spec.kind}::${spec.namespace ?? ""}`;
+
+        if (!reusableListWatchHandles[key]) {
+            reusableListWatchHandles[key] = [];
+        }
+
+        let reusableHandle = reusableListWatchHandles[key].find((handle) =>
+            deepEqual(handle.spec, spec)
+        );
+        if (!reusableHandle) {
+            // Create a reusable handle.
+            let listWatch: K8sObjectListWatch;
+            const handle: ReusableListWatchHandle<K8sObject> = {
+                spec,
+                watchers: [],
+                stop() {
+                    listWatch?.stop();
+                },
+            };
+            listWatch = baseListWatch(spec, (error, message) => {
+                handle.lastMessage = { error, message: message };
+                handle.watchers.forEach((h) => h(error, message));
+            });
+            reusableListWatchHandles[key].push(handle);
+            reusableHandle = handle;
+        }
+
+        // Reuse the existing handle.
+        const { watchers, lastMessage } = reusableHandle;
+        if (lastMessage) {
+            // Send the last received message to the watcher.
+            const { error, message } = lastMessage;
+            if (error) {
+                watcher(error);
+            } else {
+                watcher(error, message as any);
+            }
+        }
+        watchers.push(watcher as any);
+        return {
+            stop() {
+                // Remove the watcher.
+                reusableHandle.watchers = reusableHandle.watchers.filter(
+                    (w) => w !== watcher
+                );
+                if (reusableHandle.watchers.length === 0) {
+                    // This was the last watcher. Stop watching and remove the reusable handle.
+                    reusableHandle.stop();
+                    reusableListWatchHandles[key] = reusableListWatchHandles[
+                        key
+                    ].filter((handle) => handle !== reusableHandle);
+                }
             },
         };
     };

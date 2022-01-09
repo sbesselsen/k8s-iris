@@ -70,5 +70,5 @@ export type K8sClient = {
     listWatch<T extends K8sObject = K8sObject>(
         spec: K8sObjectListQuery,
         watcher: K8sObjectListWatcher<T>
-    ): Promise<K8sObjectListWatch>;
+    ): K8sObjectListWatch;
 };

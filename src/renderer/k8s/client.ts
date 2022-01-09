@@ -38,7 +38,7 @@ export function useK8sClient(kubeContext?: string): K8sClient {
         const list = <T extends K8sObject = K8sObject>(
             spec: K8sObjectListQuery
         ) => ipc.k8s.list<T>({ context, spec });
-        const listWatch = async <T extends K8sObject = K8sObject>(
+        const listWatch = <T extends K8sObject = K8sObject>(
             spec: K8sObjectListQuery,
             watcher: K8sObjectListWatcher<T>
         ) => {

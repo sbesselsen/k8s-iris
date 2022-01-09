@@ -47,7 +47,9 @@ export function ipcProvideSubscription<T, U>(
                 });
                 stop = handlerResult.stop;
             } catch (e) {
+                // First send the error down the chute, then the termination message.
                 webContents.send(subscriptionChannel, { error: e });
+                webContents.send(subscriptionChannel, null);
             }
 
             const webContentsDestroyListener = () => {
