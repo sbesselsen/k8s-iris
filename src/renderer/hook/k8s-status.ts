@@ -55,7 +55,6 @@ export const useK8sStatusListener = (listener: (status: K8sStatus) => void) => {
     );
     const onWatchError = useCallback(
         (error: any) => {
-            console.log({ onWatchError: error });
             notifyListener({
                 status: "error",
                 error,
