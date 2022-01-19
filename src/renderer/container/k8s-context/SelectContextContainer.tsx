@@ -1,15 +1,15 @@
 import { Text } from "@chakra-ui/react";
 import { ChakraStylesConfig, Select } from "chakra-react-select";
-import React, { Fragment, useCallback, useMemo } from "react";
-import { CloudK8sContextInfo } from "../../common/cloud/k8s";
-import { K8sContext } from "../../common/k8s/client";
-import { groupByKeys } from "../../common/util/group";
-import { searchMatch } from "../../common/util/search";
-import { k8sSmartCompare } from "../../common/util/sort";
-import { useK8sContext, useK8sContextStore } from "../context/k8s-context";
-import { useAsync } from "../hook/async";
-import { useIpc } from "../hook/ipc";
-import { useModifierKeyRef } from "../hook/keyboard";
+import React, { useCallback, useMemo } from "react";
+import { CloudK8sContextInfo } from "../../../common/cloud/k8s";
+import { K8sContext } from "../../../common/k8s/client";
+import { groupByKeys } from "../../../common/util/group";
+import { searchMatch } from "../../../common/util/search";
+import { k8sSmartCompare } from "../../../common/util/sort";
+import { useAsync } from "../../hook/async";
+import { useIpc } from "../../hook/ipc";
+import { useModifierKeyRef } from "../../hook/keyboard";
+import { sleep } from "../../../common/util/async";
 
 type ContextOption = K8sContext &
     Partial<CloudK8sContextInfo> & {
@@ -23,20 +23,29 @@ const selectComponents = {
     DropdownIndicator: null,
 };
 
-export const K8sContextSelector: React.FC = () => {
-    const kubeContext = useK8sContext();
-    const kubeContextStore = useK8sContextStore();
+type SelectContextContainerProps = {
+    chakraStyles?: ChakraStylesConfig;
+    selectedContext?: string | undefined;
+    onSelectContext?: (context: string, requestNewWindow: boolean) => void;
+};
+
+export const SelectContextContainer: React.FC<SelectContextContainerProps> = (
+    props
+) => {
+    const { chakraStyles, onSelectContext, selectedContext } = props;
 
     const ipc = useIpc();
 
-    const [_loadingContexts, contexts] = useAsync(
+    const [isLoadingContexts, contexts] = useAsync(
         () => ipc.k8s.listContexts(),
         []
     );
-    const [_loadingCloudInfo, cloudInfo] = useAsync(
-        async () => (contexts ? ipc.cloud.augmentK8sContexts(contexts) : {}),
-        [contexts]
-    );
+    const [isLoadingCloudInfo, cloudInfo] = useAsync(async () => {
+        await sleep(2000);
+        return contexts ? ipc.cloud.augmentK8sContexts(contexts) : {};
+    }, [contexts]);
+
+    const isLoading = isLoadingContexts || isLoadingCloudInfo;
 
     const metaKeyPressedRef = useModifierKeyRef("Meta");
 
@@ -81,58 +90,32 @@ export const K8sContextSelector: React.FC = () => {
     );
 
     const selectValue = useMemo(
-        () => contextOptions.find((context) => context.value === kubeContext),
-        [contextOptions, kubeContext]
+        () =>
+            contextOptions.find((context) => context.value === selectedContext),
+        [contextOptions, selectedContext]
     );
     const onChangeSelect = useCallback(
         (value: ContextOption | null | undefined) => {
             if (value) {
-                if (metaKeyPressedRef.current) {
-                    ipc.app.createWindow({
-                        context: value.name,
-                    });
-                } else {
-                    kubeContextStore.set(value.name);
-                }
+                onSelectContext?.(value.name, metaKeyPressedRef.current);
             }
         },
-        [kubeContextStore]
-    );
-
-    const chakraStyles: ChakraStylesConfig = useMemo(
-        () => ({
-            control: (provided, _state) => {
-                const selectedValueText = (
-                    selectValue?.localClusterName ??
-                    selectValue?.name ??
-                    ""
-                ).length;
-                return {
-                    ...provided,
-                    border: 0,
-                    minWidth: selectedValueText + "em",
-                };
-            },
-            menu: (provided, _state) => {
-                return {
-                    ...provided,
-                    minWidth: "min(250px, 100vw)",
-                };
-            },
-        }),
-        [selectValue]
+        [onSelectContext]
     );
 
     return (
         <Select
-            size="sm"
+            selectedOptionStyle="check"
             value={selectValue}
             onChange={onChangeSelect}
-            options={groupedContextOptions}
+            options={isLoading ? [] : groupedContextOptions}
+            autoFocus={true}
+            menuIsOpen={true}
             filterOption={filterOption}
             formatGroupLabel={formatGroupLabel}
-            chakraStyles={chakraStyles}
             components={selectComponents}
+            chakraStyles={chakraStyles}
+            isLoading={isLoading}
         />
     );
 };
