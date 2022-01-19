@@ -56,6 +56,12 @@ export const K8sNamespaceSelector: React.FunctionComponent = () => {
                     minWidth: "min(250px, 100vw)",
                 };
             },
+            multiValue: (provided, _state) => {
+                return {
+                    ...provided,
+                    alignItems: "start",
+                };
+            },
         }),
         []
     );
