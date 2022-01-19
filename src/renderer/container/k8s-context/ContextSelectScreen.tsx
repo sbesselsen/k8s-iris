@@ -1,16 +1,14 @@
 import { Box, Container, Heading, VStack } from "@chakra-ui/react";
 import { ChakraStylesConfig } from "chakra-react-select";
 import { useCallback, useMemo } from "react";
-import { SelectContextContainer } from "./SelectContextContainer";
-import { useK8sContext, useK8sContextStore } from "../../context/k8s-context";
+import { ContextSelect } from "./ContextSelect";
+import { useK8sContext } from "../../context/k8s-context";
 import { useIpc } from "../../hook/ipc";
-import { usePageTitle } from "../../hook/page-title";
+import { useAppRouteActions } from "../../context/route";
 
-export const SelectContextScreen = () => {
-    usePageTitle();
-
+export const ContextSelectScreen = () => {
     const kubeContext = useK8sContext();
-    const kubeContextStore = useK8sContextStore();
+    const { selectContext, toggleContextSelector } = useAppRouteActions();
 
     const ipc = useIpc();
 
@@ -21,10 +19,11 @@ export const SelectContextScreen = () => {
                     context,
                 });
             } else {
-                kubeContextStore.set(context);
+                selectContext(context);
+                toggleContextSelector(false);
             }
         },
-        [kubeContextStore]
+        [selectContext, toggleContextSelector]
     );
 
     const menuHeight = "calc(100vh - 250px)";
@@ -49,7 +48,7 @@ export const SelectContextScreen = () => {
                     Select context
                 </Heading>
                 <Box width="100%">
-                    <SelectContextContainer
+                    <ContextSelect
                         chakraStyles={chakraStyles}
                         selectedContext={kubeContext}
                         onSelectContext={onSelectContext}

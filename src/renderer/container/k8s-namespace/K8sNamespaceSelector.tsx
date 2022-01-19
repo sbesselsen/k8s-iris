@@ -1,12 +1,9 @@
-import { Checkbox, CheckboxGroup, Stack, Text } from "@chakra-ui/react";
 import { ChakraStylesConfig, Select } from "chakra-react-select";
 import React, { useCallback, useMemo } from "react";
-import { searchMatch } from "../../common/util/search";
-import {
-    useK8sNamespaces,
-    useK8sNamespacesStore,
-} from "../context/k8s-namespaces";
-import { useK8sListWatch } from "../k8s/list-watch";
+import { searchMatch } from "../../../common/util/search";
+import { useK8sNamespaces } from "../../context/k8s-namespaces";
+import { useAppRouteActions } from "../../context/route";
+import { useK8sListWatch } from "../../k8s/list-watch";
 
 const selectComponents = {
     DropdownIndicator: null,
@@ -14,7 +11,7 @@ const selectComponents = {
 
 export const K8sNamespaceSelector: React.FunctionComponent = () => {
     const selectedNamespaces = useK8sNamespaces();
-    const selectedNamespacesStore = useK8sNamespacesStore();
+    const { selectNamespaces } = useAppRouteActions();
 
     const [_loading, namespacesList] = useK8sListWatch(
         {
@@ -68,9 +65,9 @@ export const K8sNamespaceSelector: React.FunctionComponent = () => {
 
     const onChange = useCallback(
         (values: Array<{ value: string }>) => {
-            selectedNamespacesStore.set(values.map(({ value }) => value));
+            selectNamespaces(values.map(({ value }) => value));
         },
-        [selectedNamespacesStore]
+        [selectNamespaces]
     );
 
     return (

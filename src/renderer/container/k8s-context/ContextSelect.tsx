@@ -6,10 +6,8 @@ import { K8sContext } from "../../../common/k8s/client";
 import { groupByKeys } from "../../../common/util/group";
 import { searchMatch } from "../../../common/util/search";
 import { k8sSmartCompare } from "../../../common/util/sort";
-import { useAsync } from "../../hook/async";
-import { useIpc } from "../../hook/ipc";
+import { useK8sContextsInfo } from "../../hook/k8s-contexts-info";
 import { useModifierKeyRef } from "../../hook/keyboard";
-import { sleep } from "../../../common/util/async";
 
 type ContextOption = K8sContext &
     Partial<CloudK8sContextInfo> & {
@@ -23,46 +21,30 @@ const selectComponents = {
     DropdownIndicator: null,
 };
 
-type SelectContextContainerProps = {
+type ContextSelectProps = {
     chakraStyles?: ChakraStylesConfig;
     selectedContext?: string | undefined;
     onSelectContext?: (context: string, requestNewWindow: boolean) => void;
 };
 
-export const SelectContextContainer: React.FC<SelectContextContainerProps> = (
-    props
-) => {
+export const ContextSelect: React.FC<ContextSelectProps> = (props) => {
     const { chakraStyles, onSelectContext, selectedContext } = props;
 
-    const ipc = useIpc();
-
-    const [isLoadingContexts, contexts] = useAsync(
-        () => ipc.k8s.listContexts(),
-        []
-    );
-    const [isLoadingCloudInfo, cloudInfo] = useAsync(async () => {
-        await sleep(2000);
-        return contexts ? ipc.cloud.augmentK8sContexts(contexts) : {};
-    }, [contexts]);
-
-    const isLoading = isLoadingContexts || isLoadingCloudInfo;
+    const [isLoading, contextsInfo] = useK8sContextsInfo(true);
 
     const metaKeyPressedRef = useModifierKeyRef("Meta");
 
     const contextOptions: ContextOption[] = useMemo(
         () =>
-            contexts?.map((context) => ({
+            contextsInfo?.map((context) => ({
                 ...context,
-                ...(cloudInfo?.[context.name] ?? null),
-                bestAccountId:
-                    cloudInfo?.[context.name]?.accounts?.[0].accountId,
-                bestAccountName:
-                    cloudInfo?.[context.name]?.accounts?.[0].accountName,
+                ...(context.cloudInfo ?? null),
+                bestAccountId: context.cloudInfo?.accounts?.[0].accountId,
+                bestAccountName: context.cloudInfo?.accounts?.[0].accountName,
                 value: context.name,
-                label:
-                    cloudInfo?.[context.name]?.localClusterName ?? context.name,
+                label: context.cloudInfo?.localClusterName ?? context.name,
             })) ?? [],
-        [contexts, cloudInfo]
+        [contextsInfo]
     );
 
     const groupedContextOptions = useMemo(
