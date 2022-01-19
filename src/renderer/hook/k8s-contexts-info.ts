@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { CloudK8sContextInfo } from "../../common/cloud/k8s";
 import { K8sContext } from "../../common/k8s/client";
 import { create } from "../util/state";
-import { useAsync } from "./async";
 import { useIpc } from "./ipc";
 
 export type K8sContextsInfo = Array<
