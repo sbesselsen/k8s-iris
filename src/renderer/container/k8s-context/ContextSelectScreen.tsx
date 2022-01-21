@@ -1,13 +1,30 @@
-import { Box, CloseButton, Container, Heading, VStack } from "@chakra-ui/react";
+import {
+    Box,
+    Heading,
+    Modal,
+    ModalBody,
+    ModalCloseButton,
+    ModalContent,
+    ModalHeader,
+    ModalOverlay,
+} from "@chakra-ui/react";
 import { ChakraStylesConfig } from "chakra-react-select";
-import { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo } from "react";
 import { ContextSelect } from "./ContextSelect";
 import { useK8sContext } from "../../context/k8s-context";
 import { useIpc } from "../../hook/ipc";
 import { useAppRouteActions } from "../../context/route";
 import { useKeyListener } from "../../hook/keyboard";
 
-export const ContextSelectScreen = () => {
+export type ContextSelectDialogProps = {
+    isOpen?: boolean;
+};
+
+export const ContextSelectScreen: React.FC<ContextSelectDialogProps> = (
+    props
+) => {
+    const { isOpen = false } = props;
+
     const kubeContext = useK8sContext();
     const { selectContext, toggleContextSelector } = useAppRouteActions();
 
@@ -31,7 +48,7 @@ export const ContextSelectScreen = () => {
         toggleContextSelector(false);
     }, [toggleContextSelector]);
 
-    const menuHeight = "calc(100vh - 250px)";
+    const menuHeight = "calc(100vh - 270px)";
     const chakraStyles: ChakraStylesConfig = useMemo(
         () => ({
             menu: (provided) => ({
@@ -40,6 +57,8 @@ export const ContextSelectScreen = () => {
             }),
             menuList: (provided) => ({
                 ...provided,
+                border: 0,
+                borderRadius: 0,
                 maxHeight: menuHeight,
             }),
         }),
@@ -59,22 +78,25 @@ export const ContextSelectScreen = () => {
     );
 
     return (
-        <Container>
-            <Box position="absolute" right={6} top={4}>
-                <CloseButton size="lg" onClick={onClose} />
-            </Box>
-            <VStack spacing={6} alignItems="start">
-                <Heading mt={12} variant="eyecatcher">
-                    Select context
-                </Heading>
-                <Box width="100%">
-                    <ContextSelect
-                        chakraStyles={chakraStyles}
-                        selectedContext={kubeContext}
-                        onSelectContext={onSelectContext}
-                    />
-                </Box>
-            </VStack>
-        </Container>
+        <Modal isOpen={isOpen} onClose={onClose} closeOnEsc={true}>
+            <ModalOverlay />
+            <ModalContent>
+                <ModalHeader>
+                    <Heading variant="eyecatcher" fontSize="2xl">
+                        Select context
+                    </Heading>
+                </ModalHeader>
+                <ModalCloseButton />
+                <ModalBody>
+                    <Box width="100%" height="calc(100vh - 200px)">
+                        <ContextSelect
+                            chakraStyles={chakraStyles}
+                            selectedContext={kubeContext}
+                            onSelectContext={onSelectContext}
+                        />
+                    </Box>
+                </ModalBody>
+            </ModalContent>
+        </Modal>
     );
 };

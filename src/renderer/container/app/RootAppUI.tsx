@@ -17,12 +17,10 @@ export const RootAppUI: React.FunctionComponent = () => {
 
     return (
         <Fragment>
-            {isSelectingContext && <ContextSelectScreen />}
-            {!isSelectingContext && (
-                <Button onClick={onClick}>
-                    <ContextLabel context={context} />
-                </Button>
-            )}
+            <ContextSelectScreen isOpen={isSelectingContext} />
+            <Button onClick={onClick}>
+                <ContextLabel context={context} />
+            </Button>
         </Fragment>
     );
 };

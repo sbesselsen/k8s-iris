@@ -36,7 +36,11 @@ export function useK8sContextsInfo(
         didRefreshRef.current = true;
 
         // Initialize.
-        store.set((state) => ({ ...state, loading: true, initialized: true }));
+        store.set((state) => ({
+            ...state,
+            loading: !initialized,
+            initialized: true,
+        }));
         (async () => {
             console.log("useK8sContextsInfo: loading");
             const contexts = await ipc.k8s.listContexts();
