@@ -23,7 +23,6 @@ import { useIpc } from "../../hook/ipc";
 import { useAppRouteActions } from "../../context/route";
 import { useModifierKeyRef } from "../../hook/keyboard";
 import { ChevronDownIcon } from "@chakra-ui/icons";
-import { ContextLabel } from "./ContextLabel";
 import { K8sContext } from "../../../common/k8s/client";
 import { CloudK8sContextInfo } from "../../../common/cloud/k8s";
 import { useK8sContextsInfo } from "../../hook/k8s-contexts-info";
