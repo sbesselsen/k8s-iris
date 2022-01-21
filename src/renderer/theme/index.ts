@@ -20,7 +20,24 @@ export const theme = extendTheme({
                     fontSize: "6xl",
                     lineHeight: "80%",
                 },
+                menuGroup: {
+                    color: "gray.500",
+                    fontWeight: "semibold",
+                    letterSpacing: "wide",
+                    fontSize: "xs",
+                    textTransform: "uppercase",
+                },
             },
         },
     },
 });
+
+export const menuGroupStylesHack = {
+    ".chakra-menu__group__title": {
+        color: "gray.500",
+        fontWeight: "semibold",
+        letterSpacing: "wide",
+        fontSize: "xs",
+        textTransform: "uppercase",
+    },
+};

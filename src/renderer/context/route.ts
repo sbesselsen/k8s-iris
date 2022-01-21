@@ -4,13 +4,11 @@ import { create } from "../util/state";
 export type AppRoute = {
     context: string;
     namespaces: string[];
-    isSelectingContext: boolean;
 };
 
 const defaultAppRoute: AppRoute = {
     context: null,
     namespaces: [],
-    isSelectingContext: false,
 };
 
 const searchString = window.location.search;
@@ -27,7 +25,6 @@ export const useAppRoute = useAppRouteBase;
 export type AppRouteActions = {
     selectContext: (context: string) => AppRoute;
     selectNamespaces: (namespaces: string[]) => AppRoute;
-    toggleContextSelector: (isSelectingContext: boolean) => AppRoute;
 };
 export const useAppRouteActions = (): AppRouteActions => {
     const store = useAppRouteStore();
@@ -38,8 +35,6 @@ export const useAppRouteActions = (): AppRouteActions => {
                 store.set((route) => ({ ...route, context })),
             selectNamespaces: (namespaces: string[]) =>
                 store.set((route) => ({ ...route, namespaces })),
-            toggleContextSelector: (isSelectingContext: boolean) =>
-                store.set((route) => ({ ...route, isSelectingContext })),
         }),
         [store]
     );

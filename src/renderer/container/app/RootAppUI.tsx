@@ -1,26 +1,47 @@
-import { Button } from "@chakra-ui/react";
-import React, { Fragment, useCallback } from "react";
-import { useAppRoute, useAppRouteActions } from "../../context/route";
+import {
+    Box,
+    Button,
+    Input,
+    Menu,
+    MenuButton,
+    MenuDivider,
+    MenuGroup,
+    MenuItem,
+    MenuList,
+} from "@chakra-ui/react";
+import { ChevronDownIcon } from "@chakra-ui/icons";
+import React, { Fragment } from "react";
+import { useAppRoute } from "../../context/route";
 import { usePageTitle } from "../../hook/page-title";
-import { ContextLabel } from "../k8s-context/ContextLabel";
-import { ContextSelectScreen } from "../k8s-context/ContextSelectScreen";
+import { ContextSelectMenu } from "../k8s-context/ContextSelectMenu";
 
 export const RootAppUI: React.FunctionComponent = () => {
-    const { isSelectingContext, context } = useAppRoute();
-    const { toggleContextSelector } = useAppRouteActions();
+    const { context } = useAppRoute();
 
-    usePageTitle(isSelectingContext ? undefined : context);
-
-    const onClick = useCallback(() => {
-        toggleContextSelector(true);
-    }, [toggleContextSelector]);
+    usePageTitle(context);
 
     return (
         <Fragment>
-            <ContextSelectScreen isOpen={isSelectingContext} />
-            <Button onClick={onClick}>
-                <ContextLabel context={context} />
-            </Button>
+            <ContextSelectMenu />
+            <Menu>
+                <MenuButton as={Button} rightIcon={<ChevronDownIcon />}>
+                    View
+                </MenuButton>
+                <MenuList>
+                    <MenuGroup title="Cluster">
+                        <MenuItem>Info</MenuItem>
+                        <MenuItem>Nodes</MenuItem>
+                    </MenuGroup>
+                    <MenuDivider />
+                    <MenuGroup title="Workloads">
+                        <MenuItem>Applications</MenuItem>
+                    </MenuGroup>
+                    <MenuDivider />
+                    <MenuGroup title="Objects">
+                        <MenuItem>Custom objects</MenuItem>
+                    </MenuGroup>
+                </MenuList>
+            </Menu>
         </Fragment>
     );
 };
