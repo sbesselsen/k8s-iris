@@ -4,16 +4,10 @@ import {
     K8sObject,
     K8sObjectList,
     K8sObjectListQuery,
-    K8sObjectListUpdate,
     K8sObjectListWatcher,
     K8sRemoveOptions,
     K8sRemoveStatus,
 } from "../k8s/client";
-
-type K8sListUpdate<T extends K8sObject = K8sObject> = {
-    list: K8sObjectList<T>;
-    update?: K8sObjectListUpdate<T>;
-};
 
 export type IpcCalls = {
     app: {

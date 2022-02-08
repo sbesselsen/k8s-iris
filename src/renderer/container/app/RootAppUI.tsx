@@ -1,23 +1,11 @@
-import {
-    Box,
-    Button,
-    chakra,
-    HStack,
-    Menu,
-    MenuButton,
-    MenuDivider,
-    MenuGroup,
-    MenuItem,
-    MenuList,
-} from "@chakra-ui/react";
-import { ChevronDownIcon } from "@chakra-ui/icons";
+import { Box, chakra, HStack } from "@chakra-ui/react";
 import React, { Fragment } from "react";
 import { useAppRoute } from "../../context/route";
 import { usePageTitle } from "../../hook/page-title";
 import { ContextSelectMenu } from "../k8s-context/ContextSelectMenu";
 import { NamespacesSelectMenu } from "../k8s-namespace/NamespacesSelectMenu";
-import { menuGroupStylesHack } from "../../theme";
 import { Sticky, stickToTopAndScrollDown } from "react-unstuck";
+import { OverviewStyleSelectMenu } from "../overview-style/OverviewStyleSelectMenu";
 
 const ChakraSticky = chakra(Sticky);
 
@@ -36,29 +24,7 @@ export const RootAppUI: React.FunctionComponent = () => {
                 <HStack spacing={2} padding={2}>
                     <ContextSelectMenu />
                     <NamespacesSelectMenu />
-                    <Menu>
-                        <MenuButton
-                            as={Button}
-                            rightIcon={<ChevronDownIcon />}
-                            variant="ghost"
-                        >
-                            View
-                        </MenuButton>
-                        <MenuList sx={menuGroupStylesHack}>
-                            <MenuGroup title="Cluster">
-                                <MenuItem>Info</MenuItem>
-                                <MenuItem>Nodes</MenuItem>
-                            </MenuGroup>
-                            <MenuDivider />
-                            <MenuGroup title="Workloads">
-                                <MenuItem>Applications</MenuItem>
-                            </MenuGroup>
-                            <MenuDivider />
-                            <MenuGroup title="Objects">
-                                <MenuItem>Custom objects</MenuItem>
-                            </MenuGroup>
-                        </MenuList>
-                    </Menu>
+                    <OverviewStyleSelectMenu />
                 </HStack>
             </ChakraSticky>
             <Box>

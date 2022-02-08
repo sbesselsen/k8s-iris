@@ -4,11 +4,19 @@ import { create } from "../util/state";
 export type AppRoute = {
     context: string;
     namespaces: string[];
+    overviewStyle: OverviewStyle;
 };
+
+export type OverviewStyle =
+    | "cluster_info"
+    | "cluster_nodes"
+    | "applications"
+    | "custom_objects";
 
 const defaultAppRoute: AppRoute = {
     context: null,
     namespaces: [],
+    overviewStyle: "cluster_info",
 };
 
 const searchString = window.location.search;
@@ -25,6 +33,7 @@ export const useAppRoute = useAppRouteBase;
 export type AppRouteActions = {
     selectContext: (context: string) => AppRoute;
     selectNamespaces: (namespaces: string[]) => AppRoute;
+    selectOverviewStyle: (overviewStyle: OverviewStyle) => AppRoute;
 };
 export const useAppRouteActions = (): AppRouteActions => {
     const store = useAppRouteStore();
@@ -35,6 +44,8 @@ export const useAppRouteActions = (): AppRouteActions => {
                 store.set((route) => ({ ...route, context })),
             selectNamespaces: (namespaces: string[]) =>
                 store.set((route) => ({ ...route, namespaces })),
+            selectOverviewStyle: (overviewStyle: OverviewStyle) =>
+                store.set((route) => ({ ...route, overviewStyle })),
         }),
         [store]
     );
