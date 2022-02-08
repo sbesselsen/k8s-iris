@@ -42,7 +42,6 @@ export function useK8sContextsInfo(
             initialized: true,
         }));
         (async () => {
-            console.log("useK8sContextsInfo: loading");
             const contexts = await ipc.k8s.listContexts();
             const cloudInfos = await ipc.cloud.augmentK8sContexts(contexts);
 

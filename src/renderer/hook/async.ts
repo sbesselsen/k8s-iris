@@ -30,3 +30,26 @@ export function useAsync<T>(
     }, [setValue, ...deps]);
     return value;
 }
+
+/**
+ * Return true if a value is still true after the delay, false otherwise.
+ */
+export function useWithDelay(value: boolean, delayMs: number): boolean {
+    const inputValueRef = useRef(value);
+    inputValueRef.current = value;
+
+    const [delayDidPass, setDelayDidPass] = useState(false);
+
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            if (inputValueRef.current) {
+                setDelayDidPass(true);
+            }
+        }, delayMs);
+        return () => {
+            clearTimeout(timeout);
+        };
+    }, [delayMs, inputValueRef, setDelayDidPass]);
+
+    return value && delayDidPass;
+}

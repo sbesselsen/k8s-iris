@@ -19,10 +19,17 @@ import { menuGroupStylesHack } from "../../theme";
 import { searchMatch } from "../../../common/util/search";
 import { useK8sNamespaces } from "../../context/k8s-namespaces";
 import { useK8sListWatch } from "../../k8s/list-watch";
+import { useModifierKeyRef } from "../../hook/keyboard";
+import { useK8sContext } from "../../context/k8s-context";
+import { useIpc } from "../../hook/ipc";
 
 export const NamespacesSelectMenu: React.FC = () => {
     const selectedNamespaces = useK8sNamespaces();
     const { selectNamespaces } = useAppRouteActions();
+
+    const context = useK8sContext();
+
+    const ipc = useIpc();
 
     const [isLoading, namespacesList] = useK8sListWatch(
         {
@@ -31,6 +38,9 @@ export const NamespacesSelectMenu: React.FC = () => {
         },
         []
     );
+
+    const metaKeyPressedRef = useModifierKeyRef("Meta");
+    const shiftKeyPressedRef = useModifierKeyRef("Shift");
 
     const [searchValue, setSearchValue] = useState("");
 
@@ -56,6 +66,44 @@ export const NamespacesSelectMenu: React.FC = () => {
         [setSearchValue]
     );
 
+    const onChange = useCallback(
+        (namespaces: string[]) => {
+            if (shiftKeyPressedRef.current) {
+                // We are selecting/deselecting multiple namespaces. Continue.
+                selectNamespaces(namespaces);
+                return;
+            }
+
+            let clickedNamespaces: string[] = [];
+
+            // We are selecting/deselecting only one namespace.
+            clickedNamespaces = selectedNamespaces.filter(
+                (ns) => !namespaces.includes(ns)
+            );
+            if (clickedNamespaces.length === 0) {
+                clickedNamespaces = namespaces.filter(
+                    (ns) => !selectedNamespaces.includes(ns)
+                );
+            }
+            if (clickedNamespaces.length === 0) {
+                // Didn't select or deselect anything.
+                return;
+            }
+
+            if (metaKeyPressedRef.current) {
+                // Open in a new window.
+                ipc.app.createWindow({
+                    context,
+                    namespaces: clickedNamespaces,
+                });
+            } else {
+                selectNamespaces(clickedNamespaces);
+                onClose();
+            }
+        },
+        [context, onClose, selectNamespaces, selectedNamespaces]
+    );
+
     const onPressSearchEnter = useCallback(() => {
         if (filteredNamespaces.length === 1) {
             selectNamespaces(filteredNamespaces);
@@ -70,7 +118,11 @@ export const NamespacesSelectMenu: React.FC = () => {
             onClose={onClose}
             closeOnSelect={false}
         >
-            <MenuButton as={Button} rightIcon={<ChevronDownIcon />}>
+            <MenuButton
+                as={Button}
+                rightIcon={<ChevronDownIcon />}
+                variant="ghost"
+            >
                 {selectedNamespaces.join(", ") || "Namespaces"}
             </MenuButton>
             <MenuList
@@ -93,7 +145,7 @@ export const NamespacesSelectMenu: React.FC = () => {
                 <MenuOptionGroup
                     type="checkbox"
                     value={selectedNamespaces}
-                    onChange={selectNamespaces as any}
+                    onChange={onChange as any}
                 >
                     {filteredNamespaces.map((ns) => (
                         <MenuItemOption value={ns}>{ns}</MenuItemOption>

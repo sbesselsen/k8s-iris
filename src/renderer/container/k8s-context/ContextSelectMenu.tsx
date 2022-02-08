@@ -30,6 +30,7 @@ import { groupByKeys } from "../../../common/util/group";
 import { k8sSmartCompare } from "../../../common/util/sort";
 import { menuGroupStylesHack } from "../../theme";
 import { searchMatch } from "../../../common/util/search";
+import { useWithDelay } from "../../hook/async";
 
 type ContextOption = K8sContext &
     Partial<CloudK8sContextInfo> & {
@@ -66,6 +67,7 @@ export const ContextSelectMenu: React.FC = () => {
     );
 
     const [isLoading, contextsInfo] = useK8sContextsInfo();
+    const isLoadingWithDelay = useWithDelay(isLoading, 1000);
 
     const contextOptions: ContextOption[] = useMemo(
         () =>
@@ -132,8 +134,13 @@ export const ContextSelectMenu: React.FC = () => {
 
     return (
         <Menu isOpen={isOpen} onOpen={onOpen} onClose={onClose}>
-            <MenuButton as={Button} rightIcon={<ChevronDownIcon />}>
-                {currentContextInfo?.localClusterName ?? kubeContext}
+            <MenuButton
+                as={Button}
+                rightIcon={<ChevronDownIcon />}
+                variant="ghost"
+            >
+                {isLoadingWithDelay && <Spinner />}
+                {!isLoading && currentContextInfo?.localClusterName}
             </MenuButton>
             <MenuList
                 maxHeight="300px"
@@ -147,7 +154,7 @@ export const ContextSelectMenu: React.FC = () => {
                     onPressEnter={onPressSearchEnter}
                 />
                 <MenuDivider />
-                {isLoading && (
+                {isLoadingWithDelay && (
                     <Box p={4}>
                         <Spinner />
                     </Box>
