@@ -4,4 +4,5 @@ export type CloudK8sContextInfo = {
     region?: string;
     accounts?: Array<{ accountId: string; accountName?: string }>;
     localClusterName?: string;
+    supportsAppLogin?: boolean;
 };

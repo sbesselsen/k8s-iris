@@ -140,7 +140,8 @@ export const ContextSelectMenu: React.FC = () => {
                 variant="ghost"
             >
                 {isLoadingWithDelay && <Spinner />}
-                {!isLoading && currentContextInfo?.localClusterName}
+                {!isLoading &&
+                    (currentContextInfo?.localClusterName ?? kubeContext)}
             </MenuButton>
             <MenuList
                 maxHeight="300px"

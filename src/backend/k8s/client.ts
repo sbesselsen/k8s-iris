@@ -229,6 +229,8 @@ export function createClient(
         let stopped = false;
         let informer: k8s.Informer<T> | undefined;
 
+        // TODO: keep retrying the listwatch if it fails during initialization!
+
         (async () => {
             const path = await listPath(spec);
             if (stopped) {

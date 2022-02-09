@@ -6,11 +6,16 @@ import { ContextSelectMenu } from "../k8s-context/ContextSelectMenu";
 import { NamespacesSelectMenu } from "../k8s-namespace/NamespacesSelectMenu";
 import { Sticky, stickToTopAndScrollDown } from "react-unstuck";
 import { OverviewStyleSelectMenu } from "../overview-style/OverviewStyleSelectMenu";
+import { ClusterError } from "./ClusterError";
+import { useK8sStatus } from "../../hook/k8s-status";
 
 const ChakraSticky = chakra(Sticky);
 
 export const RootAppUI: React.FunctionComponent = () => {
     const { context } = useAppRoute();
+    const { status, error } = useK8sStatus();
+
+    const isError = status === "error";
 
     usePageTitle(context);
 
@@ -27,13 +32,16 @@ export const RootAppUI: React.FunctionComponent = () => {
                     <OverviewStyleSelectMenu />
                 </HStack>
             </ChakraSticky>
-            <Box>
-                {Array(50)
-                    .fill(0)
-                    .map((_, i) => (
-                        <p key={i}>test {i}</p>
-                    ))}
-            </Box>
+            {isError && <ClusterError error={error} />}
+            {!isError && (
+                <Box>
+                    {Array(50)
+                        .fill(0)
+                        .map((_, i) => (
+                            <p key={i}>test {i}</p>
+                        ))}
+                </Box>
+            )}
         </Fragment>
     );
 };

@@ -20,6 +20,7 @@ export type IpcCalls = {
         augmentK8sContexts(
             contexts: K8sContext[]
         ): Promise<Record<string, CloudK8sContextInfo>>;
+        loginForContext(context: K8sContext): Promise<void>;
     };
     k8s: {
         listContexts(): Promise<K8sContext[]>;

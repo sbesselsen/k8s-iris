@@ -74,14 +74,11 @@ export const useK8sStatusListener = (listener: (status: K8sStatus) => void) => {
             onWatchError,
         }
     );
-
-    if (prevStatusRef.current === undefined) {
-        if (error) {
-            notifyListener({
-                status: "error",
-                error,
-            });
-        }
+    if (error) {
+        notifyListener({
+            status: "error",
+            error,
+        });
     }
 };
 
