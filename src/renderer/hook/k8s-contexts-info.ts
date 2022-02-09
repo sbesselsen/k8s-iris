@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { CloudK8sContextInfo } from "../../common/cloud/k8s";
 import { K8sContext } from "../../common/k8s/client";
 import { create } from "../util/state";
-import { useIpc } from "./ipc";
+import { useIpcCall } from "./ipc";
 
 export type K8sContextsInfo = Array<
     K8sContext & { cloudInfo?: CloudK8sContextInfo }
@@ -26,7 +26,10 @@ export function useK8sContextsInfo(
 
     const didRefreshRef = useRef(false);
 
-    const ipc = useIpc();
+    const listContexts = useIpcCall((ipc) => ipc.k8s.listContexts);
+    const augmentK8sContexts = useIpcCall(
+        (ipc) => ipc.cloud.augmentK8sContexts
+    );
 
     useEffect(() => {
         const shouldRefresh = refresh && !didRefreshRef.current;
@@ -42,8 +45,8 @@ export function useK8sContextsInfo(
             initialized: true,
         }));
         (async () => {
-            const contexts = await ipc.k8s.listContexts();
-            const cloudInfos = await ipc.cloud.augmentK8sContexts(contexts);
+            const contexts = await listContexts();
+            const cloudInfos = await augmentK8sContexts(contexts);
 
             store.set((state) => ({
                 ...state,
@@ -54,7 +57,7 @@ export function useK8sContextsInfo(
                 })),
             }));
         })();
-    }, [ipc, initialized]);
+    }, [listContexts, augmentK8sContexts, initialized]);
 
     return [loading, info];
 }

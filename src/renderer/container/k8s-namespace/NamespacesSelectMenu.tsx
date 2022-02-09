@@ -21,7 +21,7 @@ import { useK8sNamespaces } from "../../context/k8s-namespaces";
 import { useK8sListWatch } from "../../k8s/list-watch";
 import { useModifierKeyRef } from "../../hook/keyboard";
 import { useK8sContext } from "../../context/k8s-context";
-import { useIpc } from "../../hook/ipc";
+import { useIpcCall } from "../../hook/ipc";
 
 export const NamespacesSelectMenu: React.FC = () => {
     const selectedNamespaces = useK8sNamespaces();
@@ -29,7 +29,7 @@ export const NamespacesSelectMenu: React.FC = () => {
 
     const context = useK8sContext();
 
-    const ipc = useIpc();
+    const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
 
     const [isLoading, namespacesList] = useK8sListWatch(
         {
@@ -92,7 +92,7 @@ export const NamespacesSelectMenu: React.FC = () => {
 
             if (metaKeyPressedRef.current) {
                 // Open in a new window.
-                ipc.app.createWindow({
+                createWindow({
                     context,
                     namespaces: clickedNamespaces,
                 });
@@ -101,7 +101,7 @@ export const NamespacesSelectMenu: React.FC = () => {
                 onClose();
             }
         },
-        [context, onClose, selectNamespaces, selectedNamespaces]
+        [context, createWindow, onClose, selectNamespaces, selectedNamespaces]
     );
 
     const onPressSearchEnter = useCallback(() => {

@@ -15,13 +15,21 @@ import {
     K8sRemoveOptions,
 } from "../../common/k8s/client";
 import { useK8sContext } from "../context/k8s-context";
-import { useIpc } from "../hook/ipc";
+import { useIpcCall } from "../hook/ipc";
+import { unwrapError } from "../../common/ipc/shared";
 
 export function useK8sClient(kubeContext?: string): K8sClient {
     const sharedKubeContext = useK8sContext();
     const context = kubeContext ?? sharedKubeContext;
 
-    const ipc = useIpc();
+    const ipcRead = useIpcCall((ipc) => ipc.k8s.read);
+    const ipcApply = useIpcCall((ipc) => ipc.k8s.apply);
+    const ipcPatch = useIpcCall((ipc) => ipc.k8s.patch);
+    const ipcReplace = useIpcCall((ipc) => ipc.k8s.replace);
+    const ipcRemove = useIpcCall((ipc) => ipc.k8s.remove);
+    const ipcList = useIpcCall((ipc) => ipc.k8s.list);
+    const ipcListWatch = useIpcCall((ipc) => ipc.k8s.listWatch);
+
     const listWatchesRef = useRef<K8sObjectListWatch[]>([]);
 
     const client = useMemo(() => {
@@ -29,15 +37,15 @@ export function useK8sClient(kubeContext?: string): K8sClient {
         listWatchesRef.current.forEach((lw) => lw.stop());
         listWatchesRef.current = [];
 
-        const read = (spec: K8sObject) => ipc.k8s.read({ context, spec });
-        const apply = (spec: K8sObject) => ipc.k8s.apply({ context, spec });
-        const patch = (spec: K8sObject) => ipc.k8s.patch({ context, spec });
-        const replace = (spec: K8sObject) => ipc.k8s.replace({ context, spec });
+        const read = (spec: K8sObject) => ipcRead({ context, spec });
+        const apply = (spec: K8sObject) => ipcApply({ context, spec });
+        const patch = (spec: K8sObject) => ipcPatch({ context, spec });
+        const replace = (spec: K8sObject) => ipcReplace({ context, spec });
         const remove = (spec: K8sObject, options?: K8sRemoveOptions) =>
-            ipc.k8s.remove({ context, spec, options });
+            ipcRemove({ context, spec, options });
         const list = <T extends K8sObject = K8sObject>(
             spec: K8sObjectListQuery
-        ) => ipc.k8s.list<T>({ context, spec });
+        ) => ipcList<T>({ context, spec });
         const listWatch = <T extends K8sObject = K8sObject>(
             spec: K8sObjectListQuery,
             watcher: K8sObjectListWatcher<T>
@@ -45,11 +53,11 @@ export function useK8sClient(kubeContext?: string): K8sClient {
             let objectList: K8sObjectList<T>;
 
             // Subscribe to list updates.
-            const subscription = ipc.k8s.listWatch(
+            const subscription = ipcListWatch(
                 { context, spec },
                 (error, message) => {
                     if (error) {
-                        watcher(error);
+                        watcher(unwrapError(error));
                         return;
                     }
                     if (message.update !== undefined) {
@@ -113,7 +121,16 @@ export function useK8sClient(kubeContext?: string): K8sClient {
             list,
             listWatch,
         };
-    }, [context, ipc]);
+    }, [
+        context,
+        ipcRead,
+        ipcApply,
+        ipcPatch,
+        ipcReplace,
+        ipcRemove,
+        ipcList,
+        ipcListWatch,
+    ]);
 
     return client;
 }

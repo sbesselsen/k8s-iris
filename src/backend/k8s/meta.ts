@@ -1,5 +1,6 @@
 import * as k8s from "@kubernetes/client-node";
 import * as request from "request";
+import { kubeRequestOpts } from "./util";
 
 export type K8sApi = {
     group?: string;
@@ -18,8 +19,7 @@ export type K8sApiResource = {
 export async function fetchApiList(
     kubeConfig: k8s.KubeConfig
 ): Promise<Array<K8sApi>> {
-    const opts: any = {};
-    await kubeConfig.applyToRequest(opts);
+    const opts = await kubeRequestOpts(kubeConfig);
 
     return new Promise((resolve, reject) => {
         request.get(
@@ -79,8 +79,7 @@ export async function fetchApiResourceList(
     kubeConfig: k8s.KubeConfig,
     api: K8sApi
 ): Promise<Array<K8sApiResource>> {
-    const opts: any = {};
-    await kubeConfig.applyToRequest(opts);
+    const opts = await kubeRequestOpts(kubeConfig);
 
     return new Promise((resolve, reject) => {
         const pathParts = [];

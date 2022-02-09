@@ -19,7 +19,7 @@ import React, {
 } from "react";
 import { MenuInput } from "../../component/MenuInput";
 import { useK8sContext } from "../../context/k8s-context";
-import { useIpc } from "../../hook/ipc";
+import { useIpcCall } from "../../hook/ipc";
 import { useAppRouteActions } from "../../context/route";
 import { useModifierKeyRef } from "../../hook/keyboard";
 import { ChevronDownIcon } from "@chakra-ui/icons";
@@ -44,7 +44,7 @@ export const ContextSelectMenu: React.FC = () => {
     const kubeContext = useK8sContext();
     const { selectContext } = useAppRouteActions();
 
-    const ipc = useIpc();
+    const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
 
     const metaKeyPressedRef = useModifierKeyRef("Meta");
 
@@ -55,7 +55,7 @@ export const ContextSelectMenu: React.FC = () => {
     const onSelectContext = useCallback(
         (context: string) => {
             if (metaKeyPressedRef.current) {
-                ipc.app.createWindow({
+                createWindow({
                     context,
                 });
             } else {
@@ -63,7 +63,7 @@ export const ContextSelectMenu: React.FC = () => {
                 onClose();
             }
         },
-        [onClose, selectContext]
+        [createWindow, onClose, selectContext]
     );
 
     const [isLoading, contextsInfo] = useK8sContextsInfo();

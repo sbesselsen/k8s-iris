@@ -1,5 +1,19 @@
+import { useMemo, useRef } from "react";
 import { IpcCalls } from "../../common/ipc-types";
+import { unwrapError } from "../../common/ipc/shared";
 
-export function useIpc(): IpcCalls {
-    return (window as any).charm;
+export function useIpcCall<T extends (...any) => any>(
+    f: (ipc: IpcCalls) => T
+): T {
+    const ipc: IpcCalls = (window as any).charm;
+    const ipcFunction = f(ipc);
+    // Abuse useRef to create a 100% certain constant.
+    const callRef = useRef<T>(((...args) => {
+        try {
+            return ipcFunction(...args);
+        } catch (e) {
+            throw unwrapError(e);
+        }
+    }) as T);
+    return callRef.current;
 }

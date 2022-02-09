@@ -1,5 +1,9 @@
 import { ipcMain } from "electron";
-import { prefixHandlerChannel, prefixSubscriptionChannel } from "./shared";
+import {
+    prefixHandlerChannel,
+    prefixSubscriptionChannel,
+    wrapError,
+} from "./shared";
 
 export function ipcHandle<T, U>(
     name: string,
@@ -9,7 +13,7 @@ export function ipcHandle<T, U>(
         try {
             return { value: await handler(data) };
         } catch (e) {
-            return { error: String(e) };
+            return { error: wrapError(e) };
         }
     });
 }
@@ -43,7 +47,7 @@ export function ipcProvideSubscription<T, U>(
                         webContents.send(subscriptionChannel, null);
                         return;
                     }
-                    const err = error ? String(error) : undefined;
+                    const err = error ? wrapError(error) : undefined;
                     webContents.send(subscriptionChannel, {
                         error: err,
                         message,
@@ -52,7 +56,7 @@ export function ipcProvideSubscription<T, U>(
                 stop = handlerResult.stop;
             } catch (e) {
                 // First send the error down the chute, then the termination message.
-                webContents.send(subscriptionChannel, { error: e });
+                webContents.send(subscriptionChannel, { error: wrapError(e) });
                 webContents.send(subscriptionChannel, null);
             }
 

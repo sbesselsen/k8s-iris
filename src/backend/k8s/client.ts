@@ -22,6 +22,7 @@ import {
     updateListObject,
 } from "../../common/k8s/util";
 import { deepEqual } from "../../common/util/deep-equal";
+import { kubeRequestOpts } from "./util";
 
 const defaultRemoveOptions: K8sRemoveOptions = {
     waitForCompletion: true,
@@ -191,8 +192,7 @@ export function createClient(
     ): Promise<K8sObjectList<T>> => {
         const path = await listPath(spec);
 
-        const opts: any = {};
-        await kubeConfig.applyToRequest(opts);
+        const opts = await kubeRequestOpts(kubeConfig);
 
         return new Promise((resolve, reject) => {
             request.get(
@@ -241,8 +241,7 @@ export function createClient(
                 items: [],
             };
 
-            const opts: any = {};
-            await kubeConfig.applyToRequest(opts);
+            const opts = await kubeRequestOpts(kubeConfig);
             if (stopped) {
                 return;
             }
