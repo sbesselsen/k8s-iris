@@ -10,8 +10,13 @@ import { createWindowManager, WindowParameters } from "./window";
 (async () => {
     await app.whenReady();
 
-    const cloudManager = createCloudManager();
     const k8sClientManager = createClientManager();
+    const cloudManager = createCloudManager({
+        didLogin: () => {
+            // Retry outstanding connections (like for listWatches) when logging in with a cloud provider.
+            k8sClientManager.retryConnections();
+        },
+    });
     const windowManager = createWindowManager();
     const menuManager = createMenuManager({
         createWindow: () => {

@@ -1,29 +1,18 @@
 import {
     Box,
     Button,
-    Code,
     Container,
     Heading,
     HStack,
-    Modal,
-    ModalBody,
-    ModalCloseButton,
-    ModalContent,
-    ModalFooter,
-    ModalHeader,
-    ModalOverlay,
     Spinner,
     Text,
     VStack,
 } from "@chakra-ui/react";
-import React, { Fragment, useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import { useK8sContext } from "../../context/k8s-context";
 import { useWithDelay } from "../../hook/async";
 import { useIpcCall } from "../../hook/ipc";
 import { useK8sContextsInfo } from "../../hook/k8s-contexts-info";
-import { useK8sStatus } from "../../hook/k8s-status";
-
-const onClose = () => {};
 
 export const ClusterError: React.FC<{ error: Error }> = (props) => {
     const { error } = props;
@@ -31,6 +20,8 @@ export const ClusterError: React.FC<{ error: Error }> = (props) => {
     const [isLoadingContexts, contextsInfo] = useK8sContextsInfo();
     const shouldShowSpinner = useWithDelay(isLoadingContexts, 1000);
     const kubeContext = useK8sContext();
+
+    const [isLoggingIn, setLoggingIn] = useState(false);
 
     const loginForContext = useIpcCall((ipc) => ipc.cloud.loginForContext);
 
@@ -42,9 +33,12 @@ export const ClusterError: React.FC<{ error: Error }> = (props) => {
 
     const onClickLoginButton = useCallback(() => {
         if (currentContext) {
-            loginForContext(currentContext);
+            setLoggingIn(true);
+            loginForContext(currentContext).finally(() => {
+                setLoggingIn(false);
+            });
         }
-    }, [currentContext, loginForContext]);
+    }, [currentContext, loginForContext, setLoggingIn]);
 
     return (
         <Container>
@@ -68,7 +62,10 @@ export const ClusterError: React.FC<{ error: Error }> = (props) => {
                             size="lg"
                             colorScheme="green"
                         >
-                            Log in
+                            <HStack spacing={2}>
+                                {isLoggingIn && <Spinner />}
+                                <Text>Log in</Text>
+                            </HStack>
                         </Button>
                     )}
                 </HStack>

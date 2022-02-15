@@ -10,7 +10,13 @@ export type CloudManager = {
     loginForContext(context: K8sContext): Promise<void>;
 };
 
-export function createCloudManager(): CloudManager {
+export function createCloudManager(options?: {
+    didLogin?: () => void;
+}): CloudManager {
+    const { didLogin } = {
+        ...options,
+    };
+
     const augmentK8sContexts = async (
         contexts: K8sContext[]
     ): Promise<Record<string, CloudK8sContextInfo>> => {
@@ -42,6 +48,7 @@ export function createCloudManager(): CloudManager {
             augmentedContext.cloudService === "eks"
         ) {
             await awsEksLoginForContext(augmentedContext);
+            didLogin?.();
         }
     };
 

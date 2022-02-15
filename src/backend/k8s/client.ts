@@ -36,6 +36,13 @@ function onlyFullObject(body: KubernetesObject): K8sObject | null {
     return isFullObject(body) ? body : null;
 }
 
+/**
+ * A k8s client with added options that should only be used on the backend.
+ */
+export type K8sBackendClient = K8sClient & {
+    retryConnections(): void;
+};
+
 export type K8sClientOptions = {
     readonly?: boolean;
 };
@@ -47,7 +54,7 @@ const defaultClientOptions = {
 export function createClient(
     kubeConfig: k8s.KubeConfig,
     options?: K8sClientOptions
-): K8sClient {
+): K8sBackendClient {
     const opts = {
         ...defaultClientOptions,
         ...options,
@@ -60,6 +67,16 @@ export function createClient(
     }
 
     const objectApi = kubeConfig.makeApiClient(k8s.KubernetesObjectApi);
+
+    // Allow retrying listWatch connections when signaled to do so from the outside.
+    let retryConnectionsListeners: Array<() => void> = [];
+    const retryConnections = () => {
+        console.log("Retrying connections", kubeConfig.getCurrentContext());
+        retryConnectionsListeners.forEach((l) => {
+            l();
+        });
+        retryConnectionsListeners = [];
+    };
 
     const exists = async (spec: K8sObject): Promise<boolean> => {
         try {
@@ -229,10 +246,44 @@ export function createClient(
         let stopped = false;
         let informer: k8s.Informer<T> | undefined;
 
-        // TODO: keep retrying the listwatch if it fails during initialization!
+        const retrySignal = async () => {
+            // Send a retry signal after a certain number of seconds, or when retryConnections is called; whichever comes first.
+            return new Promise<void>((resolve) => {
+                let retryConnectionsListener: any;
+
+                const timeout = setTimeout(() => {
+                    retryConnectionsListeners =
+                        retryConnectionsListeners.filter(
+                            (l) => l !== retryConnectionsListener
+                        );
+                    resolve();
+                }, 5000);
+
+                retryConnectionsListener = () => {
+                    clearTimeout(timeout);
+                    resolve();
+                };
+
+                retryConnectionsListeners.push(retryConnectionsListener);
+            });
+        };
 
         (async () => {
-            const path = await listPath(spec);
+            let path: string;
+            let opts: request.CoreOptions;
+            while (!stopped) {
+                try {
+                    path = await listPath(spec);
+                    opts = await kubeRequestOpts(kubeConfig);
+                    break;
+                } catch (e) {
+                    // Report the error; wait for a retry signal; try again.
+                    watcher(e);
+                    console.error(e);
+                    await retrySignal();
+                    continue;
+                }
+            }
             if (stopped) {
                 return;
             }
@@ -242,11 +293,6 @@ export function createClient(
                 kind: spec.kind,
                 items: [],
             };
-
-            const opts = await kubeRequestOpts(kubeConfig);
-            if (stopped) {
-                return;
-            }
 
             const listFn = () => {
                 return new Promise((resolve, reject) => {
@@ -324,9 +370,9 @@ export function createClient(
                 console.error(err);
                 // TODO: make this configurable or handlable somehow?
                 // Restart informer after 5sec.
-                setTimeout(() => {
+                retrySignal().then(() => {
                     informer.start();
-                }, 5000);
+                });
             });
 
             console.log(
@@ -436,5 +482,6 @@ export function createClient(
         remove,
         list,
         listWatch,
+        retryConnections,
     };
 }

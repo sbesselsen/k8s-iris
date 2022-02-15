@@ -1,13 +1,14 @@
 import * as k8s from "@kubernetes/client-node";
 import { K8sClient, K8sContext } from "../../common/k8s/client";
 
-import { createClient } from "./client";
+import { createClient, K8sBackendClient } from "./client";
 
 export type K8sClientManager = {
     listContexts(): K8sContext[];
     clientForContext(context: string): K8sClient;
     defaultContext(): string | undefined;
     defaultNamespaces(): string[] | undefined;
+    retryConnections(): void;
 };
 
 function getKubeConfigFromDefault(): k8s.KubeConfig {
@@ -22,7 +23,7 @@ export function createClientManager(
 ): K8sClientManager {
     const kc = kubeConfig ?? getKubeConfigFromDefault();
 
-    const clients: Record<string, K8sClient> = {};
+    const clients: Record<string, K8sBackendClient> = {};
 
     const listContexts = () => kc.getContexts();
     const defaultContext = () => kc.getCurrentContext();
@@ -44,10 +45,16 @@ export function createClientManager(
         }
         return clients[context];
     };
+    const retryConnections = () => {
+        for (const client of Object.values(clients)) {
+            client.retryConnections();
+        }
+    };
     return {
         listContexts,
         clientForContext,
         defaultContext,
         defaultNamespaces,
+        retryConnections,
     };
 }
