@@ -8,11 +8,12 @@ import { Sticky, stickToTopAndScrollDown } from "react-unstuck";
 import { OverviewStyleSelectMenu } from "../overview-style/OverviewStyleSelectMenu";
 import { ClusterError } from "./ClusterError";
 import { useK8sStatus } from "../../hook/k8s-status";
+import { ClusterInfoOverview } from "../cluster-info/ClusterInfoOverview";
 
 const ChakraSticky = chakra(Sticky);
 
 const OverviewComponents: Record<OverviewStyle, React.FC> = {
-    cluster_info: () => <Box>cluster_info</Box>,
+    cluster_info: ClusterInfoOverview,
     cluster_nodes: () => <Box>cluster_nodes</Box>,
     applications: () => <Box>applications</Box>,
     custom_objects: () => <Box>custom_objects</Box>,
@@ -41,7 +42,7 @@ export const RootAppUI: React.FunctionComponent = () => {
             </ChakraSticky>
             {status === "error" && <ClusterError error={error} />}
             {status === "ok" && (
-                <Box minHeight="100vh">
+                <Box minHeight="calc(100vh - 60px)">
                     <Overview />
                 </Box>
             )}
