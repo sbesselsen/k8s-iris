@@ -1,14 +1,28 @@
-import React from "react";
+import React, { Fragment, useMemo } from "react";
 
-import { List, ListItem, Tag, TagLabel, TagLeftIcon } from "@chakra-ui/react";
+import {
+    Badge,
+    Heading,
+    List,
+    ListItem,
+    Tag,
+    TagLabel,
+    TagLeftIcon,
+} from "@chakra-ui/react";
+
 import { FaAws } from "react-icons/fa";
+
+import { stickToTop } from "react-unstuck";
 
 import { useK8sListWatch } from "../../k8s/list-watch";
 import { useK8sContextsInfo } from "../../hook/k8s-contexts-info";
 
-import { Table, Tbody, Tr, Th, Td, Box, Text } from "@chakra-ui/react";
+import { K8sObject } from "../../../common/k8s/client";
+
+import { Table, Thead, Tbody, Tr, Th, Td, Box, Text } from "@chakra-ui/react";
 import { useK8sContext } from "../../context/k8s-context";
 import { IconType } from "react-icons";
+import { AppSticky } from "../../component/ChakraSticky";
 
 const SelectableText: React.FC<{}> = ({ children }) => {
     return <Text userSelect="text">{children}</Text>;
@@ -21,6 +35,7 @@ const StatTh: React.FC<{}> = ({ children, ...props }) => {
             whiteSpace="nowrap"
             textAlign="left"
             verticalAlign="baseline"
+            ps={4}
             {...props}
         >
             {children}
@@ -51,12 +66,20 @@ export const ClusterInfoOverview: React.FC<{}> = () => {
         []
     );
 
+    const [_loadingEvents, events, _eventsError] = useK8sListWatch(
+        {
+            apiVersion: "events.k8s.io/v1",
+            kind: "Event",
+        },
+        []
+    );
+
+    console.log({ events });
+
     const context = useK8sContext();
 
     const [_loadingContexts, contextsInfo] = useK8sContextsInfo(true);
     const contextInfo = contextsInfo.find((info) => info.name === context);
-
-    console.log({ contextInfo });
 
     const cloudProviderIconProps = contextInfo.cloudInfo.cloudProvider
         ? icons[contextInfo.cloudInfo.cloudProvider]
@@ -148,6 +171,66 @@ export const ClusterInfoOverview: React.FC<{}> = () => {
                         <StatTh>Number of nodes</StatTh>
                         <StatTd>{nodes?.items.length ?? "..."}</StatTd>
                     </Tr>
+                </Tbody>
+            </Table>
+            {<EventList events={events?.items ?? []} />}
+        </Box>
+    );
+};
+
+const EventList: React.FC<{ events: K8sObject[] }> = (props) => {
+    const { events } = props;
+
+    const sortedEvents = useMemo(() => {
+        return [...events].reverse();
+    }, [events]);
+
+    return (
+        <Box mt={12}>
+            <AppSticky behavior={stickToTop}>
+                <Heading p={4} variant="eyecatcher" fontSize="lg">
+                    Events
+                </Heading>
+            </AppSticky>
+            <Table size="sm">
+                <Thead>
+                    <Th>Timestamp</Th>
+                    <Th>Type</Th>
+                    <Th>Message</Th>
+                </Thead>
+                <Tbody>
+                    {sortedEvents.map((event: any) => (
+                        <Tr key={event.metadata.uid}>
+                            <StatTd>
+                                {event.deprecatedCount > 1 && (
+                                    <Fragment>
+                                        {event.deprecatedFirstTimestamp} -{" "}
+                                        {event.deprecatedLastTimestamp} (
+                                        {event.deprecatedCount})
+                                    </Fragment>
+                                )}
+                                {!(event.deprecatedCount > 1) &&
+                                    event.metadata.creationTimestamp}
+                            </StatTd>
+                            <StatTd>
+                                {event.type === "Normal" && (
+                                    <Badge>{event.type}</Badge>
+                                )}
+                                {event.type === "Warning" && (
+                                    <Badge colorScheme="red">
+                                        {event.type}
+                                    </Badge>
+                                )}
+                                {event.type !== "Normal" &&
+                                    event.type !== "Warning" && (
+                                        <Badge colorScheme="purple">
+                                            {event.type}
+                                        </Badge>
+                                    )}
+                            </StatTd>
+                            <StatTd>{event.note}</StatTd>
+                        </Tr>
+                    ))}
                 </Tbody>
             </Table>
         </Box>

@@ -1,16 +1,15 @@
-import { Box, chakra, HStack } from "@chakra-ui/react";
+import { Box, HStack } from "@chakra-ui/react";
 import React, { Fragment } from "react";
 import { OverviewStyle, useAppRoute } from "../../context/route";
 import { usePageTitle } from "../../hook/page-title";
 import { ContextSelectMenu } from "../k8s-context/ContextSelectMenu";
 import { NamespacesSelectMenu } from "../k8s-namespace/NamespacesSelectMenu";
-import { Sticky, stickToTopAndScrollDown } from "react-unstuck";
+import { stickToTopAndScrollDown } from "react-unstuck";
 import { OverviewStyleSelectMenu } from "../overview-style/OverviewStyleSelectMenu";
 import { ClusterError } from "./ClusterError";
 import { useK8sStatus } from "../../hook/k8s-status";
 import { ClusterInfoOverview } from "../cluster-info/ClusterInfoOverview";
-
-const ChakraSticky = chakra(Sticky);
+import { AppSticky } from "../../component/ChakraSticky";
 
 const OverviewComponents: Record<OverviewStyle, React.FC> = {
     cluster_info: ClusterInfoOverview,
@@ -29,17 +28,13 @@ export const RootAppUI: React.FunctionComponent = () => {
 
     return (
         <Fragment>
-            <ChakraSticky
-                behavior={stickToTopAndScrollDown}
-                bg="rgba(255, 255, 255, 0.8)"
-                backdropFilter="blur(4px)"
-            >
+            <AppSticky behavior={stickToTopAndScrollDown}>
                 <HStack spacing={2} padding={2}>
                     <ContextSelectMenu />
                     <NamespacesSelectMenu />
                     <OverviewStyleSelectMenu />
                 </HStack>
-            </ChakraSticky>
+            </AppSticky>
             {status === "error" && <ClusterError error={error} />}
             {status === "ok" && (
                 <Box minHeight="calc(100vh - 60px)">
