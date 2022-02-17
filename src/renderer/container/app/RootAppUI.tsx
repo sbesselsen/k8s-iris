@@ -1,6 +1,6 @@
 import { Box, chakra, HStack } from "@chakra-ui/react";
 import React, { Fragment } from "react";
-import { useAppRoute } from "../../context/route";
+import { OverviewStyle, useAppRoute } from "../../context/route";
 import { usePageTitle } from "../../hook/page-title";
 import { ContextSelectMenu } from "../k8s-context/ContextSelectMenu";
 import { NamespacesSelectMenu } from "../k8s-namespace/NamespacesSelectMenu";
@@ -11,13 +11,20 @@ import { useK8sStatus } from "../../hook/k8s-status";
 
 const ChakraSticky = chakra(Sticky);
 
+const OverviewComponents: Record<OverviewStyle, React.FC> = {
+    cluster_info: () => <Box>cluster_info</Box>,
+    cluster_nodes: () => <Box>cluster_nodes</Box>,
+    applications: () => <Box>applications</Box>,
+    custom_objects: () => <Box>custom_objects</Box>,
+};
+
 export const RootAppUI: React.FunctionComponent = () => {
-    const { context } = useAppRoute();
+    const { context, overviewStyle } = useAppRoute();
     const { status, error } = useK8sStatus();
 
-    const isError = status === "error";
-
     usePageTitle(context);
+
+    const Overview = OverviewComponents[overviewStyle];
 
     return (
         <Fragment>
@@ -32,14 +39,10 @@ export const RootAppUI: React.FunctionComponent = () => {
                     <OverviewStyleSelectMenu />
                 </HStack>
             </ChakraSticky>
-            {isError && <ClusterError error={error} />}
-            {!isError && (
-                <Box>
-                    {Array(50)
-                        .fill(0)
-                        .map((_, i) => (
-                            <p key={i}>test {i}</p>
-                        ))}
+            {status === "error" && <ClusterError error={error} />}
+            {status === "ok" && (
+                <Box minHeight="100vh">
+                    <Overview />
                 </Box>
             )}
         </Fragment>
