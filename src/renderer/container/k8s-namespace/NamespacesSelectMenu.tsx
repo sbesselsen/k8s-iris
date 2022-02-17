@@ -123,7 +123,10 @@ export const NamespacesSelectMenu: React.FC = () => {
                 rightIcon={<ChevronDownIcon />}
                 variant="ghost"
             >
-                {selectedNamespaces.join(", ") || "Namespaces"}
+                {selectedNamespaces.length === 0 && "Namespaces"}
+                {selectedNamespaces.length === 1 && selectedNamespaces[0]}
+                {selectedNamespaces.length > 1 &&
+                    `(${selectedNamespaces.length} namespaces)`}
             </MenuButton>
             <MenuList
                 maxHeight="300px"
