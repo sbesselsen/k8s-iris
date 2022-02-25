@@ -12,6 +12,7 @@ import React, { useCallback, useState } from "react";
 import { useK8sContext } from "../../context/k8s-context";
 import { useWithDelay } from "../../hook/async";
 import { useIpcCall } from "../../hook/ipc";
+import { useK8sContextColorScheme } from "../../hook/k8s-context-color-scheme";
 import { useK8sContextsInfo } from "../../hook/k8s-contexts-info";
 
 export const ClusterError: React.FC<{ error: Error }> = (props) => {
@@ -40,36 +41,39 @@ export const ClusterError: React.FC<{ error: Error }> = (props) => {
         }
     }, [currentContext, loginForContext, setLoggingIn]);
 
+    const colors = useK8sContextColorScheme();
+
     return (
-        <Container>
-            <VStack spacing={6} mt={12} alignItems="start">
-                <Heading variant="eyecatcher">
-                    Error connecting to cluster
-                </Heading>
-                <Text>{error.message}</Text>
-                <Text>
-                    We will automatically keep trying to restore the connection.
-                </Text>
-                {shouldShowSpinner && (
-                    <Box>
-                        <Spinner />
-                    </Box>
+        <VStack spacing={6} mt={12} alignItems="start">
+            <Heading textColor={colors.text}>
+                Error connecting to cluster
+            </Heading>
+            <Text>{error.message}</Text>
+            <Text>
+                We will automatically keep trying to restore the connection.
+            </Text>
+            {shouldShowSpinner && (
+                <Box>
+                    <Spinner />
+                </Box>
+            )}
+            <HStack>
+                {supportsAppLogin && (
+                    <Button
+                        onClick={onClickLoginButton}
+                        size="lg"
+                        bg={colors.fill}
+                        textColor={colors.background}
+                    >
+                        <HStack spacing={2}>
+                            {isLoggingIn && (
+                                <Spinner color={colors.background} />
+                            )}
+                            <Text>Log in</Text>
+                        </HStack>
+                    </Button>
                 )}
-                <HStack>
-                    {supportsAppLogin && (
-                        <Button
-                            onClick={onClickLoginButton}
-                            size="lg"
-                            colorScheme="green"
-                        >
-                            <HStack spacing={2}>
-                                {isLoggingIn && <Spinner />}
-                                <Text>Log in</Text>
-                            </HStack>
-                        </Button>
-                    )}
-                </HStack>
-            </VStack>
-        </Container>
+            </HStack>
+        </VStack>
     );
 };

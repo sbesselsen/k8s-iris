@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { K8sObjectListWatcherMessage } from "../../common/k8s/client";
 import { useK8sContext } from "../context/k8s-context";
 import { useK8sListWatch } from "../k8s/list-watch";
@@ -28,24 +28,34 @@ const okStatus: K8sStatus = {
 
 export const useK8sStatusListener = (listener: (status: K8sStatus) => void) => {
     const kubeContext = useK8sContext();
-    const prevKubeContextRef = useRef<string>();
-    const prevStatusRef = useRef<K8sStatus["status"] | undefined>();
+    const statusRef = useRef<
+        | {
+              context: string;
+              status: K8sStatus["status"];
+          }
+        | undefined
+    >();
 
     const notifyListener = useCallback(
         (status: K8sStatus) => {
-            if (status.status !== prevStatusRef.current) {
-                prevStatusRef.current = status.status;
+            if (status.status !== statusRef.current?.status) {
+                statusRef.current = {
+                    context: kubeContext,
+                    status: status.status,
+                };
                 listener(status);
             }
         },
-        [listener, prevStatusRef]
+        [listener, kubeContext, statusRef]
     );
 
-    if (prevKubeContextRef.current !== kubeContext) {
-        // When switching kubeContext, reset the status.
-        prevKubeContextRef.current = kubeContext;
-        notifyListener(unknownStatus);
-    }
+    useEffect(() => {
+        if (statusRef.current?.context !== kubeContext) {
+            // When switching kubeContext, reset the status.
+            statusRef.current = { context: kubeContext, status: "unknown" };
+            notifyListener(unknownStatus);
+        }
+    }, [kubeContext, statusRef]);
 
     const onUpdate = useCallback(
         (message: K8sObjectListWatcherMessage) => {
@@ -63,7 +73,7 @@ export const useK8sStatusListener = (listener: (status: K8sStatus) => void) => {
         [notifyListener]
     );
 
-    const [_loading, _list, error] = useK8sListWatch(
+    const [_loading, list, error] = useK8sListWatch(
         {
             apiVersion: "v1",
             kind: "Namespace",
@@ -74,12 +84,17 @@ export const useK8sStatusListener = (listener: (status: K8sStatus) => void) => {
             onWatchError,
         }
     );
-    if (error) {
-        notifyListener({
-            status: "error",
-            error,
-        });
-    }
+
+    useEffect(() => {
+        if (error) {
+            notifyListener({
+                status: "error",
+                error,
+            });
+        } else if (list) {
+            notifyListener(okStatus);
+        }
+    }, [list, error]);
 };
 
 export const useK8sStatusRef = (): { current: K8sStatus } => {
