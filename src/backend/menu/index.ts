@@ -1,4 +1,5 @@
-import { Menu } from "electron";
+import { Menu, MenuItemConstructorOptions } from "electron";
+import { isDev } from "../util/dev";
 
 export type MenuManagerOptions = {
     createWindow: () => void;
@@ -13,62 +14,62 @@ export type MenuManager = {
 export function createMenuManager(options: MenuManagerOptions): MenuManager {
     const { createWindow, closeWindow, openDevTools } = options;
     const initialize = () => {
-        // TODO: multiplatform shit
-        Menu.setApplicationMenu(
-            Menu.buildFromTemplate([
-                {
-                    label: "Charm",
-                    role: "appMenu",
-                },
-                {
-                    label: "File",
-                    role: "fileMenu",
-                    submenu: [
-                        {
-                            label: "New Window",
-                            accelerator:
-                                process.platform === "darwin"
-                                    ? "Shift+Cmd+N"
-                                    : "Shift+Ctrl+N",
-                            click: () => {
-                                createWindow();
-                            },
+        // TODO: multiplatform testing
+        const menuTemplate: MenuItemConstructorOptions[] = [
+            {
+                label: "Charm",
+                role: "appMenu",
+            },
+            {
+                label: "File",
+                role: "fileMenu",
+                submenu: [
+                    {
+                        label: "New Window",
+                        accelerator:
+                            process.platform === "darwin"
+                                ? "Shift+Cmd+N"
+                                : "Shift+Ctrl+N",
+                        click: () => {
+                            createWindow();
                         },
-                        {
-                            label: "Close Window",
-                            accelerator:
-                                process.platform === "darwin"
-                                    ? "Cmd+W"
-                                    : "Ctrl+W",
-                            click: () => {
-                                closeWindow();
-                            },
+                    },
+                    {
+                        label: "Close Window",
+                        accelerator:
+                            process.platform === "darwin" ? "Cmd+W" : "Ctrl+W",
+                        click: () => {
+                            closeWindow();
                         },
-                    ],
-                },
-                {
-                    label: "Edit",
-                    role: "editMenu",
-                },
-                {
-                    label: "Developer",
-                    submenu: [
-                        {
-                            // TODO: this is bad and should be temporary!
-                            label: "Open Development Tools",
-                            accelerator: "Option+Cmd+I",
-                            click: () => {
-                                openDevTools();
-                            },
+                    },
+                ],
+            },
+            {
+                label: "Edit",
+                role: "editMenu",
+            },
+        ];
+        if (isDev()) {
+            menuTemplate.push({
+                label: "Developer",
+                submenu: [
+                    {
+                        // TODO: this is bad and should be temporary!
+                        label: "Open Development Tools",
+                        accelerator: "Option+Cmd+I",
+                        click: () => {
+                            openDevTools();
                         },
-                    ],
-                },
-                {
-                    label: "Window",
-                    role: "windowMenu",
-                },
-            ])
-        );
+                    },
+                ],
+            });
+        }
+        menuTemplate.push({
+            label: "Window",
+            role: "windowMenu",
+        });
+
+        Menu.setApplicationMenu(Menu.buildFromTemplate(menuTemplate));
     };
 
     return {
