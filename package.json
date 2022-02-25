@@ -8,7 +8,8 @@
         "watch": "parcel watch",
         "build": "parcel build",
         "format": "prettier --config .prettierrc 'src/**/*.ts' --write",
-        "dev": "npm run build && concurrently 'npm run watch' 'npm run start'"
+        "dev": "parcel build --target backend --target preload && concurrently 'parcel serve --target renderer-dev' 'npm run start'",
+        "test": "parcel build && ELECTRON_DEV=0 npm run start"
     },
     "author": "Sebastiaan Besselsen <sebastiaan.besselsen@gmail.com>",
     "license": "UNLICENSED",
@@ -39,6 +40,10 @@
     "targets": {
         "renderer": {
             "source": "src/renderer/index.html",
+            "publicUrl": "./"
+        },
+        "renderer-dev": {
+            "source": "src/renderer/index-dev.html",
             "publicUrl": "./"
         },
         "preload": {

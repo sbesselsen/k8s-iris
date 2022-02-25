@@ -1,5 +1,6 @@
 import { BrowserWindow, BrowserWindowConstructorOptions } from "electron";
 import * as path from "path";
+import { isDev } from "../util/dev";
 
 export type WindowManager = {
     closeWindow(windowId?: string): void;
@@ -74,17 +75,22 @@ export function createWindowManager(): WindowManager {
         }
 
         const win = new BrowserWindow(options);
+        const windowHash = Buffer.from(
+            JSON.stringify({
+                ...defaultWindowParameters,
+                ...inheritedParams,
+                ...params,
+            }),
+            "utf-8"
+        ).toString("base64");
 
-        win.loadFile(path.join(__dirname, "..", "renderer", "index.html"), {
-            hash: Buffer.from(
-                JSON.stringify({
-                    ...defaultWindowParameters,
-                    ...inheritedParams,
-                    ...params,
-                }),
-                "utf-8"
-            ).toString("base64"),
-        });
+        if (isDev()) {
+            win.loadURL("http://localhost:1234/#" + windowHash);
+        } else {
+            win.loadFile(path.join(__dirname, "..", "renderer", "index.html"), {
+                hash: windowHash,
+            });
+        }
 
         const windowId = generateWindowId();
         windowHandles[windowId] = {
