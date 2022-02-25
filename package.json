@@ -20,17 +20,25 @@
         "@emotion/react": "^11.7.1",
         "@emotion/styled": "^11.6.0",
         "@kubernetes/client-node": "^0.16.1",
+        "color-scheme": "git+https://github.com/c0bra/color-scheme-js.git#47b0da0d31b04cf2254f86bed36a89632a86c996",
         "electron": "^16.0.5",
         "framer-motion": "^5.5.5",
         "react-icons": "^4.3.1",
-        "react-unstuck": "^2.4.7"
+        "react-unstuck": "^2.4.7",
+        "seedrandom": "^3.0.5"
+    },
+    "alias": {
+        "process": false,
+        "README_FOR_LINE_ABOVE": "work around a parcel 2.3 bug that would install a process polyfill"
     },
     "browserslist": [
         "chrome 90"
     ],
     "devDependencies": {
+        "@types/randomcolor": "^0.5.6",
         "@types/react": "^17.0.37",
         "@types/react-dom": "^17.0.11",
+        "@types/seedrandom": "^3.0.2",
         "concurrently": "^6.5.0",
         "parcel": "^2.0.1",
         "prettier": "^2.5.1",

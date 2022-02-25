@@ -31,6 +31,7 @@ import { k8sSmartCompare } from "../../../common/util/sort";
 import { menuGroupStylesHack } from "../../theme";
 import { searchMatch } from "../../../common/util/search";
 import { useWithDelay } from "../../hook/async";
+import { useK8sContextColorScheme } from "../../hook/k8s-context-color-scheme";
 
 type ContextOption = K8sContext &
     Partial<CloudK8sContextInfo> & {
@@ -132,20 +133,37 @@ export const ContextSelectMenu: React.FC = () => {
         }
     }, [filteredContextOptions, onSelectContext]);
 
+    const buttonColors = useK8sContextColorScheme(kubeContext);
+
     return (
-        <Menu isOpen={isOpen} onOpen={onOpen} onClose={onClose}>
+        <Menu
+            isOpen={isOpen}
+            onOpen={onOpen}
+            onClose={onClose}
+            gutter={0}
+            matchWidth={true}
+        >
             <MenuButton
                 as={Button}
                 rightIcon={<ChevronDownIcon />}
-                variant="ghost"
+                bg={buttonColors.fill}
+                textColor={buttonColors.background}
+                _hover={{ bg: buttonColors.fill }}
+                _active={{ bg: buttonColors.fill }}
+                width="100%"
+                textAlign="start"
             >
                 {isLoadingWithDelay && <Spinner />}
-                {!isLoading &&
-                    (currentContextInfo?.localClusterName ?? kubeContext)}
+                {!isLoading && (
+                    <Fragment>
+                        {currentContextInfo?.localClusterName ?? kubeContext}
+                    </Fragment>
+                )}
             </MenuButton>
             <MenuList
-                maxHeight="300px"
+                maxHeight="calc(100vh - 100px)"
                 overflowY="scroll"
+                boxShadow="xl"
                 sx={menuGroupStylesHack}
             >
                 <MenuInput
@@ -208,7 +226,22 @@ const ContextMenuItem: React.FC<ContextMenuItemProps> = (props) => {
     const onClick = useCallback(() => {
         onSelectContext(option.name);
     }, [onSelectContext, option]);
-    return <MenuItem onClick={onClick}>{option.label}</MenuItem>;
+    const colors = useK8sContextColorScheme(option.name);
+    return (
+        <MenuItem onClick={onClick}>
+            <Box
+                w="1em"
+                h="1em"
+                borderRadius="full"
+                borderWidth="2px"
+                borderColor={colors.border}
+                bg={colors.background}
+                display="inline-block"
+                marginEnd={2}
+            ></Box>
+            {option.label}
+        </MenuItem>
+    );
 };
 
 function groupLabel(group: Partial<ContextOption>): string {
