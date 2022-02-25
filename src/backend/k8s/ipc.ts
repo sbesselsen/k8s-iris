@@ -1,10 +1,6 @@
 import { K8sClientManager } from "./index";
 import { ipcHandle, ipcProvideSubscription } from "../../common/ipc/main";
-import {
-    K8sObject,
-    K8sObjectListQuery,
-    K8sObjectListWatch,
-} from "../../common/k8s/client";
+import { K8sObject, K8sObjectListQuery } from "../../common/k8s/client";
 
 export const wireK8sClientIpc = (clientManager: K8sClientManager): void => {
     ipcHandle("k8s:listContexts", () => clientManager.listContexts());
