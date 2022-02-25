@@ -43,19 +43,45 @@ export function createWindowManager(): WindowManager {
         if (!currentWindow) {
             currentWindow = BrowserWindow.getAllWindows()[0];
         }
+
+        const inheritedParams: WindowParameters = {};
+
         if (currentWindow) {
             const bounds = currentWindow.getBounds();
             options.x = bounds.x + 20;
             options.y = bounds.y + 20;
             options.width = bounds.width;
             options.height = bounds.height;
+
+            const url = currentWindow.webContents.getURL();
+            const hashMatch = String(url).match(/#(.*)$/);
+            if (hashMatch) {
+                try {
+                    const currentWindowParams = JSON.parse(
+                        Buffer.from(hashMatch[1], "base64").toString("utf-8")
+                    );
+                    if (currentWindowParams?.context) {
+                        inheritedParams.context = currentWindowParams.context;
+                    }
+                    if (currentWindowParams?.namespaces) {
+                        inheritedParams.namespaces =
+                            currentWindowParams.namespaces;
+                    }
+                } catch (e) {
+                    // Guess these are not window params then.
+                }
+            }
         }
 
         const win = new BrowserWindow(options);
 
         win.loadFile(path.join(__dirname, "..", "renderer", "index.html"), {
-            search: Buffer.from(
-                JSON.stringify({ ...defaultWindowParameters, ...params }),
+            hash: Buffer.from(
+                JSON.stringify({
+                    ...defaultWindowParameters,
+                    ...inheritedParams,
+                    ...params,
+                }),
                 "utf-8"
             ).toString("base64"),
         });

@@ -64,7 +64,9 @@ function createStore<T>(initialValue: T): InternalStore<T> {
     };
 }
 
-export function create<T>(defaultValue: T): [UseStore<T>, UseStoreValue<T>] {
+export function create<T>(
+    defaultValue: T
+): [UseStore<T>, UseStoreValue<T>, Store<T>] {
     const store = createStore(defaultValue);
     const StoreContext = createContext<Store<T>>(store);
     store.setReactContext(StoreContext);
@@ -100,7 +102,7 @@ export function create<T>(defaultValue: T): [UseStore<T>, UseStoreValue<T>] {
         return localValueRef.current;
     };
 
-    return [useStore, useStoreValue];
+    return [useStore, useStoreValue, store];
 }
 
 export function useContextStore<T>(store: Store<T>): [Store<T>, React.FC] {

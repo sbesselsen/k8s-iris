@@ -19,16 +19,22 @@ const defaultAppRoute: AppRoute = {
     overviewStyle: "cluster_info",
 };
 
-const searchString = window.location.search;
-if (searchString) {
+const hashString = window.location.hash;
+if (hashString) {
     defaultAppRoute.context =
-        JSON.parse(atob(searchString.slice(1))).context ?? null;
+        JSON.parse(atob(hashString.slice(1))).context ?? null;
     defaultAppRoute.namespaces =
-        JSON.parse(atob(searchString.slice(1))).namespaces ?? [];
+        JSON.parse(atob(hashString.slice(1))).namespaces ?? [];
 }
 
-const [useAppRouteStore, useAppRouteBase] = create(defaultAppRoute);
+const [useAppRouteStore, useAppRouteBase, rootAppRouteStore] =
+    create(defaultAppRoute);
 export const useAppRoute = useAppRouteBase;
+
+rootAppRouteStore.subscribe((newRoute) => {
+    // Change the window hash when the root app route changes, as a way to tell the main application what this window is about.
+    window.location.hash = "#" + btoa(JSON.stringify(newRoute));
+});
 
 export type AppRouteActions = {
     selectContext: (context: string) => AppRoute;
