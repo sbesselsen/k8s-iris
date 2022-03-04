@@ -1,5 +1,27 @@
-import { Box, Heading, HStack } from "@chakra-ui/react";
-import React, { Fragment } from "react";
+import {
+    Box,
+    Button,
+    ButtonGroup,
+    Checkbox,
+    CheckboxGroup,
+    Heading,
+    HStack,
+    Menu,
+    MenuItem,
+    MenuList,
+    Stack,
+    useDisclosure,
+} from "@chakra-ui/react";
+import React, {
+    Children,
+    createContext,
+    Fragment,
+    ReactElement,
+    useContext,
+    useEffect,
+    useRef,
+    useState,
+} from "react";
 import { OverviewStyle, useAppRoute } from "../../context/route";
 import { usePageTitle } from "../../hook/page-title";
 import { ContextSelectMenu } from "../k8s-context/ContextSelectMenu";
@@ -10,6 +32,7 @@ import { useK8sStatus } from "../../hook/k8s-status";
 import { ClusterInfoOverview } from "../cluster-info/ClusterInfoOverview";
 import { useK8sContextColorScheme } from "../../hook/k8s-context-color-scheme";
 import { useIsDev } from "../../hook/dev";
+import { AppFrame } from "../../component/AppFrame";
 
 const OverviewComponents: Record<OverviewStyle, React.FC> = {
     cluster_info: ClusterInfoOverview,
@@ -19,53 +42,42 @@ const OverviewComponents: Record<OverviewStyle, React.FC> = {
 };
 
 export const RootAppUI: React.FunctionComponent = () => {
-    const { context, overviewStyle } = useAppRoute();
-    const { status, error } = useK8sStatus();
-
-    const colors = useK8sContextColorScheme();
+    const { context } = useAppRoute();
 
     usePageTitle(context);
 
-    const isDev = useIsDev();
-
-    const Overview = OverviewComponents[overviewStyle];
-
     return (
         <Fragment>
-            <Box
-                width="300px"
-                height="100vh"
-                bg={colors.background}
-                overflowY="scroll"
-                position="fixed"
-                top="0"
-                left="0"
-                p={2}
-            >
-                <ContextSelectMenu />
-                {isDev && (
-                    <Heading
-                        textAlign="center"
-                        fontSize="md"
-                        textTransform="uppercase"
-                        my={3}
-                    >
-                        Development version
-                    </Heading>
-                )}
-            </Box>
-            <Box paddingStart="300px">
-                <HStack spacing={2} padding={2}>
-                    <NamespacesSelectMenu />
-                    <OverviewStyleSelectMenu />
-                </HStack>
-                {status === "error" && <ClusterError error={error} />}
-                {status === "ok" && (
-                    <Box minHeight="calc(100vh - 60px)">
-                        <Overview />
+            <AppFrame
+                title={
+                    <Box p={1}>
+                        <ContextSelectMenu />
                     </Box>
-                )}
-            </Box>
+                }
+                header={<Box>hi</Box>}
+                sidebar={
+                    <Box position="relative">
+                        <Menu isOpen={true}>
+                            <MenuList
+                                bg="transparent"
+                                border="transparent"
+                                boxShadow="none"
+                                width="100%"
+                            >
+                                <MenuItem>aap</MenuItem>
+                                <MenuItem>schaap</MenuItem>
+                                <MenuItem>blaat</MenuItem>
+                            </MenuList>
+                        </Menu>
+                    </Box>
+                }
+                content={<Box>{repeat(200, <p>right</p>)}</Box>}
+                colorScheme="green"
+            />
         </Fragment>
     );
+};
+
+const repeat = (n: number, content: ReactElement): Array<ReactElement> => {
+    return [...Array(n)].map((_, i) => <Fragment key={i}>{content}</Fragment>);
 };

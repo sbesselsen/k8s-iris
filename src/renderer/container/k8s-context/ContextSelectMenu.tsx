@@ -31,7 +31,6 @@ import { k8sSmartCompare } from "../../../common/util/sort";
 import { menuGroupStylesHack } from "../../theme";
 import { searchMatch } from "../../../common/util/search";
 import { useWithDelay } from "../../hook/async";
-import { useK8sContextColorScheme } from "../../hook/k8s-context-color-scheme";
 
 type ContextOption = K8sContext &
     Partial<CloudK8sContextInfo> & {
@@ -51,7 +50,12 @@ export const ContextSelectMenu: React.FC = () => {
 
     const [searchValue, setSearchValue] = useState("");
 
-    const { isOpen, onOpen, onClose } = useDisclosure();
+    const { isOpen, onOpen, onClose: onDisclosureClose } = useDisclosure();
+
+    const onClose = useCallback(() => {
+        setSearchValue("");
+        onDisclosureClose();
+    }, [onDisclosureClose, setSearchValue]);
 
     const onSelectContext = useCallback(
         (context: string) => {
@@ -133,25 +137,19 @@ export const ContextSelectMenu: React.FC = () => {
         }
     }, [filteredContextOptions, onSelectContext]);
 
-    const buttonColors = useK8sContextColorScheme(kubeContext);
-
     return (
         <Menu
             isOpen={isOpen}
             onOpen={onOpen}
             onClose={onClose}
-            gutter={0}
             matchWidth={true}
         >
             <MenuButton
                 as={Button}
                 rightIcon={<ChevronDownIcon />}
-                bg={buttonColors.fill}
-                textColor={buttonColors.background}
-                _hover={{ bg: buttonColors.fill }}
-                _active={{ bg: buttonColors.fill }}
                 width="100%"
                 textAlign="start"
+                colorScheme="green"
             >
                 {isLoadingWithDelay && <Spinner />}
                 {!isLoading && (
@@ -163,7 +161,8 @@ export const ContextSelectMenu: React.FC = () => {
             <MenuList
                 maxHeight="calc(100vh - 100px)"
                 overflowY="scroll"
-                boxShadow="xl"
+                boxShadow="dark-lg"
+                borderColor="gray.300"
                 sx={menuGroupStylesHack}
             >
                 <MenuInput
@@ -180,7 +179,7 @@ export const ContextSelectMenu: React.FC = () => {
                 )}
                 {groupedContextOptions.map((group, index) => (
                     <Fragment>
-                        {index > 0 && <MenuDivider />}
+                        {index > 0 && <MenuDivider key={`divider-${index}`} />}
                         <ContextMenuGroup
                             group={group}
                             key={index}
@@ -226,22 +225,7 @@ const ContextMenuItem: React.FC<ContextMenuItemProps> = (props) => {
     const onClick = useCallback(() => {
         onSelectContext(option.name);
     }, [onSelectContext, option]);
-    const colors = useK8sContextColorScheme(option.name);
-    return (
-        <MenuItem onClick={onClick}>
-            <Box
-                w="1em"
-                h="1em"
-                borderRadius="full"
-                borderWidth="2px"
-                borderColor={colors.border}
-                bg={colors.background}
-                display="inline-block"
-                marginEnd={2}
-            ></Box>
-            {option.label}
-        </MenuItem>
-    );
+    return <MenuItem onClick={onClick}>{option.label}</MenuItem>;
 };
 
 function groupLabel(group: Partial<ContextOption>): string {
