@@ -1,3 +1,8 @@
+html,
+body {
+    overflow: hidden;
+}
+
 :not(input):not(textarea),
 :not(input):not(textarea)::after,
 :not(input):not(textarea)::before {
