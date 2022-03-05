@@ -6,6 +6,7 @@ import React, {
     useRef,
     useState,
 } from "react";
+import { useColorTheme } from "../context/color-theme";
 
 export type AppFrameProps = {
     header: ReactElement;
@@ -16,7 +17,17 @@ export type AppFrameProps = {
 };
 
 export const AppFrame: React.FC<AppFrameProps> = (props) => {
-    const { header, sidebar, content, title, colorScheme = "gray" } = props;
+    const {
+        header,
+        sidebar,
+        content,
+        title,
+        colorScheme: propsColorScheme,
+    } = props;
+
+    const { colorScheme: defaultColorScheme } = useColorTheme();
+
+    const colorScheme = propsColorScheme ?? defaultColorScheme ?? "gray";
 
     const separatorWidth = "8px";
     const [sidebarWidth, setSidebarWidth] = useState("300px");
@@ -122,6 +133,7 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                     h="3px"
                     position="absolute"
                     bgGradient="linear(to-b, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.0))"
+                    zIndex={1}
                 ></Box>
                 <Box
                     flexGrow="0"
