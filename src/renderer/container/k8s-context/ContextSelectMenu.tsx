@@ -18,6 +18,7 @@ import React, {
     useState,
 } from "react";
 import { MenuInput } from "../../component/MenuInput";
+import { useColorTheme } from "../../context/color-theme";
 import { useK8sContext } from "../../context/k8s-context";
 import { useIpcCall } from "../../hook/ipc";
 import { useAppRouteActions } from "../../context/route";
@@ -43,6 +44,7 @@ type ContextOption = K8sContext &
 export const ContextSelectMenu: React.FC = () => {
     const kubeContext = useK8sContext();
     const { selectContext } = useAppRouteActions();
+    const { colorScheme } = useColorTheme();
 
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
 
@@ -149,7 +151,7 @@ export const ContextSelectMenu: React.FC = () => {
                 rightIcon={<ChevronDownIcon />}
                 width="100%"
                 textAlign="start"
-                colorScheme="green"
+                colorScheme={colorScheme}
             >
                 {isLoadingWithDelay && <Spinner />}
                 {!isLoading && (
@@ -178,14 +180,12 @@ export const ContextSelectMenu: React.FC = () => {
                     </Box>
                 )}
                 {groupedContextOptions.map((group, index) => (
-                    <Fragment>
-                        {index > 0 && <MenuDivider key={`divider-${index}`} />}
-                        <ContextMenuGroup
-                            group={group}
-                            key={index}
-                            onSelectContext={onSelectContext}
-                        />
-                    </Fragment>
+                    <ContextMenuGroup
+                        withDivider={index > 0}
+                        group={group}
+                        key={index}
+                        onSelectContext={onSelectContext}
+                    />
                 ))}
             </MenuList>
         </Menu>
@@ -198,20 +198,24 @@ type ContextMenuGroupProps = {
         options: ContextOption[];
     };
     onSelectContext: (context: string) => void;
+    withDivider: boolean;
 };
 
 const ContextMenuGroup: React.FC<ContextMenuGroupProps> = (props) => {
-    const { group, onSelectContext } = props;
+    const { group, onSelectContext, withDivider } = props;
     return (
-        <MenuGroup title={group.label}>
-            {group.options.map((contextOption) => (
-                <ContextMenuItem
-                    key={contextOption.name}
-                    option={contextOption}
-                    onSelectContext={onSelectContext}
-                />
-            ))}
-        </MenuGroup>
+        <Fragment>
+            {withDivider && <MenuDivider />}
+            <MenuGroup title={group.label}>
+                {group.options.map((contextOption) => (
+                    <ContextMenuItem
+                        key={contextOption.name}
+                        option={contextOption}
+                        onSelectContext={onSelectContext}
+                    />
+                ))}
+            </MenuGroup>
+        </Fragment>
     );
 };
 
