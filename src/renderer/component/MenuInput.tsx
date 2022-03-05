@@ -1,12 +1,14 @@
-import { Box, Input, useMenuItem } from "@chakra-ui/react";
+import { Box, Input, InputProps, useMenuItem } from "@chakra-ui/react";
 import React, { useCallback } from "react";
 
 const navigationKeys = ["ArrowUp", "ArrowDown", "Escape"];
 
 // See: https://github.com/chakra-ui/chakra-ui/issues/3697#issuecomment-811118964
-export const MenuInput: typeof Input &
-    React.FC<{ onPressEnter?: () => void }> = (props) => {
+export const MenuInput: React.FC<InputProps & { onPressEnter?: () => void }> = (
+    props
+) => {
     const { role, ...rest } = useMenuItem(props);
+    delete (rest as any).onPressEnter;
     const { onPressEnter } = props;
 
     const onKeyDown = useCallback(
