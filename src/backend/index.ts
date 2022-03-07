@@ -43,8 +43,10 @@ import { createWindowManager, WindowParameters } from "./window";
 
     // Set default params for new windows.
     windowManager.setDefaultWindowParameters({
-        context: k8sClientManager.defaultContext(),
-        namespaces: k8sClientManager.defaultNamespaces(),
+        route: {
+            context: k8sClientManager.defaultContext() ?? null,
+            namespaces: k8sClientManager.defaultNamespaces() ?? null,
+        },
     });
 
     // Open our main window.

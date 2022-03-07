@@ -11,7 +11,7 @@ export const BoxMenuList: React.FC<BoxProps> = (props) => {
     const wrappedKeyDown = useCallback(
         (e: KeyboardEvent<Element>) => {
             boxOnKeyDown?.(e as KeyboardEvent<HTMLDivElement>);
-            if (e.key !== "Tab") {
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
                 onKeyDown(e);
             }
         },

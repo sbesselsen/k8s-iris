@@ -31,8 +31,8 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
 
     const separatorWidth = "8px";
     const [sidebarWidth, setSidebarWidth] = useState("300px");
-    const sidebarMinWidth = 300;
-    const contentMinWidth = 500;
+    const sidebarMinWidth = 200;
+    const contentMinWidth = 400;
 
     const titleBoxRef = useRef<HTMLDivElement>();
     const vSeparatorBoxRef = useRef<HTMLDivElement>();

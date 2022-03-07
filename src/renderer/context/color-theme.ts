@@ -5,7 +5,7 @@ export type ColorTheme = {
 };
 
 const defaultColorTheme: ColorTheme = {
-    colorScheme: "pink",
+    colorScheme: "gray",
 };
 
 export const [useColorThemeStore, useColorTheme] = create(defaultColorTheme);

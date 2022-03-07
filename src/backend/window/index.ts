@@ -1,5 +1,6 @@
 import { BrowserWindow, BrowserWindowConstructorOptions } from "electron";
 import * as path from "path";
+import { AppRoute, emptyAppRoute } from "../../common/route/app-route";
 import { isDev } from "../util/dev";
 
 export type WindowManager = {
@@ -10,8 +11,7 @@ export type WindowManager = {
 };
 
 export type WindowParameters = {
-    context?: string;
-    namespaces?: string[];
+    route: AppRoute;
 };
 
 type WindowHandle = {
@@ -20,7 +20,9 @@ type WindowHandle = {
 
 export function createWindowManager(): WindowManager {
     const windowHandles: Record<string, WindowHandle> = {};
-    let defaultWindowParameters: WindowParameters = {};
+    let defaultWindowParameters: WindowParameters = {
+        route: emptyAppRoute,
+    };
 
     const generateWindowId = (() => {
         let counter = 0;
@@ -28,7 +30,7 @@ export function createWindowManager(): WindowManager {
     })();
 
     const createWindow = async (
-        params: WindowParameters = {}
+        params: Partial<WindowParameters> = {}
     ): Promise<string> => {
         const options: BrowserWindowConstructorOptions = {
             width: 800,
@@ -45,7 +47,7 @@ export function createWindowManager(): WindowManager {
             currentWindow = BrowserWindow.getAllWindows()[0];
         }
 
-        const inheritedParams: WindowParameters = {};
+        const inheritedParams: Partial<WindowParameters> = {};
 
         if (currentWindow) {
             const bounds = currentWindow.getBounds();
@@ -61,12 +63,8 @@ export function createWindowManager(): WindowManager {
                     const currentWindowParams = JSON.parse(
                         Buffer.from(hashMatch[1], "base64").toString("utf-8")
                     );
-                    if (currentWindowParams?.context) {
-                        inheritedParams.context = currentWindowParams.context;
-                    }
-                    if (currentWindowParams?.namespaces) {
-                        inheritedParams.namespaces =
-                            currentWindowParams.namespaces;
+                    if (currentWindowParams?.route) {
+                        inheritedParams.route = currentWindowParams.route;
                     }
                 } catch (e) {
                     // Guess these are not window params then.
