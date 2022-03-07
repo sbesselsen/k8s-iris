@@ -9,7 +9,7 @@ import React, {
 import { useColorTheme } from "../context/color-theme";
 
 export type AppFrameProps = {
-    header: ReactElement;
+    search: ReactElement;
     sidebar: ReactElement;
     content: ReactElement;
     title: ReactElement;
@@ -18,7 +18,7 @@ export type AppFrameProps = {
 
 export const AppFrame: React.FC<AppFrameProps> = (props) => {
     const {
-        header,
+        search,
         sidebar,
         content,
         title,
@@ -30,11 +30,10 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
     const colorScheme = propsColorScheme ?? defaultColorScheme ?? "gray";
 
     const separatorWidth = "8px";
-    const [sidebarWidth, setSidebarWidth] = useState("300px");
+    const [sidebarWidth, setSidebarWidth] = useState("250px");
     const sidebarMinWidth = 200;
     const contentMinWidth = 400;
 
-    const titleBoxRef = useRef<HTMLDivElement>();
     const vSeparatorBoxRef = useRef<HTMLDivElement>();
     const sidebarBoxRef = useRef<HTMLDivElement>();
 
@@ -78,11 +77,9 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                 );
                 sidebarBoxRef.current.style.flexBasis =
                     separatorDragState.currentSidebarWidth + "px";
-                titleBoxRef.current.style.flexBasis =
-                    separatorDragState.currentSidebarWidth + "px";
             }
         },
-        [separatorDragState, sidebarBoxRef, titleBoxRef, vSeparatorBoxRef]
+        [separatorDragState, sidebarBoxRef, vSeparatorBoxRef]
     );
 
     // When dragging ends, rerender with the new sidebar width.
@@ -103,6 +100,8 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
         colorScheme + ".900"
     );
 
+    // TODO: make button offset work in Windows as well, on the other side
+
     return (
         <VStack
             w="100vw"
@@ -117,24 +116,36 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                 flex="0 0 30px"
                 bg={headerBackground}
                 spacing={0}
+                justifyContent="space-between"
                 alignItems="stretch"
             >
                 <Box
                     flexGrow="0"
                     flexShrink="0"
-                    flexBasis={sidebarWidth}
+                    flexBasis="250px"
+                    h="100%"
+                    sx={{ "-webkit-app-region": "drag" }}
+                ></Box>
+                <Box
+                    flexGrow="1"
+                    flexShrink="0"
+                    flexBasis="0"
                     overflow="hidden"
-                    ref={titleBoxRef}
+                    h="100%"
+                    sx={{ "-webkit-app-region": "drag" }}
                 >
                     {title}
                 </Box>
                 <Box
                     flexGrow="0"
                     flexShrink="0"
-                    flexBasis={separatorWidth}
-                ></Box>
-                <Box flex="1 0 0" overflow="hidden">
-                    {header}
+                    flexBasis="250px"
+                    overflow="hidden"
+                    textAlign="end"
+                    h="100%"
+                    sx={{ "-webkit-app-region": "drag" }}
+                >
+                    {search}
                 </Box>
             </HStack>
             <HStack spacing={0} flex="1 0 0" alignItems="stretch" h={0}>

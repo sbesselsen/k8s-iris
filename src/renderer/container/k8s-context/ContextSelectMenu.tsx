@@ -14,6 +14,7 @@ import {
 import React, {
     ChangeEvent,
     Fragment,
+    ReactElement,
     useCallback,
     useMemo,
     useState,
@@ -33,6 +34,7 @@ import { k8sSmartCompare } from "../../../common/util/sort";
 import { menuGroupStylesHack } from "../../theme";
 import { searchMatch } from "../../../common/util/search";
 import { useWithDelay } from "../../hook/async";
+import { k8sAccountIdColor } from "../../util/k8s-context-color";
 
 type ContextOption = K8sContext &
     Partial<CloudK8sContextInfo> & {
@@ -156,18 +158,26 @@ export const ContextSelectMenu: React.FC = () => {
                 width="100%"
                 textAlign="start"
                 colorScheme={colorScheme}
+                size="sm"
+                boxShadow="0 1px 2px rgba(0, 0, 0, 0.1)"
+                _active={{
+                    bg: "",
+                }}
             >
-                {isLoadingWithDelay && <Spinner />}
-                {!isLoading && (
-                    <Fragment>
-                        {currentContextInfo?.localClusterName ?? kubeContext}
-                    </Fragment>
-                )}
+                <Box isTruncated>
+                    {isLoadingWithDelay && <Spinner />}
+                    {!isLoading && (
+                        <Fragment>
+                            {currentContextInfo?.localClusterName ??
+                                kubeContext}
+                        </Fragment>
+                    )}
+                </Box>
             </MenuButton>
             <MenuList
                 maxHeight="calc(100vh - 100px)"
                 overflowY="scroll"
-                boxShadow="dark-lg"
+                boxShadow="2xl"
                 borderColor={popupBorderColor}
                 bg={popupBackground}
                 sx={menuGroupStylesHack}
@@ -177,8 +187,9 @@ export const ContextSelectMenu: React.FC = () => {
                     value={searchValue}
                     onChange={onChangeSearchInput}
                     onPressEnter={onPressSearchEnter}
+                    size="sm"
+                    mb={4}
                 />
-                <MenuDivider />
                 {isLoadingWithDelay && (
                     <Box p={4}>
                         <Spinner />
@@ -186,7 +197,6 @@ export const ContextSelectMenu: React.FC = () => {
                 )}
                 {groupedContextOptions.map((group, index) => (
                     <ContextMenuGroup
-                        withDivider={index > 0}
                         group={group}
                         key={index}
                         onSelectContext={onSelectContext}
@@ -203,15 +213,13 @@ type ContextMenuGroupProps = {
         options: ContextOption[];
     };
     onSelectContext: (context: string) => void;
-    withDivider: boolean;
 };
 
 const ContextMenuGroup: React.FC<ContextMenuGroupProps> = (props) => {
-    const { group, onSelectContext, withDivider } = props;
+    const { group, onSelectContext } = props;
     return (
         <Fragment>
-            {withDivider && <MenuDivider />}
-            <MenuGroup title={group.label}>
+            <MenuGroup title={group.label} pt={2}>
                 {group.options.map((contextOption) => (
                     <ContextMenuItem
                         key={contextOption.name}
@@ -234,7 +242,21 @@ const ContextMenuItem: React.FC<ContextMenuItemProps> = (props) => {
     const onClick = useCallback(() => {
         onSelectContext(option.name);
     }, [onSelectContext, option]);
-    return <MenuItem onClick={onClick}>{option.label}</MenuItem>;
+
+    const { colorScheme } = k8sAccountIdColor(option.bestAccountId ?? null);
+
+    return (
+        <MenuItem onClick={onClick} fontSize="sm" px={4}>
+            <Box
+                w="1em"
+                h="1em"
+                borderRadius="full"
+                bg={colorScheme + ".500"}
+                me={3}
+            ></Box>{" "}
+            {option.label}
+        </MenuItem>
+    );
 };
 
 function groupLabel(group: Partial<ContextOption>): string {

@@ -33,8 +33,11 @@ export function createWindowManager(): WindowManager {
         params: Partial<WindowParameters> = {}
     ): Promise<string> => {
         const options: BrowserWindowConstructorOptions = {
-            width: 800,
+            width: 850,
             height: 600,
+            minWidth: 850,
+            titleBarStyle: "hiddenInset",
+            titleBarOverlay: true,
             title: "Charm",
             webPreferences: {
                 preload: path.join(__dirname, "..", "preload", "index.js"),

@@ -57,11 +57,11 @@ export const RootAppUI: React.FunctionComponent = () => {
         <Fragment>
             <AppFrame
                 title={
-                    <Box p={1}>
+                    <Box p={1} maxWidth="300px" mx="auto">
                         <ContextSelectMenu />
                     </Box>
                 }
-                header={<Box>hi</Box>}
+                search={<Box>hi</Box>}
                 sidebar={
                     <Box position="relative">
                         <TestMenu />

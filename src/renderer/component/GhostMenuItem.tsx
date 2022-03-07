@@ -8,10 +8,10 @@ export const GhostMenuItem: React.FC<MenuItemProps> = (props) => {
     return (
         <MenuItem
             _focus={{
-                bg: "rgba(255, 255, 255, 0.2)",
+                bg: "rgba(255, 255, 255, 0.4)",
             }}
             _active={{
-                bg: "rgba(255, 255, 255, 0.5)",
+                bg: "rgba(255, 255, 255, 0.6)",
             }}
             {...props}
         />
