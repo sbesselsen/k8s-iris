@@ -118,13 +118,13 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                 spacing={0}
                 justifyContent="space-between"
                 alignItems="stretch"
+                sx={{ "-webkit-app-region": "drag" }}
             >
                 <Box
                     flexGrow="0"
                     flexShrink="0"
                     flexBasis="250px"
                     h="100%"
-                    sx={{ "-webkit-app-region": "drag" }}
                 ></Box>
                 <Box
                     flexGrow="1"
@@ -132,7 +132,6 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                     flexBasis="0"
                     overflow="hidden"
                     h="100%"
-                    sx={{ "-webkit-app-region": "drag" }}
                 >
                     {title}
                 </Box>
@@ -143,7 +142,6 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                     overflow="hidden"
                     textAlign="end"
                     h="100%"
-                    sx={{ "-webkit-app-region": "drag" }}
                 >
                     {search}
                 </Box>

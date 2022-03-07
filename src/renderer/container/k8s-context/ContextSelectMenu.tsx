@@ -188,6 +188,7 @@ export const ContextSelectMenu: React.FC = () => {
                     onChange={onChangeSearchInput}
                     onPressEnter={onPressSearchEnter}
                     size="sm"
+                    borderRadius="md"
                     mb={4}
                 />
                 {isLoadingWithDelay && (

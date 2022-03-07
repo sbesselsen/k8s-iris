@@ -1,6 +1,9 @@
 import {
     Box,
     Icon,
+    Input,
+    InputGroup,
+    InputRightElement,
     Menu,
     MenuGroup,
     useColorModeValue,
@@ -22,6 +25,7 @@ import { SiKubernetes } from "react-icons/si";
 import { useK8sContext } from "../../context/k8s-context";
 import { useK8sContextsInfo } from "../../hook/k8s-contexts-info";
 import { k8sAccountIdColor } from "../../util/k8s-context-color";
+import { CheckIcon, SearchIcon } from "@chakra-ui/icons";
 
 export const RootAppUI: React.FunctionComponent = () => {
     const { context } = useAppRoute();
@@ -53,6 +57,23 @@ export const RootAppUI: React.FunctionComponent = () => {
         return null;
     }
 
+    const { colorScheme } = contextualColorTheme;
+
+    const searchBackground = useColorModeValue(
+        colorScheme + ".100",
+        colorScheme + ".900"
+    );
+
+    const iconColor = useColorModeValue(
+        colorScheme + ".700",
+        colorScheme + ".100"
+    );
+    const itemTextColor = useColorModeValue(colorScheme + ".900", "white");
+    const itemPlaceholderColor = useColorModeValue(
+        colorScheme + ".600",
+        colorScheme + ".100"
+    );
+
     return (
         <Fragment>
             <AppFrame
@@ -61,7 +82,26 @@ export const RootAppUI: React.FunctionComponent = () => {
                         <ContextSelectMenu />
                     </Box>
                 }
-                search={<Box>hi</Box>}
+                search={
+                    <Box px={1} py={1}>
+                        <InputGroup size="sm">
+                            <Input
+                                placeholder="Search"
+                                borderRadius="md"
+                                bg={searchBackground}
+                                border={0}
+                                textColor={itemTextColor}
+                                _placeholder={{
+                                    textColor: itemPlaceholderColor,
+                                }}
+                            />
+                            <InputRightElement
+                                children={<SearchIcon />}
+                                color={iconColor}
+                            />
+                        </InputGroup>
+                    </Box>
+                }
                 sidebar={
                     <Box position="relative">
                         <TestMenu />
@@ -127,10 +167,7 @@ const TestMenu: React.FC = () => {
         />
     );
 
-    const itemTextColor = useColorModeValue(
-        colorScheme + ".900",
-        colorScheme + ".200"
-    );
+    const itemTextColor = useColorModeValue(colorScheme + ".900", "white");
 
     return (
         <Menu isOpen={true}>
