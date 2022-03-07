@@ -1,4 +1,4 @@
-import { Box, HStack, VStack } from "@chakra-ui/react";
+import { Box, HStack, useColorModeValue, VStack } from "@chakra-ui/react";
 import React, {
     PointerEventHandler,
     ReactElement,
@@ -93,6 +93,16 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
         }
     }, [separatorDragState, setSidebarWidth]);
 
+    const contentBackground = useColorModeValue("white", "black");
+    const headerBackground = useColorModeValue(
+        colorScheme + ".300",
+        colorScheme + ".700"
+    );
+    const sidebarBackground = useColorModeValue(
+        colorScheme + ".100",
+        colorScheme + ".900"
+    );
+
     return (
         <VStack
             w="100vw"
@@ -105,7 +115,7 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
         >
             <HStack
                 flex="0 0 30px"
-                bg={colorScheme + ".300"}
+                bg={headerBackground}
                 spacing={0}
                 alignItems="stretch"
             >
@@ -139,7 +149,7 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                     flexGrow="0"
                     flexShrink="0"
                     flexBasis={sidebarWidth}
-                    bg={colorScheme + ".100"}
+                    bg={sidebarBackground}
                     overflow="hidden scroll"
                     sx={{ scrollbarGutter: "stable" }}
                     ref={sidebarBoxRef}
@@ -150,14 +160,14 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                     flexGrow="0"
                     flexShrink="0"
                     flexBasis={separatorWidth}
-                    bg="white"
+                    bg={contentBackground}
                     cursor="col-resize"
                     onPointerDown={onVSeparatorPointerDown}
                     ref={vSeparatorBoxRef}
                 ></Box>
                 <Box
                     flex="1 0 0"
-                    bg="white"
+                    bg={contentBackground}
                     overflow="scroll"
                     sx={{ scrollbarGutter: "stable" }}
                 >

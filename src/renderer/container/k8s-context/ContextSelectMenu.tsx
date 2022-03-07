@@ -8,6 +8,7 @@ import {
     MenuItem,
     MenuList,
     Spinner,
+    useColorModeValue,
     useDisclosure,
 } from "@chakra-ui/react";
 import React, {
@@ -139,6 +140,9 @@ export const ContextSelectMenu: React.FC = () => {
         }
     }, [filteredContextOptions, onSelectContext]);
 
+    const popupBackground = useColorModeValue("white", "gray.800");
+    const popupBorderColor = useColorModeValue("gray.300", "gray.600");
+
     return (
         <Menu
             isOpen={isOpen}
@@ -164,7 +168,8 @@ export const ContextSelectMenu: React.FC = () => {
                 maxHeight="calc(100vh - 100px)"
                 overflowY="scroll"
                 boxShadow="dark-lg"
-                borderColor="gray.300"
+                borderColor={popupBorderColor}
+                bg={popupBackground}
                 sx={menuGroupStylesHack}
             >
                 <MenuInput
