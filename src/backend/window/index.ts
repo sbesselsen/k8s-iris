@@ -1,5 +1,6 @@
 import { BrowserWindow, BrowserWindowConstructorOptions } from "electron";
 import * as path from "path";
+import { prefixEventChannel } from "../../common/ipc/shared";
 import { AppRoute, emptyAppRoute } from "../../common/route/app-route";
 import { isDev } from "../util/dev";
 
@@ -92,6 +93,24 @@ export function createWindowManager(): WindowManager {
                 hash: windowHash,
             });
         }
+        win.webContents.on("did-finish-load", () => {
+            win.webContents.send(
+                prefixEventChannel("app:window:focus-change"),
+                win.isFocused()
+            );
+        });
+        win.on("focus", () => {
+            win.webContents.send(
+                prefixEventChannel("app:window:focus-change"),
+                true
+            );
+        });
+        win.on("blur", () => {
+            win.webContents.send(
+                prefixEventChannel("app:window:focus-change"),
+                false
+            );
+        });
 
         const windowId = generateWindowId();
         windowHandles[windowId] = {

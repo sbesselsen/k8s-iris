@@ -26,6 +26,7 @@ import { useK8sContext } from "../../context/k8s-context";
 import { useK8sContextsInfo } from "../../hook/k8s-contexts-info";
 import { k8sAccountIdColor } from "../../util/k8s-context-color";
 import { CheckIcon, SearchIcon } from "@chakra-ui/icons";
+import { useWindowFocusValue } from "../../hook/window-focus";
 
 export const RootAppUI: React.FunctionComponent = () => {
     const { context } = useAppRoute();
@@ -53,26 +54,27 @@ export const RootAppUI: React.FunctionComponent = () => {
 
     usePageTitle(context);
 
-    if (loadingContextsInfo || !contextualColorTheme) {
-        return null;
-    }
-
-    const { colorScheme } = contextualColorTheme;
+    const { colorScheme } = contextualColorTheme ?? { colorScheme: "gray" };
 
     const searchBackground = useColorModeValue(
-        colorScheme + ".100",
-        colorScheme + ".900"
+        colorScheme + useWindowFocusValue(".100", ".300"),
+        colorScheme + useWindowFocusValue(".800", ".900")
     );
 
     const iconColor = useColorModeValue(
-        colorScheme + ".700",
-        colorScheme + ".100"
+        useWindowFocusValue(colorScheme + ".700", colorScheme + ".300"),
+        useWindowFocusValue(colorScheme + ".300", colorScheme + ".500")
     );
+
     const itemTextColor = useColorModeValue(colorScheme + ".900", "white");
     const itemPlaceholderColor = useColorModeValue(
-        colorScheme + ".600",
-        colorScheme + ".100"
+        useWindowFocusValue(colorScheme + ".600", colorScheme + ".600"),
+        useWindowFocusValue(colorScheme + ".100", colorScheme + ".400")
     );
+
+    if (loadingContextsInfo) {
+        return null;
+    }
 
     return (
         <Fragment>

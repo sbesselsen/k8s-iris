@@ -1,5 +1,9 @@
 import { ipcRenderer } from "electron";
-import { prefixHandlerChannel, prefixSubscriptionChannel } from "./shared";
+import {
+    prefixEventChannel,
+    prefixHandlerChannel,
+    prefixSubscriptionChannel,
+} from "./shared";
 
 function ipcInvoke<T, U>(name: string, data: T): Promise<U> {
     return ipcRenderer
@@ -69,4 +73,27 @@ export function ipcSubscriber<T, U>(
     handler: (error: any | undefined, message?: U | undefined) => void
 ) => IpcSubscription {
     return (data, handler) => ipcSubscribe(name, data, handler);
+}
+
+export type IpcEventSubscription = {
+    stop(): void;
+};
+
+export function ipcEventSubscriber<T>(
+    name: string
+): (handler: (event: T) => void) => IpcEventSubscription {
+    let handlers: Array<(event: T) => void> = [];
+
+    ipcRenderer.on(prefixEventChannel(name), (_e, data) => {
+        handlers.forEach((h) => h(data));
+    });
+
+    return (handler) => {
+        handlers.push(handler);
+        return {
+            stop() {
+                handlers = handlers.filter((h) => h !== handler);
+            },
+        };
+    };
 }

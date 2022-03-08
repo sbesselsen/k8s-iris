@@ -1,5 +1,9 @@
 import { contextBridge } from "electron";
-import { ipcInvoker, ipcSubscriber } from "../common/ipc/renderer";
+import {
+    ipcInvoker,
+    ipcEventSubscriber,
+    ipcSubscriber,
+} from "../common/ipc/renderer";
 import { IpcCalls } from "../common/ipc-types";
 
 const createWindow = ipcInvoker("app:createWindow");
@@ -13,10 +17,14 @@ const replace = ipcInvoker("k8s:client:replace");
 const remove = ipcInvoker("k8s:client:remove");
 const list = ipcInvoker("k8s:client:list");
 const listWatch = ipcSubscriber("k8s:client:listWatch");
+const onWindowFocusChange = ipcEventSubscriber<boolean>(
+    "app:window:focus-change"
+);
 
 contextBridge.exposeInMainWorld("charm", {
     app: {
         createWindow,
+        onWindowFocusChange,
     },
     cloud: {
         augmentK8sContexts,

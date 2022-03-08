@@ -15,6 +15,9 @@ export type IpcCalls = {
             context?: string;
             namespaces?: string[];
         }): Promise<void>;
+        onWindowFocusChange(handler: (data: boolean) => void): {
+            stop: () => void;
+        };
     };
     cloud: {
         augmentK8sContexts(
