@@ -53,7 +53,7 @@ export const RootAppUI: React.FunctionComponent = () => {
 
     usePageTitle(context);
 
-    if (loadingContextsInfo) {
+    if (loadingContextsInfo || !contextualColorTheme) {
         return null;
     }
 
@@ -78,12 +78,12 @@ export const RootAppUI: React.FunctionComponent = () => {
         <Fragment>
             <AppFrame
                 title={
-                    <Box p={1} maxWidth="300px" mx="auto">
+                    <Box p={2} maxWidth="300px" mx="auto">
                         <ContextSelectMenu />
                     </Box>
                 }
                 search={
-                    <Box px={1} py={1}>
+                    <Box px={2} py={2}>
                         <InputGroup size="sm">
                             <Input
                                 placeholder="Search"

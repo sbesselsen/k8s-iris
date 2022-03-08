@@ -118,7 +118,7 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                 spacing={0}
                 justifyContent="space-between"
                 alignItems="stretch"
-                sx={{ "-webkit-app-region": "drag" }}
+                sx={{ WebkitAppRegion: "drag" }}
             >
                 <Box
                     flexGrow="0"
