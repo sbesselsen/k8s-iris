@@ -6,8 +6,8 @@ import React, {
     useRef,
     useState,
 } from "react";
-import { useColorTheme } from "../context/color-theme";
-import { useWindowFocusValue } from "../hook/window-focus";
+import { useColorTheme } from "../../context/color-theme";
+import { useWindowFocusValue } from "../../hook/window-focus";
 
 export type AppFrameProps = {
     search: ReactElement;

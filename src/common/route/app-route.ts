@@ -3,9 +3,15 @@ export type AppRoute = {
     namespaces: AppNamespacesSelection;
 };
 
-export type AppNamespacesSelection = string[] | null;
+export type AppNamespacesSelection = {
+    mode: "all" | "selected";
+    selected: string[];
+};
 
 export const emptyAppRoute: AppRoute = {
     context: null,
-    namespaces: null,
+    namespaces: {
+        mode: "all",
+        selected: [],
+    },
 };

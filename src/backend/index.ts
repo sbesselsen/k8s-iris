@@ -45,7 +45,10 @@ import { createWindowManager, WindowParameters } from "./window";
     windowManager.setDefaultWindowParameters({
         route: {
             context: k8sClientManager.defaultContext() ?? null,
-            namespaces: k8sClientManager.defaultNamespaces() ?? null,
+            namespaces: {
+                mode: "all",
+                selected: k8sClientManager.defaultNamespaces() ?? [],
+            },
         },
     });
 

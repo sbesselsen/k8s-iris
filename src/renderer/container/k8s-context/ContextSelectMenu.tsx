@@ -3,7 +3,6 @@ import {
     Button,
     Menu,
     MenuButton,
-    MenuDivider,
     MenuGroup,
     MenuItem,
     MenuList,
@@ -14,7 +13,6 @@ import {
 import React, {
     ChangeEvent,
     Fragment,
-    ReactElement,
     useCallback,
     useMemo,
     useState,
@@ -35,6 +33,7 @@ import { menuGroupStylesHack } from "../../theme";
 import { searchMatch } from "../../../common/util/search";
 import { useWithDelay } from "../../hook/async";
 import { k8sAccountIdColor } from "../../util/k8s-context-color";
+import { emptyAppRoute } from "../../../common/route/app-route";
 
 type ContextOption = K8sContext &
     Partial<CloudK8sContextInfo> & {
@@ -66,7 +65,10 @@ export const ContextSelectMenu: React.FC = () => {
         (context: string) => {
             if (metaKeyPressedRef.current) {
                 createWindow({
-                    context,
+                    route: {
+                        ...emptyAppRoute,
+                        context,
+                    },
                 });
             } else {
                 selectContext(context);

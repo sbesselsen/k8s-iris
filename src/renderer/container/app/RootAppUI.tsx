@@ -10,7 +10,14 @@ import {
     MenuGroup,
     useColorModeValue,
 } from "@chakra-ui/react";
-import React, { Fragment, ReactElement, useEffect, useMemo } from "react";
+import React, {
+    Fragment,
+    ReactElement,
+    useCallback,
+    useEffect,
+    useMemo,
+    useState,
+} from "react";
 import { useAppRoute } from "../../context/route";
 import { usePageTitle } from "../../hook/page-title";
 import { ContextSelectMenu } from "../k8s-context/ContextSelectMenu";
@@ -18,7 +25,7 @@ import { ClusterError } from "./ClusterError";
 import { useK8sStatus } from "../../hook/k8s-status";
 import { ClusterInfoOverview } from "../cluster-info/ClusterInfoOverview";
 import { useIsDev } from "../../hook/dev";
-import { AppFrame } from "../../component/AppFrame";
+import { AppFrame } from "../../component/main/AppFrame";
 import { BoxMenuList } from "../../component/BoxMenuList";
 import { GhostMenuItem } from "../../component/GhostMenuItem";
 import { useColorTheme, useColorThemeStore } from "../../context/color-theme";
@@ -29,12 +36,24 @@ import { useK8sContextsInfo } from "../../hook/k8s-contexts-info";
 import { k8sAccountIdColor } from "../../util/k8s-context-color";
 import { CheckIcon, SearchIcon } from "@chakra-ui/icons";
 import { useWindowFocusValue } from "../../hook/window-focus";
+import { SearchInput } from "../../component/main/SearchInput";
+import { useAppSearch, useAppSearchStore } from "../../context/search";
 
 export const RootAppUI: React.FunctionComponent = () => {
     const { context } = useAppRoute();
     const colorThemeStore = useColorThemeStore();
     const kubeContext = useK8sContext();
     const [loadingContextsInfo, contextsInfo] = useK8sContextsInfo();
+
+    const searchStore = useAppSearchStore();
+    const searchValue = useAppSearch();
+
+    const setSearchValue = useCallback(
+        (query: string) => {
+            searchStore.set({ query });
+        },
+        [searchStore]
+    );
 
     const contextualColorTheme = useMemo(() => {
         const contextInfo = contextsInfo?.find((ctx) => ctx.name === context);
@@ -56,21 +75,6 @@ export const RootAppUI: React.FunctionComponent = () => {
 
     usePageTitle(context);
 
-    const { colorScheme } = contextualColorTheme ?? { colorScheme: "gray" };
-
-    const searchBackground = useColorModeValue(
-        colorScheme + useWindowFocusValue(".100", ".300"),
-        colorScheme + useWindowFocusValue(".800", ".900")
-    );
-    const searchFocusedBackground = useColorModeValue("white", "black");
-    const itemTextColor = useColorModeValue(colorScheme + ".900", "white");
-    const itemPlaceholderColor = useColorModeValue(
-        useWindowFocusValue(colorScheme + ".600", colorScheme + ".600"),
-        useWindowFocusValue(colorScheme + ".100", colorScheme + ".400")
-    );
-
-    const iconColor = itemPlaceholderColor;
-
     if (loadingContextsInfo) {
         return null;
     }
@@ -85,27 +89,10 @@ export const RootAppUI: React.FunctionComponent = () => {
                 }
                 search={
                     <Box px={2} py={2}>
-                        <InputGroup size="sm">
-                            <Input
-                                placeholder="Search"
-                                borderRadius="md"
-                                bg={searchBackground}
-                                border={0}
-                                transition="none"
-                                textColor={itemTextColor}
-                                _placeholder={{
-                                    textColor: itemPlaceholderColor,
-                                }}
-                                _focus={{
-                                    bg: searchFocusedBackground,
-                                }}
-                                sx={{ WebkitAppRegion: "no-drag" }}
-                            />
-                            <InputRightElement
-                                children={<SearchIcon />}
-                                color={iconColor}
-                            />
-                        </InputGroup>
+                        <SearchInput
+                            value={searchValue.query}
+                            onChange={setSearchValue}
+                        />
                     </Box>
                 }
                 sidebar={
@@ -185,6 +172,10 @@ const TestMenu: React.FC = () => {
     const itemTextColor = useColorModeValue(colorScheme + ".900", "white");
 
     const namespacesToggleBorderColor = colorScheme + ".500";
+    const namespacesToggleHoverColor = useColorModeValue(
+        "white",
+        colorScheme + ".700"
+    );
 
     return (
         <Fragment>
@@ -215,12 +206,27 @@ const TestMenu: React.FC = () => {
                                     mr="-1px"
                                     borderColor={namespacesToggleBorderColor}
                                     textColor={itemTextColor}
+                                    isActive
+                                    _active={{
+                                        bg: namespacesToggleBorderColor,
+                                        textColor: "white",
+                                    }}
+                                    _hover={{
+                                        bg: namespacesToggleHoverColor,
+                                    }}
                                 >
                                     All
                                 </Button>
                                 <Button
                                     borderColor={namespacesToggleBorderColor}
                                     textColor={itemTextColor}
+                                    _active={{
+                                        bg: namespacesToggleBorderColor,
+                                        textColor: "white",
+                                    }}
+                                    _hover={{
+                                        bg: namespacesToggleHoverColor,
+                                    }}
                                 >
                                     Selected
                                 </Button>

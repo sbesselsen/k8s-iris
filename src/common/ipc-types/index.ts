@@ -8,13 +8,11 @@ import {
     K8sRemoveOptions,
     K8sRemoveStatus,
 } from "../k8s/client";
+import { AppRoute } from "../route/app-route";
 
 export type IpcCalls = {
     app: {
-        createWindow(parameters?: {
-            context?: string;
-            namespaces?: string[];
-        }): Promise<void>;
+        createWindow(parameters?: { route?: AppRoute }): Promise<void>;
         onWindowFocusChange(handler: (data: boolean) => void): {
             stop: () => void;
         };

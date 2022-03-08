@@ -1,5 +1,3 @@
-// const namespaces = useLocation(state => state.namespaces);
-
 import React, {
     Context,
     createContext,
