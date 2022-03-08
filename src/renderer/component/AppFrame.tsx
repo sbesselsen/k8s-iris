@@ -7,7 +7,7 @@ import React, {
     useState,
 } from "react";
 import { useColorTheme } from "../context/color-theme";
-import { useWindowFocus, useWindowFocusValue } from "../hook/window-focus";
+import { useWindowFocusValue } from "../hook/window-focus";
 
 export type AppFrameProps = {
     search: ReactElement;
@@ -101,8 +101,6 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
         colorScheme + ".900"
     );
 
-    const headerShadowVisible = useWindowFocus();
-
     // TODO: make button offset work in Windows as well, on the other side
 
     return (
@@ -154,9 +152,8 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                     w="100%"
                     h="3px"
                     position="absolute"
-                    bgGradient="linear(to-b, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.0))"
+                    bgGradient="linear(to-b, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0))"
                     zIndex={1}
-                    visibility={headerShadowVisible ? "visible" : "hidden"}
                 ></Box>
                 <Box
                     flexGrow="0"

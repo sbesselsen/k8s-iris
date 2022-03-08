@@ -4,7 +4,6 @@ let listeners: Array<(focus: boolean) => void> = [];
 
 let focusState: boolean = true;
 (window as any).charm.app.onWindowFocusChange((focus: boolean) => {
-    console.log({ focus });
     focusState = focus;
     listeners.forEach((l) => l(focusState));
 });

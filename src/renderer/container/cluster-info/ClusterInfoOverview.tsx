@@ -74,8 +74,6 @@ export const ClusterInfoOverview: React.FC<{}> = () => {
         []
     );
 
-    console.log({ events });
-
     const context = useK8sContext();
 
     const [_loadingContexts, contextsInfo] = useK8sContextsInfo(true);

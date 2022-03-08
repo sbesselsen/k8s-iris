@@ -5,7 +5,6 @@ const themes: ColorTheme[] = [
     { colorScheme: "gray" },
     { colorScheme: "red" },
     { colorScheme: "orange" },
-    { colorScheme: "yellow" },
     { colorScheme: "green" },
     { colorScheme: "teal" },
     { colorScheme: "blue" },
