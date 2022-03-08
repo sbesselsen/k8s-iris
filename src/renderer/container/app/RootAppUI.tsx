@@ -116,7 +116,7 @@ export const RootAppUI: React.FunctionComponent = () => {
                             selection={namespacesSelection}
                             onChangeSelection={selectNamespaces}
                             isLoading={loadingNamespaces}
-                            namespaces={namespaces}
+                            namespaces={namespaces?.items ?? []}
                         />
                     </VStack>
                 }

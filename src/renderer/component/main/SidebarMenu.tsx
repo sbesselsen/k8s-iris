@@ -9,7 +9,7 @@ import {
 } from "@chakra-ui/react";
 import React, { ElementType, ReactNode, useCallback } from "react";
 import { BsCheckCircleFill, BsCircle } from "react-icons/bs";
-import { K8sObject, K8sObjectList } from "../../../common/k8s/client";
+import { K8sObject } from "../../../common/k8s/client";
 import { AppNamespacesSelection } from "../../../common/route/app-route";
 import { useColorTheme } from "../../context/color-theme";
 import { BoxMenuList } from "../BoxMenuList";
@@ -69,7 +69,7 @@ export const SidebarMainMenu: React.FC<SidebarMainMenuProps> = (props) => {
 
 export type SidebarNamespacesMenuProps = {
     isLoading?: boolean;
-    namespaces?: K8sObjectList<K8sObject> | undefined;
+    namespaces: K8sObject[] | undefined;
     selection: AppNamespacesSelection;
     onChangeSelection: (selection: AppNamespacesSelection) => void;
 };
@@ -80,7 +80,7 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
     const {
         isLoading = false,
         onChangeSelection,
-        namespaces,
+        namespaces = [],
         selection,
     } = props;
 
@@ -217,7 +217,7 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                     py={2}
                     sx={{ scrollbarGutter: "stable" }}
                 >
-                    {(namespaces?.items ?? []).map(buildMenuItem)}
+                    {namespaces.map(buildMenuItem)}
                 </Box>
             </BoxMenuList>
         </Menu>
