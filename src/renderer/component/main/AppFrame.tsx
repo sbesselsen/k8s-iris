@@ -130,7 +130,7 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                 <Box
                     flexGrow="1"
                     flexShrink="0"
-                    flexBasis="0"
+                    flexBasis="300px"
                     overflow="hidden"
                     h="100%"
                 >
@@ -160,8 +160,7 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                     flexShrink="0"
                     flexBasis={sidebarWidth}
                     bg={sidebarBackground}
-                    overflow="hidden scroll"
-                    sx={{ scrollbarGutter: "stable" }}
+                    overflow="hidden"
                     ref={sidebarBoxRef}
                 >
                     {sidebar}

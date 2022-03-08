@@ -1,52 +1,52 @@
-import {
-    Box,
-    Button,
-    ButtonGroup,
-    Icon,
-    Input,
-    InputGroup,
-    InputRightElement,
-    Menu,
-    MenuGroup,
-    useColorModeValue,
-} from "@chakra-ui/react";
+import { Box, VStack } from "@chakra-ui/react";
 import React, {
     Fragment,
     ReactElement,
     useCallback,
     useEffect,
     useMemo,
-    useState,
 } from "react";
-import { useAppRoute } from "../../context/route";
+import { useAppRoute, useAppRouteActions } from "../../context/route";
 import { usePageTitle } from "../../hook/page-title";
 import { ContextSelectMenu } from "../k8s-context/ContextSelectMenu";
-import { ClusterError } from "./ClusterError";
-import { useK8sStatus } from "../../hook/k8s-status";
-import { ClusterInfoOverview } from "../cluster-info/ClusterInfoOverview";
-import { useIsDev } from "../../hook/dev";
 import { AppFrame } from "../../component/main/AppFrame";
-import { BoxMenuList } from "../../component/BoxMenuList";
-import { GhostMenuItem } from "../../component/GhostMenuItem";
-import { useColorTheme, useColorThemeStore } from "../../context/color-theme";
-import { BsCheckCircleFill, BsCircle, BsBox } from "react-icons/bs";
-import { SiKubernetes } from "react-icons/si";
+import { useColorThemeStore } from "../../context/color-theme";
 import { useK8sContext } from "../../context/k8s-context";
 import { useK8sContextsInfo } from "../../hook/k8s-contexts-info";
 import { k8sAccountIdColor } from "../../util/k8s-context-color";
-import { CheckIcon, SearchIcon } from "@chakra-ui/icons";
-import { useWindowFocusValue } from "../../hook/window-focus";
 import { SearchInput } from "../../component/main/SearchInput";
 import { useAppSearch, useAppSearchStore } from "../../context/search";
+import {
+    SidebarMainMenu,
+    SidebarMainMenuItem,
+    SidebarNamespacesMenu,
+} from "../../component/main/SidebarMenu";
+import { SiKubernetes } from "react-icons/si";
+import { BsBox } from "react-icons/bs";
+import { useK8sListWatch } from "../../k8s/list-watch";
 
 export const RootAppUI: React.FunctionComponent = () => {
     const { context } = useAppRoute();
     const colorThemeStore = useColorThemeStore();
+
     const kubeContext = useK8sContext();
+    usePageTitle(context);
+
     const [loadingContextsInfo, contextsInfo] = useK8sContextsInfo();
 
     const searchStore = useAppSearchStore();
     const searchValue = useAppSearch();
+
+    const { namespaces: namespacesSelection } = useAppRoute();
+    const { selectNamespaces } = useAppRouteActions();
+
+    const [loadingNamespaces, namespaces, namespacesError] = useK8sListWatch(
+        {
+            apiVersion: "v1",
+            kind: "Namespace",
+        },
+        []
+    );
 
     const setSearchValue = useCallback(
         (query: string) => {
@@ -73,7 +73,21 @@ export const RootAppUI: React.FunctionComponent = () => {
         }
     }, [colorThemeStore, contextualColorTheme]);
 
-    usePageTitle(context);
+    const sidebarMainMenuItems: SidebarMainMenuItem[] = useMemo(
+        () => [
+            {
+                id: "cluster",
+                iconType: SiKubernetes,
+                title: "Cluster",
+            },
+            {
+                id: "resources",
+                iconType: BsBox,
+                title: "Resources",
+            },
+        ],
+        []
+    );
 
     if (loadingContextsInfo) {
         return null;
@@ -96,9 +110,15 @@ export const RootAppUI: React.FunctionComponent = () => {
                     </Box>
                 }
                 sidebar={
-                    <Box position="relative">
-                        <TestMenu />
-                    </Box>
+                    <VStack h="100%" position="relative" alignItems="stretch">
+                        <SidebarMainMenu items={sidebarMainMenuItems} />
+                        <SidebarNamespacesMenu
+                            selection={namespacesSelection}
+                            onChangeSelection={selectNamespaces}
+                            isLoading={loadingNamespaces}
+                            namespaces={namespaces}
+                        />
+                    </VStack>
                 }
                 content={<Box>{repeat(200, <p>right</p>)}</Box>}
             />
@@ -108,182 +128,4 @@ export const RootAppUI: React.FunctionComponent = () => {
 
 const repeat = (n: number, content: ReactElement): Array<ReactElement> => {
     return [...Array(n)].map((_, i) => <Fragment key={i}>{content}</Fragment>);
-};
-
-const TestMenu: React.FC = () => {
-    const { colorScheme } = useColorTheme();
-    const menuGroupStyles = useMemo(
-        () => ({
-            ".chakra-menu__group__title": {
-                color: colorScheme + ".500",
-                fontWeight: "semibold",
-                letterSpacing: "wide",
-                fontSize: "xs",
-                textTransform: "uppercase",
-                marginStart: 4,
-            },
-        }),
-        [colorScheme]
-    );
-
-    const iconColor = useColorModeValue(
-        colorScheme + ".700",
-        colorScheme + ".300"
-    );
-    const iconSize = 4;
-    const checkedIcon = (
-        <Icon
-            verticalAlign="middle"
-            w={iconSize}
-            h={iconSize}
-            as={BsCheckCircleFill}
-            color={iconColor}
-        />
-    );
-    const uncheckedIcon = (
-        <Icon
-            verticalAlign="middle"
-            w={iconSize}
-            h={iconSize}
-            as={BsCircle}
-            color={iconColor}
-        />
-    );
-
-    const clusterIcon = (
-        <Icon
-            verticalAlign="middle"
-            w={iconSize}
-            h={iconSize}
-            as={SiKubernetes}
-            color={iconColor}
-        />
-    );
-    const resourcesIcon = (
-        <Icon
-            verticalAlign="middle"
-            w={iconSize}
-            h={iconSize}
-            as={BsBox}
-            color={iconColor}
-        />
-    );
-
-    const itemTextColor = useColorModeValue(colorScheme + ".900", "white");
-
-    const namespacesToggleBorderColor = colorScheme + ".500";
-    const namespacesToggleHoverColor = useColorModeValue(
-        "white",
-        colorScheme + ".700"
-    );
-
-    return (
-        <Fragment>
-            <Menu isOpen={true}>
-                <BoxMenuList sx={menuGroupStyles} mt={2}>
-                    <GhostMenuItem
-                        color={itemTextColor}
-                        px={4}
-                        icon={clusterIcon}
-                    >
-                        Cluster
-                    </GhostMenuItem>
-                    <GhostMenuItem
-                        color={itemTextColor}
-                        px={4}
-                        icon={resourcesIcon}
-                    >
-                        Resources
-                    </GhostMenuItem>
-                </BoxMenuList>
-            </Menu>
-            <Menu isOpen={true}>
-                <BoxMenuList sx={menuGroupStyles} mt={6}>
-                    <MenuGroup title="Namespaces">
-                        <Box px={4}>
-                            <ButtonGroup variant="outline" size="xs" isAttached>
-                                <Button
-                                    mr="-1px"
-                                    borderColor={namespacesToggleBorderColor}
-                                    textColor={itemTextColor}
-                                    isActive
-                                    _active={{
-                                        bg: namespacesToggleBorderColor,
-                                        textColor: "white",
-                                    }}
-                                    _hover={{
-                                        bg: namespacesToggleHoverColor,
-                                    }}
-                                >
-                                    All
-                                </Button>
-                                <Button
-                                    borderColor={namespacesToggleBorderColor}
-                                    textColor={itemTextColor}
-                                    _active={{
-                                        bg: namespacesToggleBorderColor,
-                                        textColor: "white",
-                                    }}
-                                    _hover={{
-                                        bg: namespacesToggleHoverColor,
-                                    }}
-                                >
-                                    Selected
-                                </Button>
-                            </ButtonGroup>
-                        </Box>
-                        <GhostMenuItem
-                            color={itemTextColor}
-                            px={4}
-                            icon={checkedIcon}
-                        >
-                            aap
-                        </GhostMenuItem>
-                        <GhostMenuItem
-                            color={itemTextColor}
-                            px={4}
-                            icon={uncheckedIcon}
-                        >
-                            schaap
-                        </GhostMenuItem>
-                        <GhostMenuItem
-                            color={itemTextColor}
-                            px={4}
-                            icon={uncheckedIcon}
-                        >
-                            blaat
-                        </GhostMenuItem>
-                        <GhostMenuItem
-                            color={itemTextColor}
-                            px={4}
-                            icon={uncheckedIcon}
-                        >
-                            casper
-                        </GhostMenuItem>
-                        <GhostMenuItem
-                            color={itemTextColor}
-                            px={4}
-                            icon={uncheckedIcon}
-                        >
-                            stella
-                        </GhostMenuItem>
-                        <GhostMenuItem
-                            color={itemTextColor}
-                            px={4}
-                            icon={uncheckedIcon}
-                        >
-                            mama
-                        </GhostMenuItem>
-                        <GhostMenuItem
-                            color={itemTextColor}
-                            px={4}
-                            icon={uncheckedIcon}
-                        >
-                            papa
-                        </GhostMenuItem>
-                    </MenuGroup>
-                </BoxMenuList>
-            </Menu>
-        </Fragment>
-    );
 };
