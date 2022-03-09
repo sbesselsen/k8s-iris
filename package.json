@@ -14,14 +14,14 @@
     "author": "Sebastiaan Besselsen <sebastiaan.besselsen@gmail.com>",
     "license": "UNLICENSED",
     "dependencies": {
-        "@aws-sdk/shared-ini-file-loader": "^3.49.0",
+        "@aws-sdk/shared-ini-file-loader": "^3.52.0",
         "@chakra-ui/icons": "^1.1.1",
         "@chakra-ui/react": "^1.8.6",
         "@emotion/react": "^11.7.1",
         "@emotion/styled": "^11.6.0",
         "@kubernetes/client-node": "^0.16.1",
-        "color-scheme": "git+https://github.com/c0bra/color-scheme-js.git#47b0da0d31b04cf2254f86bed36a89632a86c996",
-        "electron": "^16.0.5",
+        "electron": "^17.0.0",
+        "execa": "^5.0.0",
         "framer-motion": "^5.5.5",
         "react-icons": "^4.3.1",
         "react-unstuck": "^2.4.7",
@@ -35,7 +35,6 @@
         "chrome 90"
     ],
     "devDependencies": {
-        "@types/randomcolor": "^0.5.6",
         "@types/react": "^17.0.37",
         "@types/react-dom": "^17.0.13",
         "@types/seedrandom": "^3.0.2",
