@@ -23,6 +23,7 @@ import {
 } from "../../common/k8s/util";
 import { deepEqual } from "../../common/util/deep-equal";
 import { kubeRequestOpts } from "./util";
+import { CharmPatchedExecAuth } from "./authenticator/exec";
 
 const defaultRemoveOptions: K8sRemoveOptions = {
     waitForCompletion: true,
@@ -50,6 +51,11 @@ export type K8sClientOptions = {
 const defaultClientOptions = {
     readonly: false,
 };
+
+// Patch KubeConfig class with an ExecAuth class that works asynchronously.
+((k8s.KubeConfig as any).authenticators as Array<any>).unshift(
+    new CharmPatchedExecAuth()
+);
 
 export function createClient(
     kubeConfig: k8s.KubeConfig,
