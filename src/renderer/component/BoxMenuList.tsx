@@ -1,8 +1,14 @@
-import { Box, BoxProps, useMenuContext, useMenuList } from "@chakra-ui/react";
-import React, { KeyboardEvent, useCallback } from "react";
+import {
+    Box,
+    BoxProps,
+    Button,
+    useMenuContext,
+    useMenuList,
+} from "@chakra-ui/react";
+import React, { FocusEvent, KeyboardEvent, useCallback, useRef } from "react";
 
 export const BoxMenuList: React.FC<BoxProps> = (props) => {
-    const boxProps = props;
+    const { children, ...boxProps } = props;
     const { focusedIndex, setFocusedIndex } = useMenuContext();
     const { onKeyDown, style: _, ...menuListProps } = useMenuList();
 
@@ -18,19 +24,14 @@ export const BoxMenuList: React.FC<BoxProps> = (props) => {
         [boxOnKeyDown, onKeyDown]
     );
 
-    const onFocus = useCallback(() => {
-        if (focusedIndex === -1) {
-            setFocusedIndex(0);
-        }
-    }, [focusedIndex, setFocusedIndex]);
-
     return (
         <Box
             {...menuListProps}
             {...boxProps}
             onKeyDown={wrappedKeyDown}
-            onFocus={onFocus}
             outline="none"
-        />
+        >
+            {children}
+        </Box>
     );
 };

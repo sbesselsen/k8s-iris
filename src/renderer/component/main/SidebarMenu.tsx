@@ -5,13 +5,17 @@ import {
     Heading,
     Icon,
     Menu,
+    MenuItemOption,
+    MenuOptionGroup,
     useColorModeValue,
+    VStack,
 } from "@chakra-ui/react";
 import React, { ElementType, ReactNode, useCallback } from "react";
 import { BsCheckCircleFill, BsCircle } from "react-icons/bs";
 import { K8sObject } from "../../../common/k8s/client";
 import { AppNamespacesSelection } from "../../../common/route/app-route";
 import { useColorTheme } from "../../context/color-theme";
+import { useWindowFocusValue } from "../../hook/window-focus";
 import { BoxMenuList } from "../BoxMenuList";
 import { GhostMenuItem } from "../GhostMenuItem";
 
@@ -28,42 +32,78 @@ export type SidebarMainMenuProps = {
 export const SidebarMainMenu: React.FC<SidebarMainMenuProps> = (props) => {
     const { items } = props;
 
+    return (
+        <VStack mt={6} spacing={0}>
+            {items.map((item) => (
+                <SidebarMenuButton
+                    key={item.id}
+                    item={item}
+                    isSelected={item.id === "resources"}
+                />
+            ))}
+        </VStack>
+    );
+};
+
+type SidebarMenuButtonProps = {
+    item: SidebarMainMenuItem;
+    isSelected?: boolean;
+};
+
+const SidebarMenuButton: React.FC<SidebarMenuButtonProps> = (props) => {
+    const { item, isSelected = false } = props;
+
     const { colorScheme } = useColorTheme();
 
-    const iconColor = useColorModeValue(
-        colorScheme + ".700",
-        colorScheme + ".300"
-    );
     const iconSize = 4;
 
-    const itemTextColor = useColorModeValue(colorScheme + ".900", "white");
-
-    const buildMenuItem = (item: SidebarMainMenuItem) => {
-        const icon = item.iconType ? (
-            <Icon
-                verticalAlign="middle"
-                w={iconSize}
-                h={iconSize}
-                as={item.iconType}
-                color={iconColor}
-            />
-        ) : null;
-        return (
-            <GhostMenuItem
-                color={itemTextColor}
-                px={4}
-                icon={icon}
-                key={item.id}
-            >
-                {item.title}
-            </GhostMenuItem>
-        );
-    };
-
+    const itemTextColor = useColorModeValue(
+        useWindowFocusValue(colorScheme + ".900", colorScheme + ".500"),
+        useWindowFocusValue("white", colorScheme + ".400")
+    );
+    const iconColor = itemTextColor;
+    const selectedTextColor = useWindowFocusValue(
+        "white",
+        colorScheme + ".400"
+    );
+    const hoverBackgroundColor = useColorModeValue(
+        colorScheme + ".50",
+        colorScheme + ".700"
+    );
+    const selectedBackgroundColor = useColorModeValue(
+        useWindowFocusValue(colorScheme + ".500", colorScheme + ".500"),
+        useWindowFocusValue(colorScheme + ".500", colorScheme + ".600")
+    );
+    const icon = item.iconType ? (
+        <Icon
+            verticalAlign="middle"
+            w={iconSize}
+            h={iconSize}
+            as={item.iconType}
+            color={isSelected ? selectedTextColor : iconColor}
+        />
+    ) : null;
     return (
-        <Menu isOpen={true}>
-            <BoxMenuList mt={2}>{items.map(buildMenuItem)}</BoxMenuList>
-        </Menu>
+        <Button
+            bg="transparent"
+            textColor={itemTextColor}
+            px={4}
+            leftIcon={icon}
+            w="100%"
+            justifyContent="start"
+            fontWeight="normal"
+            borderRadius={0}
+            _hover={{
+                bg: hoverBackgroundColor,
+            }}
+            _active={{
+                textColor: selectedTextColor,
+                bg: selectedBackgroundColor,
+            }}
+            isActive={isSelected}
+        >
+            {item.title}
+        </Button>
     );
 };
 
@@ -99,47 +139,20 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
 
     const { colorScheme } = useColorTheme();
 
-    const iconColor = useColorModeValue(
-        colorScheme + ".700",
-        colorScheme + ".300"
-    );
-    const iconSize = 4;
-    const checkedIcon = (
-        <Icon
-            verticalAlign="middle"
-            w={iconSize}
-            h={iconSize}
-            as={BsCheckCircleFill}
-            color={iconColor}
-        />
-    );
-    const uncheckedIcon = (
-        <Icon
-            verticalAlign="middle"
-            w={iconSize}
-            h={iconSize}
-            as={BsCircle}
-            color={iconColor}
-        />
-    );
-
     const itemTextColor = useColorModeValue(colorScheme + ".900", "white");
 
     const namespacesToggleBorderColor = colorScheme + ".500";
     const namespacesToggleHoverColor = useColorModeValue(
-        "white",
+        colorScheme + ".50",
         colorScheme + ".700"
     );
-
-    const selectedSet = new Set(selection.selected);
 
     const buildMenuItem = (namespace: K8sObject) => {
         const name = namespace.metadata.name;
         return (
-            <GhostMenuItem
+            <MenuItemOption
                 color={itemTextColor}
                 px={4}
-                icon={selectedSet.has(name) ? checkedIcon : uncheckedIcon}
                 key={name}
                 fontSize="sm"
                 py={1}
@@ -152,12 +165,12 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                 }}
             >
                 {name}
-            </GhostMenuItem>
+            </MenuItemOption>
         );
     };
 
     return (
-        <Menu isOpen={true}>
+        <Menu isOpen={true} closeOnBlur={false} closeOnSelect={false}>
             <Heading
                 textColor={colorScheme + ".500"}
                 fontWeight="semibold"
@@ -169,56 +182,55 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
             >
                 Namespaces
             </Heading>
+
+            <Box px={4} flex="0 0 0">
+                <ButtonGroup variant="outline" size="xs" isAttached>
+                    <Button
+                        mr="-1px"
+                        borderColor={namespacesToggleBorderColor}
+                        textColor={itemTextColor}
+                        isActive={selection.mode === "all"}
+                        _active={{
+                            bg: namespacesToggleBorderColor,
+                            textColor: "white",
+                        }}
+                        _hover={{
+                            bg: namespacesToggleHoverColor,
+                        }}
+                        onClick={onClickAll}
+                    >
+                        All
+                    </Button>
+                    <Button
+                        borderColor={namespacesToggleBorderColor}
+                        textColor={itemTextColor}
+                        isActive={selection.mode === "selected"}
+                        isLoading={isLoading}
+                        _active={{
+                            bg: namespacesToggleBorderColor,
+                            textColor: "white",
+                        }}
+                        _hover={{
+                            bg: namespacesToggleHoverColor,
+                        }}
+                        onClick={onClickSelected}
+                    >
+                        Selected
+                    </Button>
+                </ButtonGroup>
+            </Box>
             <BoxMenuList
                 mt={6}
                 display="flex"
                 flex="1 0 0"
                 flexDirection="column"
+                overflow="hidden scroll"
+                sx={{ scrollbarGutter: "stable" }}
+                pb={2}
             >
-                <Box px={4} flex="0 0 0">
-                    <ButtonGroup variant="outline" size="xs" isAttached pb={2}>
-                        <Button
-                            mr="-1px"
-                            borderColor={namespacesToggleBorderColor}
-                            textColor={itemTextColor}
-                            isActive={selection.mode === "all"}
-                            _active={{
-                                bg: namespacesToggleBorderColor,
-                                textColor: "white",
-                            }}
-                            _hover={{
-                                bg: namespacesToggleHoverColor,
-                            }}
-                            onClick={onClickAll}
-                        >
-                            All
-                        </Button>
-                        <Button
-                            borderColor={namespacesToggleBorderColor}
-                            textColor={itemTextColor}
-                            isActive={selection.mode === "selected"}
-                            isLoading={isLoading}
-                            _active={{
-                                bg: namespacesToggleBorderColor,
-                                textColor: "white",
-                            }}
-                            _hover={{
-                                bg: namespacesToggleHoverColor,
-                            }}
-                            onClick={onClickSelected}
-                        >
-                            Selected
-                        </Button>
-                    </ButtonGroup>
-                </Box>
-                <Box
-                    flex="1 0 0"
-                    overflow="hidden scroll"
-                    py={2}
-                    sx={{ scrollbarGutter: "stable" }}
-                >
+                <MenuOptionGroup>
                     {namespaces.map(buildMenuItem)}
-                </Box>
+                </MenuOptionGroup>
             </BoxMenuList>
         </Menu>
     );

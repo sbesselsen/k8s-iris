@@ -2,7 +2,7 @@ import { SearchIcon } from "@chakra-ui/icons";
 import {
     Input,
     InputGroup,
-    InputRightElement,
+    InputLeftElement,
     useColorModeValue,
 } from "@chakra-ui/react";
 import React, {
@@ -68,6 +68,11 @@ export const SearchInput: React.FC<SearchInputProps> = (props) => {
     const iconColor = itemPlaceholderColor;
     return (
         <InputGroup size="sm">
+            <InputLeftElement
+                children={<SearchIcon />}
+                color={iconColor}
+                onClick={onClick}
+            />
             <Input
                 placeholder="Search"
                 borderRadius="md"
@@ -85,11 +90,6 @@ export const SearchInput: React.FC<SearchInputProps> = (props) => {
                 value={innerValue}
                 onChange={onChangeCallback}
                 onKeyUp={onKeyUp}
-            />
-            <InputRightElement
-                children={<SearchIcon />}
-                color={iconColor}
-                onClick={onClick}
             />
         </InputGroup>
     );
