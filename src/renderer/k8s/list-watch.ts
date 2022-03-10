@@ -6,6 +6,7 @@ import {
     K8sObjectListWatch,
     K8sObjectListWatcherMessage,
 } from "../../common/k8s/client";
+import { useK8sContext } from "../context/k8s-context";
 import { useK8sClient } from "./client";
 
 const loadingValue: [boolean, undefined, undefined] = [
@@ -22,10 +23,16 @@ export function useK8sListWatch<T extends K8sObject = K8sObject>(
     spec: K8sObjectListQuery,
     deps: any[] = []
 ): [boolean, K8sObjectList<T> | undefined, any | undefined] {
+    const kubeContext = useK8sContext();
+
     const [value, setValue] =
         useState<[boolean, K8sObjectList<T> | undefined, any | undefined]>(
             loadingValue
         );
+
+    useEffect(() => {
+        setValue(loadingValue);
+    }, [kubeContext, setValue]);
 
     const onUpdate = useCallback(
         (message: K8sObjectListWatcherMessage<K8sObject>) => {

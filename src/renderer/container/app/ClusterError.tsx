@@ -1,4 +1,12 @@
-import { Button, Code, Heading, HStack, Text, VStack } from "@chakra-ui/react";
+import {
+    Button,
+    Code,
+    Heading,
+    HStack,
+    Spinner,
+    Text,
+    VStack,
+} from "@chakra-ui/react";
 import React, { useCallback, useState } from "react";
 import { useColorTheme } from "../../context/color-theme";
 import { useK8sContext } from "../../context/k8s-context";
@@ -55,15 +63,16 @@ export const ClusterError: React.FC<{ error: Error }> = (props) => {
             <Code variant="large" fontSize="sm" userSelect="text">
                 {error.message}
             </Code>
-            <Text>
-                We will automatically keep trying to restore the connection.
-            </Text>
+            <HStack>
+                <Spinner size="sm" />
+                <Text>Trying to restore the connection...</Text>
+            </HStack>
             <HStack>
                 {supportsAppLogin && (
                     <Button
                         onClick={onClickLoginButton}
                         colorScheme={colorScheme}
-                        isLoading={isLoggingIn}
+                        isDisabled={isLoggingIn}
                     >
                         Log in
                     </Button>

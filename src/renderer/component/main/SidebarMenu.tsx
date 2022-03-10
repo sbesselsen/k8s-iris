@@ -10,10 +10,18 @@ import {
     useColorModeValue,
     VStack,
 } from "@chakra-ui/react";
-import React, { ElementType, Fragment, ReactNode, useCallback } from "react";
+import React, {
+    ElementType,
+    Fragment,
+    ReactNode,
+    useCallback,
+    useMemo,
+} from "react";
 import { K8sObject } from "../../../common/k8s/client";
 import { AppNamespacesSelection } from "../../../common/route/app-route";
+import { searchMatch } from "../../../common/util/search";
 import { useColorTheme } from "../../context/color-theme";
+import { useAppSearch } from "../../context/search";
 import { useWindowFocusValue } from "../../hook/window-focus";
 
 export type SidebarMainMenuItem = {
@@ -57,7 +65,7 @@ const SidebarMenuButton: React.FC<SidebarMenuButtonProps> = (props) => {
     const iconSize = 4;
 
     const itemTextColor = useColorModeValue(colorScheme + ".900", "white");
-    const iconColor = itemTextColor;
+    const iconColor = colorScheme + ".500";
     const selectedTextColor = "white";
     const hoverBackgroundColor = useColorModeValue(
         colorScheme + ".50",
@@ -148,6 +156,12 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
         colorScheme + ".700"
     );
 
+    const { query } = useAppSearch();
+    const filteredNamespaces = useMemo(
+        () => namespaces.filter((ns) => searchMatch(query, ns.metadata.name)),
+        [namespaces, query]
+    );
+
     const buildMenuItem = (namespace: K8sObject) => {
         const name = namespace.metadata.name;
         return (
@@ -227,7 +241,7 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                 <Collapse in={selection.mode === "selected"}>
                     <CheckboxGroup colorScheme={colorScheme}>
                         <VStack alignItems="start" spacing={0} pb={4}>
-                            {namespaces.map(buildMenuItem)}
+                            {filteredNamespaces.map(buildMenuItem)}
                         </VStack>
                     </CheckboxGroup>
                 </Collapse>
