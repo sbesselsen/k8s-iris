@@ -93,6 +93,7 @@ const SidebarMenuButton: React.FC<SidebarMenuButtonProps> = (props) => {
             justifyContent="start"
             fontWeight="normal"
             borderRadius={0}
+            transition="none"
             _hover={{
                 bg: hoverBackgroundColor,
             }}

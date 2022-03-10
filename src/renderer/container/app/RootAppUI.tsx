@@ -26,6 +26,7 @@ import { SiKubernetes } from "react-icons/si";
 import { BsBox } from "react-icons/bs";
 import { useK8sListWatch } from "../../k8s/list-watch";
 import { useKeyListener, useModifierKeyRef } from "../../hook/keyboard";
+import { ClusterError } from "./ClusterError";
 
 export const RootAppUI: React.FunctionComponent = () => {
     const { context } = useAppRoute();
@@ -146,7 +147,27 @@ export const RootAppUI: React.FunctionComponent = () => {
                         />
                     </VStack>
                 }
-                content={<Box>{repeat(200, <p>right</p>)}</Box>}
+                content={
+                    namespacesError ? (
+                        <Box
+                            w="100%"
+                            height="100%"
+                            overflow="hidden scroll"
+                            sx={{ scrollbarGutter: "stable" }}
+                        >
+                            <ClusterError error={namespacesError} />
+                        </Box>
+                    ) : (
+                        <Box
+                            w="100%"
+                            height="100%"
+                            overflow="hidden scroll"
+                            sx={{ scrollbarGutter: "stable" }}
+                        >
+                            {repeat(100, <p>right</p>)}
+                        </Box>
+                    )
+                }
             />
         </Fragment>
     );

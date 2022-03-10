@@ -1,25 +1,14 @@
-import {
-    Box,
-    Button,
-    Container,
-    Heading,
-    HStack,
-    Spinner,
-    Text,
-    VStack,
-} from "@chakra-ui/react";
+import { Button, Code, Heading, HStack, Text, VStack } from "@chakra-ui/react";
 import React, { useCallback, useState } from "react";
+import { useColorTheme } from "../../context/color-theme";
 import { useK8sContext } from "../../context/k8s-context";
-import { useWithDelay } from "../../hook/async";
 import { useIpcCall } from "../../hook/ipc";
-import { useK8sContextColorScheme } from "../../hook/k8s-context-color-scheme";
 import { useK8sContextsInfo } from "../../hook/k8s-contexts-info";
 
 export const ClusterError: React.FC<{ error: Error }> = (props) => {
     const { error } = props;
 
     const [isLoadingContexts, contextsInfo] = useK8sContextsInfo();
-    const shouldShowSpinner = useWithDelay(isLoadingContexts, 1000);
     const kubeContext = useK8sContext();
 
     const [isLoggingIn, setLoggingIn] = useState(false);
@@ -35,42 +24,48 @@ export const ClusterError: React.FC<{ error: Error }> = (props) => {
     const onClickLoginButton = useCallback(() => {
         if (currentContext) {
             setLoggingIn(true);
+            const resetTimeout = setTimeout(() => {
+                setLoggingIn(false);
+            }, 5000);
             loginForContext(currentContext).finally(() => {
+                clearTimeout(resetTimeout);
                 setLoggingIn(false);
             });
         }
     }, [currentContext, loginForContext, setLoggingIn]);
 
-    const colors = useK8sContextColorScheme();
+    const { colorScheme } = useColorTheme();
+
+    if (isLoadingContexts) {
+        return null;
+    }
 
     return (
-        <VStack spacing={6} mt={12} alignItems="start">
-            <Heading textColor={colors.text}>
+        <VStack
+            spacing={6}
+            mt={6}
+            alignItems="start"
+            ps={4}
+            pe={12}
+            maxWidth="800px"
+        >
+            <Heading textColor={colorScheme + ".500"}>
                 Error connecting to cluster
             </Heading>
-            <Text>{error.message}</Text>
+            <Code variant="large" fontSize="sm" userSelect="text">
+                {error.message}
+            </Code>
             <Text>
                 We will automatically keep trying to restore the connection.
             </Text>
-            {shouldShowSpinner && (
-                <Box>
-                    <Spinner />
-                </Box>
-            )}
             <HStack>
                 {supportsAppLogin && (
                     <Button
                         onClick={onClickLoginButton}
-                        size="lg"
-                        bg={colors.fill}
-                        textColor={colors.background}
+                        colorScheme={colorScheme}
+                        isLoading={isLoggingIn}
                     >
-                        <HStack spacing={2}>
-                            {isLoggingIn && (
-                                <Spinner color={colors.background} />
-                            )}
-                            <Text>Log in</Text>
-                        </HStack>
+                        Log in
                     </Button>
                 )}
             </HStack>

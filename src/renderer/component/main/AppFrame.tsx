@@ -174,12 +174,7 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                     onPointerDown={onVSeparatorPointerDown}
                     ref={vSeparatorBoxRef}
                 ></Box>
-                <Box
-                    flex="1 0 0"
-                    bg={contentBackground}
-                    overflow="scroll"
-                    sx={{ scrollbarGutter: "stable" }}
-                >
+                <Box flex="1 0 0" bg={contentBackground} overflow="hidden">
                     {content}
                 </Box>
             </HStack>
