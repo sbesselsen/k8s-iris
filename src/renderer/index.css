@@ -1,6 +1,7 @@
 html,
 body {
     overflow: hidden;
+    margin: 0;
 }
 
 :not(input):not(textarea),
@@ -9,4 +10,46 @@ body {
     -webkit-user-select: none;
     user-select: none;
     cursor: default;
+}
+
+/*
+ Take care of the app's blank slate.
+*/
+html,
+body {
+    height: 100%;
+}
+
+body,
+body.chakra-ui-light {
+    background: #fff;
+}
+
+body.app-ui-mounted {
+    height: initial;
+}
+#root {
+    background: #f8f9fa;
+    width: 100%;
+    min-height: 48px;
+    -webkit-app-region: drag;
+    box-shadow: 0 -5px 5px 5px rgba(0, 0, 0, 0.2);
+}
+
+@media (prefers-color-scheme: dark) {
+    body,
+    body.chakra-ui-dark {
+        background: #111;
+    }
+    #root {
+        background: #363636;
+    }
+}
+
+.app-ui-mounted #root {
+    -webkit-app-region: initial;
+    min-height: initial;
+    width: initial;
+    background: initial;
+    box-shadow: initial;
 }

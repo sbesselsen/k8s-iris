@@ -1,4 +1,8 @@
-import { BrowserWindow, BrowserWindowConstructorOptions } from "electron";
+import {
+    BrowserWindow,
+    BrowserWindowConstructorOptions,
+    nativeTheme,
+} from "electron";
 import * as path from "path";
 import { prefixEventChannel } from "../../common/ipc/shared";
 import { AppRoute, emptyAppRoute } from "../../common/route/app-route";
@@ -38,8 +42,13 @@ export function createWindowManager(): WindowManager {
             height: 600,
             minWidth: 850,
             titleBarStyle: "hiddenInset",
-            titleBarOverlay: true,
             title: "Charm",
+            trafficLightPosition: {
+                x: 14,
+                y: 16,
+            },
+            backgroundColor: nativeTheme.shouldUseDarkColors ? "#000" : "#fff",
+            show: false,
             webPreferences: {
                 preload: path.join(__dirname, "..", "preload", "index.js"),
             },
@@ -110,6 +119,13 @@ export function createWindowManager(): WindowManager {
                 prefixEventChannel("app:window:focus-change"),
                 false
             );
+        });
+        win.on("ready-to-show", () => {
+            win.webContents.send(
+                prefixEventChannel("app:window:focus-change"),
+                win.isFocused()
+            );
+            win.show();
         });
 
         const windowId = generateWindowId();

@@ -89,7 +89,13 @@ export const RootAppUI: React.FunctionComponent = () => {
         []
     );
 
-    if (loadingContextsInfo) {
+    const isReady = contextualColorTheme !== null;
+
+    useEffect(() => {
+        document.body.classList.toggle("app-ui-mounted", isReady);
+    }, [isReady]);
+
+    if (!isReady) {
         return null;
     }
 
