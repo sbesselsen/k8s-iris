@@ -2,22 +2,19 @@ import {
     Box,
     Button,
     ButtonGroup,
+    Checkbox,
+    CheckboxGroup,
+    Collapse,
     Heading,
     Icon,
-    Menu,
-    MenuItemOption,
-    MenuOptionGroup,
     useColorModeValue,
     VStack,
 } from "@chakra-ui/react";
-import React, { ElementType, ReactNode, useCallback } from "react";
-import { BsCheckCircleFill, BsCircle } from "react-icons/bs";
+import React, { ElementType, Fragment, ReactNode, useCallback } from "react";
 import { K8sObject } from "../../../common/k8s/client";
 import { AppNamespacesSelection } from "../../../common/route/app-route";
 import { useColorTheme } from "../../context/color-theme";
 import { useWindowFocusValue } from "../../hook/window-focus";
-import { BoxMenuList } from "../BoxMenuList";
-import { GhostMenuItem } from "../GhostMenuItem";
 
 export type SidebarMainMenuItem = {
     id: string;
@@ -32,8 +29,10 @@ export type SidebarMainMenuProps = {
 export const SidebarMainMenu: React.FC<SidebarMainMenuProps> = (props) => {
     const { items } = props;
 
+    const opacity = useWindowFocusValue(1.0, 0.5);
+
     return (
-        <VStack mt={6} spacing={0}>
+        <VStack mt={6} spacing={0} opacity={opacity}>
             {items.map((item) => (
                 <SidebarMenuButton
                     key={item.id}
@@ -57,22 +56,16 @@ const SidebarMenuButton: React.FC<SidebarMenuButtonProps> = (props) => {
 
     const iconSize = 4;
 
-    const itemTextColor = useColorModeValue(
-        useWindowFocusValue(colorScheme + ".900", colorScheme + ".500"),
-        useWindowFocusValue("white", colorScheme + ".400")
-    );
+    const itemTextColor = useColorModeValue(colorScheme + ".900", "white");
     const iconColor = itemTextColor;
-    const selectedTextColor = useWindowFocusValue(
-        "white",
-        colorScheme + ".400"
-    );
+    const selectedTextColor = "white";
     const hoverBackgroundColor = useColorModeValue(
         colorScheme + ".50",
         colorScheme + ".700"
     );
     const selectedBackgroundColor = useColorModeValue(
-        useWindowFocusValue(colorScheme + ".500", colorScheme + ".500"),
-        useWindowFocusValue(colorScheme + ".500", colorScheme + ".600")
+        colorScheme + ".500",
+        colorScheme + ".500"
     );
     const icon = item.iconType ? (
         <Icon
@@ -125,6 +118,8 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
         selection,
     } = props;
 
+    const opacity = useWindowFocusValue(1.0, 0.5);
+
     const onClickAll = useCallback(() => {
         onChangeSelection({
             ...selection,
@@ -148,43 +143,46 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
         colorScheme + ".700"
     );
 
+    const checkboxBorderColor = useColorModeValue(
+        colorScheme + ".300",
+        colorScheme + ".700"
+    );
+
     const buildMenuItem = (namespace: K8sObject) => {
         const name = namespace.metadata.name;
         return (
-            <MenuItemOption
+            <Checkbox
                 color={itemTextColor}
                 px={4}
                 key={name}
-                fontSize="sm"
+                size="sm"
+                value={name}
                 py={1}
-                sx={{
-                    "& > span:last-child": {
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                    },
-                }}
+                borderColor={checkboxBorderColor}
+                flexShrink="0"
+                isTruncated
             >
-                {name}
-            </MenuItemOption>
+                <Box>{name}</Box>
+            </Checkbox>
         );
     };
 
     return (
-        <Menu isOpen={true} closeOnBlur={false} closeOnSelect={false}>
+        <Fragment>
             <Heading
                 textColor={colorScheme + ".500"}
                 fontWeight="semibold"
                 letterSpacing="wide"
                 fontSize="xs"
                 textTransform="uppercase"
+                opacity={opacity}
                 px={4}
                 pt={4}
             >
                 Namespaces
             </Heading>
 
-            <Box px={4} flex="0 0 0">
+            <Box px={4} flex="0 0 0" opacity={opacity}>
                 <ButtonGroup variant="outline" size="xs" isAttached>
                     <Button
                         mr="-1px"
@@ -220,19 +218,20 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                     </Button>
                 </ButtonGroup>
             </Box>
-            <BoxMenuList
-                mt={6}
-                display="flex"
+            <Box
                 flex="1 0 0"
-                flexDirection="column"
                 overflow="hidden scroll"
                 sx={{ scrollbarGutter: "stable" }}
-                pb={2}
+                opacity={opacity}
             >
-                <MenuOptionGroup>
-                    {namespaces.map(buildMenuItem)}
-                </MenuOptionGroup>
-            </BoxMenuList>
-        </Menu>
+                <Collapse in={selection.mode === "selected"}>
+                    <CheckboxGroup colorScheme={colorScheme}>
+                        <VStack alignItems="start" spacing={0} pb={4}>
+                            {namespaces.map(buildMenuItem)}
+                        </VStack>
+                    </CheckboxGroup>
+                </Collapse>
+            </Box>
+        </Fragment>
     );
 };

@@ -55,20 +55,22 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
 
         const { colorScheme } = useColorTheme() ?? { colorScheme: "gray" };
 
+        const opacity = useWindowFocusValue(1.0, 0.5);
+
         const searchBackground = useColorModeValue(
-            colorScheme + useWindowFocusValue(".100", ".300"),
+            colorScheme + useWindowFocusValue(".100", ".200"),
             colorScheme + useWindowFocusValue(".800", ".900")
         );
         const searchFocusedBackground = useColorModeValue("white", "black");
         const itemTextColor = useColorModeValue(colorScheme + ".900", "white");
         const itemPlaceholderColor = useColorModeValue(
-            useWindowFocusValue(colorScheme + ".600", colorScheme + ".600"),
-            useWindowFocusValue(colorScheme + ".100", colorScheme + ".400")
+            colorScheme + ".600",
+            colorScheme + ".100"
         );
 
         const iconColor = itemPlaceholderColor;
         return (
-            <InputGroup size="sm">
+            <InputGroup size="sm" opacity={opacity}>
                 <InputLeftElement
                     children={<SearchIcon />}
                     color={iconColor}
