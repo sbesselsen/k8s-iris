@@ -5,6 +5,7 @@ import React, {
     useCallback,
     useEffect,
     useMemo,
+    useRef,
 } from "react";
 import { useAppRoute, useAppRouteActions } from "../../context/route";
 import { usePageTitle } from "../../hook/page-title";
@@ -24,6 +25,7 @@ import {
 import { SiKubernetes } from "react-icons/si";
 import { BsBox } from "react-icons/bs";
 import { useK8sListWatch } from "../../k8s/list-watch";
+import { useKeyListener, useModifierKeyRef } from "../../hook/keyboard";
 
 export const RootAppUI: React.FunctionComponent = () => {
     const { context } = useAppRoute();
@@ -36,6 +38,23 @@ export const RootAppUI: React.FunctionComponent = () => {
 
     const searchStore = useAppSearchStore();
     const searchValue = useAppSearch();
+    const searchBoxRef = useRef<HTMLInputElement>();
+
+    const metaKeyRef = useModifierKeyRef("Meta");
+    useKeyListener(
+        useCallback(
+            (eventType, key) => {
+                if (
+                    eventType === "keydown" &&
+                    metaKeyRef.current &&
+                    key === "f"
+                ) {
+                    searchBoxRef.current.focus();
+                }
+            },
+            [metaKeyRef, searchBoxRef]
+        )
+    );
 
     const { namespaces: namespacesSelection } = useAppRoute();
     const { selectNamespaces } = useAppRouteActions();
@@ -112,6 +131,7 @@ export const RootAppUI: React.FunctionComponent = () => {
                         <SearchInput
                             value={searchValue.query}
                             onChange={setSearchValue}
+                            ref={searchBoxRef}
                         />
                     </Box>
                 }
