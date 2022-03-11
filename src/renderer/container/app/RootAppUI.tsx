@@ -42,6 +42,7 @@ export const RootAppUI: React.FunctionComponent = () => {
     const searchStore = useAppSearchStore();
     const searchValue = useAppSearch();
     const searchBoxRef = useRef<HTMLInputElement>();
+    const contextSelectMenuRef = useRef<HTMLButtonElement>();
 
     const metaKeyRef = useModifierKeyRef("Meta");
     useKeyListener(
@@ -53,6 +54,13 @@ export const RootAppUI: React.FunctionComponent = () => {
                     key === "f"
                 ) {
                     searchBoxRef.current.focus();
+                }
+                if (
+                    eventType === "keydown" &&
+                    metaKeyRef.current &&
+                    key === "o"
+                ) {
+                    contextSelectMenuRef.current.click();
                 }
             },
             [metaKeyRef, searchBoxRef]
@@ -149,7 +157,7 @@ export const RootAppUI: React.FunctionComponent = () => {
             <AppFrame
                 title={
                     <Box p={2} maxWidth="300px" mx="auto">
-                        <ContextSelectMenu />
+                        <ContextSelectMenu ref={contextSelectMenuRef} />
                     </Box>
                 }
                 search={
@@ -188,9 +196,7 @@ export const RootAppUI: React.FunctionComponent = () => {
                             height="100%"
                             overflow="hidden scroll"
                             sx={{ scrollbarGutter: "stable" }}
-                        >
-                            {repeat(100, <p>right</p>)}
-                        </Box>
+                        ></Box>
                     )
                 }
             />

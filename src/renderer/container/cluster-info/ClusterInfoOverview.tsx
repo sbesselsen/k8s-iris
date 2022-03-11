@@ -122,7 +122,6 @@ export const ClusterInfoOverview: React.FC<{}> = () => {
                                     <TagLabel
                                         textTransform="uppercase"
                                         fontWeight="semibold"
-                                        letterSpacing="wide"
                                         fontSize="xs"
                                     >
                                         {[

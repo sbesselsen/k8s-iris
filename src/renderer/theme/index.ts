@@ -18,26 +18,5 @@ export const theme = extendTheme({
                 },
             },
         },
-        Heading: {
-            variants: {
-                menuGroup: {
-                    color: "gray.500",
-                    fontWeight: "semibold",
-                    letterSpacing: "wide",
-                    fontSize: "xs",
-                    textTransform: "uppercase",
-                },
-            },
-        },
     },
 });
-
-export const menuGroupStylesHack = {
-    ".chakra-menu__group__title": {
-        color: "gray.500",
-        fontWeight: "semibold",
-        letterSpacing: "wide",
-        fontSize: "xs",
-        textTransform: "uppercase",
-    },
-};

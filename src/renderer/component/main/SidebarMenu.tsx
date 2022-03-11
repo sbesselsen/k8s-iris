@@ -219,11 +219,10 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
     const buildMenuItem = (namespace: K8sObject) => {
         const name = namespace.metadata.name;
         return (
-            <HStack w="100%" spacing={0}>
+            <HStack w="100%" spacing={0} key={name}>
                 <Checkbox
                     color={itemTextColor}
                     px={4}
-                    key={name}
                     size="sm"
                     value={name}
                     py={1}
@@ -235,6 +234,8 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                     fontSize="sm"
                     onClick={onClickSingleNamespace[name]}
                     flexGrow="1"
+                    isTruncated
+                    pe={4}
                 >
                     {name}
                 </Box>
@@ -247,7 +248,6 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
             <Heading
                 textColor={colorScheme + ".500"}
                 fontWeight="semibold"
-                letterSpacing="wide"
                 fontSize="xs"
                 textTransform="uppercase"
                 opacity={opacity}
@@ -305,7 +305,7 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                         value={selection.selected ?? []}
                         onChange={onChangeSelectedNamespaces}
                     >
-                        <VStack alignItems="start" spacing={1} pb={4}>
+                        <VStack alignItems="start" spacing={2} pt={1} pb={4}>
                             {filteredNamespaces.map(buildMenuItem)}
                         </VStack>
                     </CheckboxGroup>
