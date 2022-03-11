@@ -27,13 +27,15 @@ import { BsBox } from "react-icons/bs";
 import { useK8sListWatch } from "../../k8s/list-watch";
 import { useKeyListener, useModifierKeyRef } from "../../hook/keyboard";
 import { ClusterError } from "./ClusterError";
+import { useIpcCall } from "../../hook/ipc";
+import { AppNamespacesSelection } from "../../../common/route/app-route";
 
 export const RootAppUI: React.FunctionComponent = () => {
-    const { context } = useAppRoute();
+    const appRoute = useAppRoute();
     const colorThemeStore = useColorThemeStore();
 
     const kubeContext = useK8sContext();
-    usePageTitle(context);
+    usePageTitle(kubeContext);
 
     const [loadingContextsInfo, contextsInfo] = useK8sContextsInfo();
 
@@ -60,12 +62,33 @@ export const RootAppUI: React.FunctionComponent = () => {
     const { namespaces: namespacesSelection } = useAppRoute();
     const { selectNamespaces } = useAppRouteActions();
 
+    const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
+
     const [loadingNamespaces, namespaces, namespacesError] = useK8sListWatch(
         {
             apiVersion: "v1",
             kind: "Namespace",
         },
         []
+    );
+
+    const onChangeNamespacesSelection = useCallback(
+        (
+            namespaces: AppNamespacesSelection,
+            requestNewWindow: boolean = false
+        ) => {
+            if (requestNewWindow) {
+                createWindow({
+                    route: {
+                        ...appRoute,
+                        namespaces,
+                    },
+                });
+            } else {
+                selectNamespaces(namespaces);
+            }
+        },
+        [appRoute, createWindow, selectNamespaces]
     );
 
     const setSearchValue = useCallback(
@@ -76,7 +99,9 @@ export const RootAppUI: React.FunctionComponent = () => {
     );
 
     const contextualColorTheme = useMemo(() => {
-        const contextInfo = contextsInfo?.find((ctx) => ctx.name === context);
+        const contextInfo = contextsInfo?.find(
+            (ctx) => ctx.name === kubeContext
+        );
         if (!contextInfo) {
             return null;
         }
@@ -141,7 +166,7 @@ export const RootAppUI: React.FunctionComponent = () => {
                         <SidebarMainMenu items={sidebarMainMenuItems} />
                         <SidebarNamespacesMenu
                             selection={namespacesSelection}
-                            onChangeSelection={selectNamespaces}
+                            onChangeSelection={onChangeNamespacesSelection}
                             isLoading={loadingNamespaces}
                             namespaces={namespaces?.items ?? []}
                         />

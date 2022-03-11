@@ -8,11 +8,13 @@ import {
     Heading,
     Icon,
     useColorModeValue,
+    HStack,
     VStack,
 } from "@chakra-ui/react";
 import React, {
     ElementType,
     Fragment,
+    MouseEvent,
     ReactNode,
     useCallback,
     useMemo,
@@ -22,6 +24,8 @@ import { AppNamespacesSelection } from "../../../common/route/app-route";
 import { searchMatch } from "../../../common/util/search";
 import { useColorTheme } from "../../context/color-theme";
 import { useAppSearch } from "../../context/search";
+import { useModifierKeyRef } from "../../hook/keyboard";
+import { useMultiSelectUpdater } from "../../hook/multi-select";
 import { useWindowFocusValue } from "../../hook/window-focus";
 
 export type SidebarMainMenuItem = {
@@ -113,7 +117,10 @@ export type SidebarNamespacesMenuProps = {
     isLoading?: boolean;
     namespaces: K8sObject[] | undefined;
     selection: AppNamespacesSelection;
-    onChangeSelection: (selection: AppNamespacesSelection) => void;
+    onChangeSelection: (
+        selection: AppNamespacesSelection,
+        requestNewWindow?: boolean
+    ) => void;
 };
 
 export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
@@ -162,22 +169,76 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
         [namespaces, query]
     );
 
+    const namespaceNames = useMemo(
+        () => namespaces.map((ns) => ns.metadata.name),
+        [namespaces]
+    );
+
+    const updateNamespacesSelect = useMultiSelectUpdater(
+        namespaceNames,
+        selection.selected
+    );
+    const shiftKeyRef = useModifierKeyRef("Shift");
+
+    const onChangeSelectedNamespaces = useCallback(
+        (namespaces: string[]) => {
+            onChangeSelection({
+                ...selection,
+                selected: updateNamespacesSelect(
+                    namespaces,
+                    shiftKeyRef.current
+                ),
+            });
+        },
+        [onChangeSelection, selection, updateNamespacesSelect]
+    );
+
+    const metaKeyRef = useModifierKeyRef("Meta");
+
+    const onClickSingleNamespace = useMemo(
+        () =>
+            Object.fromEntries(
+                namespaces.map((namespace) => [
+                    namespace.metadata.name,
+                    (e: MouseEvent) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        onChangeSelection(
+                            {
+                                ...selection,
+                                selected: [namespace.metadata.name],
+                            },
+                            metaKeyRef.current
+                        );
+                    },
+                ])
+            ),
+        [metaKeyRef, namespaces, onChangeSelection]
+    );
+
     const buildMenuItem = (namespace: K8sObject) => {
         const name = namespace.metadata.name;
         return (
-            <Checkbox
-                color={itemTextColor}
-                px={4}
-                key={name}
-                size="sm"
-                value={name}
-                py={1}
-                borderColor={checkboxBorderColor}
-                flexShrink="0"
-                isTruncated
-            >
-                <Box>{name}</Box>
-            </Checkbox>
+            <HStack w="100%" spacing={0}>
+                <Checkbox
+                    color={itemTextColor}
+                    px={4}
+                    key={name}
+                    size="sm"
+                    value={name}
+                    py={1}
+                    borderColor={checkboxBorderColor}
+                    flexShrink="0"
+                    isTruncated
+                ></Checkbox>
+                <Box
+                    fontSize="sm"
+                    onClick={onClickSingleNamespace[name]}
+                    flexGrow="1"
+                >
+                    {name}
+                </Box>
+            </HStack>
         );
     };
 
@@ -239,8 +300,12 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                 opacity={opacity}
             >
                 <Collapse in={selection.mode === "selected"}>
-                    <CheckboxGroup colorScheme={colorScheme}>
-                        <VStack alignItems="start" spacing={0} pb={4}>
+                    <CheckboxGroup
+                        colorScheme={colorScheme}
+                        value={selection.selected ?? []}
+                        onChange={onChangeSelectedNamespaces}
+                    >
+                        <VStack alignItems="start" spacing={1} pb={4}>
                             {filteredNamespaces.map(buildMenuItem)}
                         </VStack>
                     </CheckboxGroup>
