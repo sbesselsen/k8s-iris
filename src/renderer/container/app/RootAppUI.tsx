@@ -40,7 +40,7 @@ export const RootAppUI: React.FunctionComponent = () => {
     const kubeContext = useK8sContext();
     usePageTitle(kubeContext);
 
-    const [loadingContextsInfo, contextsInfo] = useK8sContextsInfo();
+    const [_loadingContextsInfo, contextsInfo] = useK8sContextsInfo();
 
     const searchStore = useAppSearchStore();
     const searchValue = useAppSearch();

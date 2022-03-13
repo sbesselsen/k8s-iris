@@ -6,7 +6,6 @@ import React, {
     useRef,
     useState,
 } from "react";
-import { useColorTheme } from "../../context/color-theme";
 import { useWindowFocusValue } from "../../hook/window-focus";
 
 export type AppFrameProps = {
@@ -14,21 +13,10 @@ export type AppFrameProps = {
     sidebar: ReactElement;
     content: ReactElement;
     title: ReactElement;
-    colorScheme?: string;
 };
 
 export const AppFrame: React.FC<AppFrameProps> = (props) => {
-    const {
-        search,
-        sidebar,
-        content,
-        title,
-        colorScheme: propsColorScheme,
-    } = props;
-
-    const { colorScheme: defaultColorScheme } = useColorTheme();
-
-    const colorScheme = propsColorScheme ?? defaultColorScheme ?? "gray";
+    const { search, sidebar, content, title } = props;
 
     const separatorWidth = "8px";
     const [sidebarWidth, setSidebarWidth] = useState("250px");
@@ -93,13 +81,10 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
 
     const contentBackground = useColorModeValue("white", "black");
     const headerBackground = useColorModeValue(
-        colorScheme + useWindowFocusValue(".300", ".400"),
-        colorScheme + useWindowFocusValue(".700", ".800")
+        useWindowFocusValue("primary.300", "primary.400"),
+        useWindowFocusValue("primary.700", "primary.800")
     );
-    const sidebarBackground = useColorModeValue(
-        colorScheme + ".100",
-        colorScheme + ".900"
-    );
+    const sidebarBackground = useColorModeValue("primary.100", "primary.900");
 
     // TODO: make button offset work in Windows as well, on the other side
 

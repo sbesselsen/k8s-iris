@@ -19,7 +19,6 @@ import React, {
     useState,
 } from "react";
 import { MenuInput } from "../../component/MenuInput";
-import { useColorTheme } from "../../context/color-theme";
 import { useK8sContext } from "../../context/k8s-context";
 import { useIpcCall } from "../../hook/ipc";
 import { useAppRouteActions } from "../../context/route";
@@ -47,7 +46,6 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
     (_props, ref) => {
         const kubeContext = useK8sContext();
         const { selectContext } = useAppRouteActions();
-        const { colorScheme } = useColorTheme();
 
         const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
 
@@ -170,7 +168,7 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
                     rightIcon={<ChevronDownIcon />}
                     width="100%"
                     textAlign="start"
-                    colorScheme={colorScheme}
+                    colorScheme="primary"
                     size="sm"
                     boxShadow="0 1px 2px rgba(0, 0, 0, 0.1)"
                     _active={{

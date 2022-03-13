@@ -12,7 +12,6 @@ import React, {
     useEffect,
     useState,
 } from "react";
-import { useColorTheme } from "../../context/color-theme";
 import { useWindowFocusValue } from "../../hook/window-focus";
 
 export type SearchInputProps = {
@@ -53,19 +52,17 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
             [innerValue, onChange, setInnerValue]
         );
 
-        const { colorScheme } = useColorTheme() ?? { colorScheme: "gray" };
-
         const opacity = useWindowFocusValue(1.0, 0.5);
 
         const searchBackground = useColorModeValue(
-            colorScheme + useWindowFocusValue(".100", ".200"),
-            colorScheme + useWindowFocusValue(".800", ".900")
+            useWindowFocusValue("primary.100", "primary.200"),
+            useWindowFocusValue("primary.800", "primary.900")
         );
         const searchFocusedBackground = useColorModeValue("white", "black");
-        const itemTextColor = useColorModeValue(colorScheme + ".900", "white");
+        const itemTextColor = useColorModeValue("primary.900", "white");
         const itemPlaceholderColor = useColorModeValue(
-            colorScheme + ".600",
-            colorScheme + ".100"
+            "primary.600",
+            "primary.100"
         );
 
         const iconColor = itemPlaceholderColor;

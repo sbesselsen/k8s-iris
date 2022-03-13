@@ -1,16 +1,12 @@
 import React from "react";
 
-import { ChakraProvider } from "@chakra-ui/react";
 import { RootAppUI } from "./container/app/RootAppUI";
-import { theme } from "./theme";
-import { StickyContainer } from "react-unstuck";
+import { AppThemeProvider } from "./container/app/AppThemeProvider";
 
 export const App: React.FunctionComponent = () => {
     return (
-        <ChakraProvider theme={theme}>
-            <StickyContainer>
-                <RootAppUI />
-            </StickyContainer>
-        </ChakraProvider>
+        <AppThemeProvider>
+            <RootAppUI />
+        </AppThemeProvider>
     );
 };

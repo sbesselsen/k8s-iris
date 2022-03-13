@@ -23,7 +23,6 @@ import React, {
 import { K8sObject } from "../../../common/k8s/client";
 import { AppNamespacesSelection } from "../../../common/route/app-route";
 import { searchMatch } from "../../../common/util/search";
-import { useColorTheme } from "../../context/color-theme";
 import { useAppSearch } from "../../context/search";
 import { useModifierKeyRef } from "../../hook/keyboard";
 import { useMultiSelectUpdater } from "../../hook/multi-select";
@@ -84,20 +83,15 @@ type SidebarMenuButtonProps = {
 const SidebarMenuButton: React.FC<SidebarMenuButtonProps> = (props) => {
     const { item, isSelected = false, onSelect } = props;
 
-    const { colorScheme } = useColorTheme();
-
     const iconSize = 4;
 
-    const itemTextColor = useColorModeValue(colorScheme + ".900", "white");
-    const iconColor = colorScheme + ".500";
+    const itemTextColor = useColorModeValue("primary.900", "white");
+    const iconColor = "primary.500";
     const selectedTextColor = "white";
-    const hoverBackgroundColor = useColorModeValue(
-        colorScheme + ".50",
-        colorScheme + ".700"
-    );
+    const hoverBackgroundColor = useColorModeValue("primary.50", "primary.700");
     const selectedBackgroundColor = useColorModeValue(
-        colorScheme + ".500",
-        colorScheme + ".500"
+        "primary.500",
+        "primary.500"
     );
     const icon = item.iconType ? (
         <Icon
@@ -176,20 +170,15 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
         });
     }, [selection, onChangeSelection]);
 
-    const { colorScheme } = useColorTheme();
+    const itemTextColor = useColorModeValue("primary.900", "white");
 
-    const itemTextColor = useColorModeValue(colorScheme + ".900", "white");
-
-    const namespacesToggleBorderColor = colorScheme + ".500";
+    const namespacesToggleBorderColor = "primary.500";
     const namespacesToggleHoverColor = useColorModeValue(
-        colorScheme + ".50",
-        colorScheme + ".700"
+        "primary.50",
+        "primary.700"
     );
 
-    const checkboxBorderColor = useColorModeValue(
-        colorScheme + ".300",
-        colorScheme + ".700"
-    );
+    const checkboxBorderColor = useColorModeValue("primary.300", "primary.700");
 
     const { query } = useAppSearch();
     const filteredNamespaces = useMemo(
@@ -274,7 +263,7 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
     return (
         <Fragment>
             <Heading
-                textColor={colorScheme + ".500"}
+                textColor={"primary.500"}
                 fontWeight="semibold"
                 fontSize="xs"
                 textTransform="uppercase"
@@ -329,7 +318,7 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
             >
                 <Collapse in={selection.mode === "selected"}>
                     <CheckboxGroup
-                        colorScheme={colorScheme}
+                        colorScheme="primary"
                         value={selection.selected ?? []}
                         onChange={onChangeSelectedNamespaces}
                     >

@@ -8,7 +8,6 @@ import {
     VStack,
 } from "@chakra-ui/react";
 import React, { useCallback, useState } from "react";
-import { useColorTheme } from "../../context/color-theme";
 import { useK8sContext } from "../../context/k8s-context";
 import { useIpcCall } from "../../hook/ipc";
 import { useK8sContextsInfo } from "../../hook/k8s-contexts-info";
@@ -42,8 +41,6 @@ export const ClusterError: React.FC<{ error: Error }> = (props) => {
         }
     }, [currentContext, loginForContext, setLoggingIn]);
 
-    const { colorScheme } = useColorTheme();
-
     if (isLoadingContexts) {
         return null;
     }
@@ -57,7 +54,7 @@ export const ClusterError: React.FC<{ error: Error }> = (props) => {
             pe={12}
             maxWidth="800px"
         >
-            <Heading textColor={colorScheme + ".500"}>
+            <Heading textColor={"primary.500"}>
                 Error connecting to cluster
             </Heading>
             <Code variant="large" fontSize="sm" userSelect="text">
@@ -71,7 +68,7 @@ export const ClusterError: React.FC<{ error: Error }> = (props) => {
                 {supportsAppLogin && (
                     <Button
                         onClick={onClickLoginButton}
-                        colorScheme={colorScheme}
+                        colorScheme="primary"
                         isDisabled={isLoggingIn}
                     >
                         Log in
