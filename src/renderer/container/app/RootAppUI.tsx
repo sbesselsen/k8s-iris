@@ -28,7 +28,10 @@ import { useK8sListWatch } from "../../k8s/list-watch";
 import { useKeyListener, useModifierKeyRef } from "../../hook/keyboard";
 import { ClusterError } from "./ClusterError";
 import { useIpcCall } from "../../hook/ipc";
-import { AppNamespacesSelection } from "../../../common/route/app-route";
+import {
+    AppMenuItem,
+    AppNamespacesSelection,
+} from "../../../common/route/app-route";
 
 export const RootAppUI: React.FunctionComponent = () => {
     const appRoute = useAppRoute();
@@ -67,8 +70,8 @@ export const RootAppUI: React.FunctionComponent = () => {
         )
     );
 
-    const { namespaces: namespacesSelection } = useAppRoute();
-    const { selectNamespaces } = useAppRouteActions();
+    const { namespaces: namespacesSelection, menuItem } = useAppRoute();
+    const { selectNamespaces, selectMenuItem } = useAppRouteActions();
 
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
 
@@ -142,6 +145,22 @@ export const RootAppUI: React.FunctionComponent = () => {
         []
     );
 
+    const onChangeMenuItemSelection = useCallback(
+        (selection: string, requestNewWindow: boolean = false) => {
+            if (requestNewWindow) {
+                createWindow({
+                    route: {
+                        ...appRoute,
+                        menuItem: selection as AppMenuItem,
+                    },
+                });
+            } else {
+                selectMenuItem(selection as AppMenuItem);
+            }
+        },
+        [createWindow, selectMenuItem]
+    );
+
     const isReady = contextualColorTheme !== null;
 
     useEffect(() => {
@@ -171,7 +190,11 @@ export const RootAppUI: React.FunctionComponent = () => {
                 }
                 sidebar={
                     <VStack h="100%" position="relative" alignItems="stretch">
-                        <SidebarMainMenu items={sidebarMainMenuItems} />
+                        <SidebarMainMenu
+                            items={sidebarMainMenuItems}
+                            selection={menuItem}
+                            onChangeSelection={onChangeMenuItemSelection}
+                        />
                         <SidebarNamespacesMenu
                             selection={namespacesSelection}
                             onChangeSelection={onChangeNamespacesSelection}

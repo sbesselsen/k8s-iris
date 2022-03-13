@@ -9,6 +9,7 @@ import {
     Spinner,
     useColorModeValue,
     useDisclosure,
+    useToken,
 } from "@chakra-ui/react";
 import React, {
     ChangeEvent,
@@ -154,6 +155,8 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
         );
         const popupBorderColor = useColorModeValue("gray.200", "gray.700");
 
+        const focusBoxShadow = useToken("shadows", "outline");
+
         return (
             <Menu
                 isOpen={isOpen}
@@ -172,6 +175,10 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
                     boxShadow="0 1px 2px rgba(0, 0, 0, 0.1)"
                     _active={{
                         bg: "",
+                    }}
+                    _focus={{}}
+                    _focusVisible={{
+                        boxShadow: focusBoxShadow,
                     }}
                     ref={ref}
                 >

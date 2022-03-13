@@ -10,6 +10,7 @@ import {
     useColorModeValue,
     HStack,
     VStack,
+    useToken,
 } from "@chakra-ui/react";
 import React, {
     ElementType,
@@ -36,12 +37,29 @@ export type SidebarMainMenuItem = {
 
 export type SidebarMainMenuProps = {
     items: SidebarMainMenuItem[];
+    selection?: string | undefined;
+    onChangeSelection?: (selection: string, requestNewWindow?: boolean) => void;
 };
 
 export const SidebarMainMenu: React.FC<SidebarMainMenuProps> = (props) => {
-    const { items } = props;
+    const { items, selection, onChangeSelection } = props;
 
     const opacity = useWindowFocusValue(1.0, 0.5);
+
+    const metaKeyRef = useModifierKeyRef("Meta");
+
+    const onClickMenuItems = useMemo(
+        () =>
+            Object.fromEntries(
+                items.map((item) => [
+                    item.id,
+                    () => {
+                        onChangeSelection?.(item.id, metaKeyRef.current);
+                    },
+                ])
+            ),
+        [items, metaKeyRef, onChangeSelection]
+    );
 
     return (
         <VStack mt={6} spacing={0} opacity={opacity}>
@@ -49,7 +67,8 @@ export const SidebarMainMenu: React.FC<SidebarMainMenuProps> = (props) => {
                 <SidebarMenuButton
                     key={item.id}
                     item={item}
-                    isSelected={item.id === "resources"}
+                    onSelect={onClickMenuItems[item.id]}
+                    isSelected={item.id && item.id === selection}
                 />
             ))}
         </VStack>
@@ -59,10 +78,11 @@ export const SidebarMainMenu: React.FC<SidebarMainMenuProps> = (props) => {
 type SidebarMenuButtonProps = {
     item: SidebarMainMenuItem;
     isSelected?: boolean;
+    onSelect?: () => void;
 };
 
 const SidebarMenuButton: React.FC<SidebarMenuButtonProps> = (props) => {
-    const { item, isSelected = false } = props;
+    const { item, isSelected = false, onSelect } = props;
 
     const { colorScheme } = useColorTheme();
 
@@ -88,6 +108,9 @@ const SidebarMenuButton: React.FC<SidebarMenuButtonProps> = (props) => {
             color={isSelected ? selectedTextColor : iconColor}
         />
     ) : null;
+
+    const focusBoxShadow = useToken("shadows", "outline");
+
     return (
         <Button
             bg="transparent"
@@ -99,8 +122,13 @@ const SidebarMenuButton: React.FC<SidebarMenuButtonProps> = (props) => {
             fontWeight="normal"
             borderRadius={0}
             transition="none"
+            onClick={onSelect}
             _hover={{
                 bg: hoverBackgroundColor,
+            }}
+            _focus={{}}
+            _focusVisible={{
+                boxShadow: focusBoxShadow,
             }}
             _active={{
                 textColor: selectedTextColor,

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import {
+    AppMenuItem,
     AppNamespacesSelection,
     AppRoute,
     emptyAppRoute,
@@ -14,6 +15,9 @@ if (hashParams?.route) {
     const route = hashParams.route as any;
     appRoute.context = route.context ?? null;
     appRoute.namespaces = route.namespaces ?? null;
+    if (route.menuItem) {
+        appRoute.menuItem = route.menuItem;
+    }
 }
 
 const [useAppRouteStore, useAppRouteBase, rootAppRouteStore] = create(appRoute);
@@ -27,6 +31,7 @@ rootAppRouteStore.subscribe((route) => {
 export type AppRouteActions = {
     selectContext: (context: string) => AppRoute;
     selectNamespaces: (namespaces: AppNamespacesSelection) => AppRoute;
+    selectMenuItem: (menuItem: AppMenuItem) => AppRoute;
 };
 export const useAppRouteActions = (): AppRouteActions => {
     const store = useAppRouteStore();
@@ -37,6 +42,8 @@ export const useAppRouteActions = (): AppRouteActions => {
                 store.set((route) => ({ ...route, context })),
             selectNamespaces: (namespaces: AppNamespacesSelection) =>
                 store.set((route) => ({ ...route, namespaces })),
+            selectMenuItem: (menuItem: AppMenuItem) =>
+                store.set((route) => ({ ...route, menuItem })),
         }),
         [store]
     );
