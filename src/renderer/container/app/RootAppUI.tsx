@@ -32,6 +32,7 @@ import {
     AppMenuItem,
     AppNamespacesSelection,
 } from "../../../common/route/app-route";
+import { ContentTabs } from "../../component/main/ContentTabs";
 
 export const RootAppUI: React.FunctionComponent = () => {
     const appRoute = useAppRoute();
@@ -171,6 +172,15 @@ export const RootAppUI: React.FunctionComponent = () => {
         return null;
     }
 
+    const tabs = [
+        { id: "aap", title: "Aap", content: <strong>Aap</strong> },
+        {
+            id: " schaap",
+            title: "Schaap",
+            content: <Box>{repeat(100, <p>schaap</p>)}</Box>,
+        },
+    ];
+
     return (
         <Fragment>
             <AppFrame
@@ -214,12 +224,7 @@ export const RootAppUI: React.FunctionComponent = () => {
                             <ClusterError error={namespacesError} />
                         </Box>
                     ) : (
-                        <Box
-                            w="100%"
-                            height="100%"
-                            overflow="hidden scroll"
-                            sx={{ scrollbarGutter: "stable" }}
-                        ></Box>
+                        <ContentTabs tabs={tabs} />
                     )
                 }
             />
