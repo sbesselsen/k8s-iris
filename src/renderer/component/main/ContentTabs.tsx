@@ -11,6 +11,7 @@ import {
     VStack,
 } from "@chakra-ui/react";
 import React, { ReactNode } from "react";
+import { useWindowFocusValue } from "../../hook/window-focus";
 import { ScrollBox } from "./ScrollBox";
 
 export type ContentTab = {
@@ -29,6 +30,8 @@ export const ContentTabs: React.FC<ContentTabsProps> = (props) => {
     const tabsBorderColor = useColorModeValue("primary.100", "primary.900");
     const focusBoxShadow = useToken("shadows", "outline");
 
+    const opacity = useWindowFocusValue(1.0, 0.7);
+
     return (
         <Tabs
             display="flex"
@@ -38,7 +41,11 @@ export const ContentTabs: React.FC<ContentTabsProps> = (props) => {
             variant="line"
             colorScheme="primary"
         >
-            <TabList flex="0 0 0" borderBottomColor={tabsBorderColor}>
+            <TabList
+                flex="0 0 0"
+                borderBottomColor={tabsBorderColor}
+                opacity={opacity}
+            >
                 {tabs.map((tab) => (
                     <Tab
                         key={tab.id}
