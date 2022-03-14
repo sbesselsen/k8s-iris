@@ -4,20 +4,20 @@ import { ContentTabs } from "../../component/main/ContentTabs";
 import { useAppRoute, useAppRouteActions } from "../../context/route";
 import { useIpcCall } from "../../hook/ipc";
 
-type ResourcesContentRoute = {
+type ClusterContentRoute = {
     item: string;
 };
 
-const defaultResourcesContentRoute: ResourcesContentRoute = {
-    item: "workloads",
+const defaultClusterContentRoute: ClusterContentRoute = {
+    item: "info",
 };
 
-export const ResourcesOverview: React.FC<{}> = () => {
+export const ClusterOverview: React.FC<{}> = () => {
     const appRoute = useAppRoute();
     const { contentRoute: baseContentRoute } = appRoute;
     const { selectContentRoute } = useAppRouteActions();
 
-    const contentRoute = baseContentRoute ?? defaultResourcesContentRoute;
+    const contentRoute = baseContentRoute ?? defaultClusterContentRoute;
 
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
 
@@ -38,8 +38,9 @@ export const ResourcesOverview: React.FC<{}> = () => {
     );
 
     const tabs = [
-        { id: "workloads", title: "Workloads", content: <Box /> },
-        { id: "other", title: "Other", content: <Box /> },
+        { id: "info", title: "Info", content: <Box /> },
+        { id: "nodes", title: "Nodes", content: <Box /> },
+        { id: "cloud", title: "Cloud", content: <Box /> },
     ];
     return (
         <ContentTabs

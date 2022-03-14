@@ -2,6 +2,8 @@ import { Box, VStack } from "@chakra-ui/react";
 import React, {
     Fragment,
     ReactElement,
+    ReactNode,
+    Suspense,
     useCallback,
     useEffect,
     useMemo,
@@ -29,7 +31,13 @@ import { useKeyListener, useModifierKeyRef } from "../../hook/keyboard";
 import { ClusterError } from "./ClusterError";
 import { useIpcCall } from "../../hook/ipc";
 import { AppNamespacesSelection } from "../../../common/route/app-route";
-import { ResourcesOverview } from "../resources/ResourcesOverview";
+
+const ClusterOverview = React.lazy(async () => ({
+    default: (await import("../cluster/ClusterOverview")).ClusterOverview,
+}));
+const ResourcesOverview = React.lazy(async () => ({
+    default: (await import("../resources/ResourcesOverview")).ResourcesOverview,
+}));
 
 export const RootAppUI: React.FunctionComponent = () => {
     const appRoute = useAppRoute();
@@ -214,7 +222,7 @@ export const RootAppUI: React.FunctionComponent = () => {
                             <ClusterError error={namespacesError} />
                         </Box>
                     ) : (
-                        <ResourcesOverview />
+                        <AppContent />
                     )
                 }
             />
@@ -222,6 +230,17 @@ export const RootAppUI: React.FunctionComponent = () => {
     );
 };
 
-const repeat = (n: number, content: ReactElement): Array<ReactElement> => {
-    return [...Array(n)].map((_, i) => <Fragment key={i}>{content}</Fragment>);
+const appComponents: Record<string, ReactNode> = {
+    resources: <ResourcesOverview />,
+    cluster: <ClusterOverview />,
+};
+
+const AppContent: React.FC = () => {
+    const { menuItem } = useAppRoute();
+
+    return (
+        <Suspense fallback={<Box />}>
+            {appComponents[menuItem] ?? <Box />}
+        </Suspense>
+    );
 };

@@ -7,7 +7,7 @@ import {
     useColorModeValue,
     useToken,
 } from "@chakra-ui/react";
-import React, { ReactNode, useCallback, useRef } from "react";
+import React, { ReactNode, useCallback, useMemo, useRef } from "react";
 import { useModifierKeyRef } from "../../hook/keyboard";
 import { useWindowFocusValue } from "../../hook/window-focus";
 import { ScrollBox } from "./ScrollBox";
@@ -49,19 +49,22 @@ export const ContentTabs: React.FC<ContentTabsProps> = (props) => {
     const metaKeyRef = useModifierKeyRef("Meta");
     const onChangeTabIndex = useCallback(
         (index: number) => {
-            if (
-                index >= 0 &&
-                tabs.length > index &&
-                index !== tabIndexRef.current
-            ) {
-                // The little dance with the tabIndexRef is necessary because Tabs calls
-                // onChange multiple times in sequence, causing trouble when we request
-                // a new window.
-                tabIndexRef.current = index;
+            if (index >= 0 && tabs.length > index) {
                 onChangeSelection?.(tabs[index].id, metaKeyRef.current);
             }
         },
         [metaKeyRef, onChangeSelection, tabIndexRef]
+    );
+
+    // We set onClick on Tab instead of onChange on Tabs because Tabs calls
+    // onChange multiple times in sequence, causing trouble when we request
+    // a new window.
+    const onChangeTabIndexes = useMemo(
+        () =>
+            tabs.map((_, index) => () => {
+                onChangeTabIndex(index);
+            }),
+        [onChangeTabIndex]
     );
 
     return (
@@ -73,7 +76,7 @@ export const ContentTabs: React.FC<ContentTabsProps> = (props) => {
             variant="soft-rounded"
             colorScheme="primary"
             index={tabIndex}
-            onChange={onChangeTabIndex}
+            isLazy
         >
             <TabList
                 flex="0 0 0"
@@ -82,7 +85,7 @@ export const ContentTabs: React.FC<ContentTabsProps> = (props) => {
                 opacity={opacity}
                 m={2}
             >
-                {tabs.map((tab) => (
+                {tabs.map((tab, index) => (
                     <Tab
                         key={tab.id}
                         borderRadius={6}
@@ -97,6 +100,7 @@ export const ContentTabs: React.FC<ContentTabsProps> = (props) => {
                             textColor: selectedTabTextColor,
                         }}
                         me={1}
+                        onClick={onChangeTabIndexes[index]}
                     >
                         {tab.title}
                     </Tab>
