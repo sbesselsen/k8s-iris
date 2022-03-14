@@ -1,16 +1,14 @@
 import {
-    Box,
     Tab,
-    Table,
     TabList,
     TabPanel,
     TabPanels,
     Tabs,
     useColorModeValue,
     useToken,
-    VStack,
 } from "@chakra-ui/react";
-import React, { ReactNode } from "react";
+import React, { ReactNode, useCallback, useRef } from "react";
+import { useModifierKeyRef } from "../../hook/keyboard";
 import { useWindowFocusValue } from "../../hook/window-focus";
 import { ScrollBox } from "./ScrollBox";
 
@@ -22,10 +20,12 @@ export type ContentTab = {
 
 export type ContentTabsProps = {
     tabs: ContentTab[];
+    selected?: string;
+    onChangeSelection?: (selection: string, requestNewWindow?: boolean) => void;
 };
 
 export const ContentTabs: React.FC<ContentTabsProps> = (props) => {
-    const { tabs } = props;
+    const { onChangeSelection, selected, tabs } = props;
 
     const primaryColorIsGray =
         useToken("colors", "primary.500") === useToken("colors", "gray.500");
@@ -41,6 +41,29 @@ export const ContentTabs: React.FC<ContentTabsProps> = (props) => {
 
     const opacity = useWindowFocusValue(1.0, 0.5);
 
+    let tabIndex = tabs.findIndex((tab) => selected && tab.id === selected);
+    if (tabIndex === -1) {
+        tabIndex = 0;
+    }
+    const tabIndexRef = useRef(tabIndex);
+    const metaKeyRef = useModifierKeyRef("Meta");
+    const onChangeTabIndex = useCallback(
+        (index: number) => {
+            if (
+                index >= 0 &&
+                tabs.length > index &&
+                index !== tabIndexRef.current
+            ) {
+                // The little dance with the tabIndexRef is necessary because Tabs calls
+                // onChange multiple times in sequence, causing trouble when we request
+                // a new window.
+                tabIndexRef.current = index;
+                onChangeSelection?.(tabs[index].id, metaKeyRef.current);
+            }
+        },
+        [metaKeyRef, onChangeSelection, tabIndexRef]
+    );
+
     return (
         <Tabs
             display="flex"
@@ -49,6 +72,8 @@ export const ContentTabs: React.FC<ContentTabsProps> = (props) => {
             flexDirection="column"
             variant="soft-rounded"
             colorScheme="primary"
+            index={tabIndex}
+            onChange={onChangeTabIndex}
         >
             <TabList
                 flex="0 0 0"

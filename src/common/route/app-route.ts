@@ -1,15 +1,14 @@
 export type AppRoute = {
     context: string;
     namespaces: AppNamespacesSelection;
-    menuItem: AppMenuItem;
+    menuItem?: string;
+    contentRoute?: any | undefined;
 };
 
 export type AppNamespacesSelection = {
     mode: "all" | "selected";
     selected: string[];
 };
-
-export type AppMenuItem = "cluster" | "resources";
 
 export const emptyAppRoute: AppRoute = {
     context: null,

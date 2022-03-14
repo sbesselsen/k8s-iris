@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import {
-    AppMenuItem,
     AppNamespacesSelection,
     AppRoute,
     emptyAppRoute,
@@ -18,6 +17,9 @@ if (hashParams?.route) {
     if (route.menuItem) {
         appRoute.menuItem = route.menuItem;
     }
+    if (route.contentRoute) {
+        appRoute.contentRoute = route.contentRoute;
+    }
 }
 
 const [useAppRouteStore, useAppRouteBase, rootAppRouteStore] = create(appRoute);
@@ -31,7 +33,11 @@ rootAppRouteStore.subscribe((route) => {
 export type AppRouteActions = {
     selectContext: (context: string) => AppRoute;
     selectNamespaces: (namespaces: AppNamespacesSelection) => AppRoute;
-    selectMenuItem: (menuItem: AppMenuItem) => AppRoute;
+    selectMenuItem: (menuItem: string) => AppRoute;
+    selectContentRoute: (contentRoute: any | undefined) => AppRoute;
+    setAppRoute: (
+        newRoute: AppRoute | ((oldRoute: AppRoute) => AppRoute)
+    ) => AppRoute;
 };
 export const useAppRouteActions = (): AppRouteActions => {
     const store = useAppRouteStore();
@@ -42,8 +48,14 @@ export const useAppRouteActions = (): AppRouteActions => {
                 store.set((route) => ({ ...route, context })),
             selectNamespaces: (namespaces: AppNamespacesSelection) =>
                 store.set((route) => ({ ...route, namespaces })),
-            selectMenuItem: (menuItem: AppMenuItem) =>
-                store.set((route) => ({ ...route, menuItem })),
+            selectMenuItem: (menuItem: string) =>
+                store.set(({ contentRoute, ...route }) => ({
+                    ...route,
+                    menuItem,
+                })),
+            selectContentRoute: (contentRoute: any | undefined) =>
+                store.set((route) => ({ ...route, contentRoute })),
+            setAppRoute: (route) => store.set(route),
         }),
         [store]
     );

@@ -28,11 +28,8 @@ import { useK8sListWatch } from "../../k8s/list-watch";
 import { useKeyListener, useModifierKeyRef } from "../../hook/keyboard";
 import { ClusterError } from "./ClusterError";
 import { useIpcCall } from "../../hook/ipc";
-import {
-    AppMenuItem,
-    AppNamespacesSelection,
-} from "../../../common/route/app-route";
-import { ContentTabs } from "../../component/main/ContentTabs";
+import { AppNamespacesSelection } from "../../../common/route/app-route";
+import { ResourcesOverview } from "../resources/ResourcesOverview";
 
 export const RootAppUI: React.FunctionComponent = () => {
     const appRoute = useAppRoute();
@@ -154,11 +151,11 @@ export const RootAppUI: React.FunctionComponent = () => {
                 createWindow({
                     route: {
                         ...appRoute,
-                        menuItem: selection as AppMenuItem,
+                        menuItem: selection,
                     },
                 });
             } else {
-                selectMenuItem(selection as AppMenuItem);
+                selectMenuItem(selection);
             }
         },
         [createWindow, selectMenuItem]
@@ -173,20 +170,6 @@ export const RootAppUI: React.FunctionComponent = () => {
     if (!isReady) {
         return null;
     }
-
-    const tabs = [
-        { id: "aap", title: "Info", content: <strong>Aap</strong> },
-        {
-            id: "nodes",
-            title: "Nodes",
-            content: <Box>{repeat(100, <p>schaap</p>)}</Box>,
-        },
-        {
-            id: "schaap",
-            title: "Cloud",
-            content: <Box>{repeat(100, <p>schaap</p>)}</Box>,
-        },
-    ];
 
     return (
         <Fragment>
@@ -231,7 +214,7 @@ export const RootAppUI: React.FunctionComponent = () => {
                             <ClusterError error={namespacesError} />
                         </Box>
                     ) : (
-                        <ContentTabs tabs={tabs} />
+                        <ResourcesOverview />
                     )
                 }
             />
