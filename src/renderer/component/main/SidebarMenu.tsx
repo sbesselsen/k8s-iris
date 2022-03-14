@@ -10,7 +10,6 @@ import {
     useColorModeValue,
     HStack,
     VStack,
-    useToken,
 } from "@chakra-ui/react";
 import React, {
     ElementType,
@@ -61,7 +60,7 @@ export const SidebarMainMenu: React.FC<SidebarMainMenuProps> = (props) => {
     );
 
     return (
-        <VStack mt={6} spacing={0} opacity={opacity}>
+        <VStack mt={4} mx={2} spacing={0} opacity={opacity}>
             {items.map((item) => (
                 <SidebarMenuButton
                     key={item.id}
@@ -103,26 +102,20 @@ const SidebarMenuButton: React.FC<SidebarMenuButtonProps> = (props) => {
         />
     ) : null;
 
-    const focusBoxShadow = useToken("shadows", "outline");
-
     return (
         <Button
             bg="transparent"
             textColor={itemTextColor}
-            px={4}
+            px={3}
             leftIcon={icon}
             w="100%"
+            borderRadius={6}
             justifyContent="start"
             fontWeight="normal"
-            borderRadius={0}
             transition="none"
             onClick={onSelect}
             _hover={{
                 bg: hoverBackgroundColor,
-            }}
-            _focus={{}}
-            _focusVisible={{
-                boxShadow: focusBoxShadow,
             }}
             _active={{
                 textColor: selectedTextColor,

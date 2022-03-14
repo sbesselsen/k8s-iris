@@ -1,4 +1,10 @@
-import { Box, HStack, useColorModeValue, VStack } from "@chakra-ui/react";
+import {
+    Box,
+    HStack,
+    useColorModeValue,
+    useToken,
+    VStack,
+} from "@chakra-ui/react";
 import React, {
     PointerEventHandler,
     ReactElement,
@@ -18,7 +24,6 @@ export type AppFrameProps = {
 export const AppFrame: React.FC<AppFrameProps> = (props) => {
     const { search, sidebar, content, title } = props;
 
-    const separatorWidth = "8px";
     const [sidebarWidth, setSidebarWidth] = useState("250px");
     const sidebarMinWidth = 200;
     const contentMinWidth = 400;
@@ -79,12 +84,17 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
         }
     }, [separatorDragState, setSidebarWidth]);
 
-    const contentBackground = useColorModeValue("white", "black");
+    const contentBackground = useColorModeValue("white", "gray.900");
     const headerBackground = useColorModeValue(
         useWindowFocusValue("primary.300", "primary.400"),
         useWindowFocusValue("primary.700", "primary.800")
     );
-    const sidebarBackground = useColorModeValue("primary.100", "primary.900");
+    const primaryColorIsGray =
+        useToken("colors", "primary.500") === useToken("colors", "gray.500");
+    const sidebarBackground = useColorModeValue(
+        "primary.100",
+        primaryColorIsGray ? "primary.800" : "primary.900"
+    );
 
     // TODO: make button offset work in Windows as well, on the other side
 
@@ -147,18 +157,21 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                     bg={sidebarBackground}
                     overflow="hidden"
                     ref={sidebarBoxRef}
+                    position="relative"
                 >
+                    <Box
+                        position="absolute"
+                        w={2}
+                        h="100%"
+                        cursor="col-resize"
+                        onPointerDown={onVSeparatorPointerDown}
+                        top="0"
+                        right="0"
+                        ref={vSeparatorBoxRef}
+                        zIndex={1}
+                    ></Box>
                     {sidebar}
                 </Box>
-                <Box
-                    flexGrow="0"
-                    flexShrink="0"
-                    flexBasis={separatorWidth}
-                    bg={contentBackground}
-                    cursor="col-resize"
-                    onPointerDown={onVSeparatorPointerDown}
-                    ref={vSeparatorBoxRef}
-                ></Box>
                 <Box flex="1 0 0" bg={contentBackground} overflow="hidden">
                     {content}
                 </Box>
