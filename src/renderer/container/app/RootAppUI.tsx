@@ -49,6 +49,7 @@ export const RootAppUI: React.FunctionComponent = () => {
     const contextSelectMenuRef = useRef<HTMLButtonElement>();
 
     const metaKeyRef = useModifierKeyRef("Meta");
+    const shiftKeyRef = useModifierKeyRef("Shift");
     useKeyListener(
         useCallback(
             (eventType, key) => {
@@ -62,6 +63,7 @@ export const RootAppUI: React.FunctionComponent = () => {
                 if (
                     eventType === "keydown" &&
                     metaKeyRef.current &&
+                    shiftKeyRef.current &&
                     key === "o"
                 ) {
                     contextSelectMenuRef.current.click();
@@ -173,10 +175,15 @@ export const RootAppUI: React.FunctionComponent = () => {
     }
 
     const tabs = [
-        { id: "aap", title: "Aap", content: <strong>Aap</strong> },
+        { id: "aap", title: "Info", content: <strong>Aap</strong> },
         {
-            id: " schaap",
-            title: "Schaap",
+            id: "nodes",
+            title: "Nodes",
+            content: <Box>{repeat(100, <p>schaap</p>)}</Box>,
+        },
+        {
+            id: "schaap",
+            title: "Cloud",
             content: <Box>{repeat(100, <p>schaap</p>)}</Box>,
         },
     ];

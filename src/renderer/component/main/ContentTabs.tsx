@@ -27,10 +27,19 @@ export type ContentTabsProps = {
 export const ContentTabs: React.FC<ContentTabsProps> = (props) => {
     const { tabs } = props;
 
-    const tabsBorderColor = useColorModeValue("primary.100", "primary.900");
+    const primaryColorIsGray =
+        useToken("colors", "primary.500") === useToken("colors", "gray.500");
+    const tabsBackgroundColor = useColorModeValue(
+        "primary.100",
+        primaryColorIsGray ? "primary.800" : "primary.900"
+    );
     const focusBoxShadow = useToken("shadows", "outline");
 
-    const opacity = useWindowFocusValue(1.0, 0.7);
+    const tabTextColor = useColorModeValue("primary.900", "white");
+    const selectedTabTextColor = "white";
+    const selectedTabBackgroundColor = "primary.500";
+
+    const opacity = useWindowFocusValue(1.0, 0.5);
 
     return (
         <Tabs
@@ -38,23 +47,31 @@ export const ContentTabs: React.FC<ContentTabsProps> = (props) => {
             w="100%"
             h="100%"
             flexDirection="column"
-            variant="line"
+            variant="soft-rounded"
             colorScheme="primary"
         >
             <TabList
                 flex="0 0 0"
-                borderBottomColor={tabsBorderColor}
+                borderRadius={6}
+                bg={tabsBackgroundColor}
                 opacity={opacity}
-                pt={1}
-                mx={2}
+                m={2}
             >
                 {tabs.map((tab) => (
                     <Tab
                         key={tab.id}
+                        borderRadius={6}
                         _focus={{}}
+                        fontWeight="normal"
+                        textColor={tabTextColor}
                         _focusVisible={{
                             boxShadow: focusBoxShadow,
                         }}
+                        _selected={{
+                            bg: selectedTabBackgroundColor,
+                            textColor: selectedTabTextColor,
+                        }}
+                        me={1}
                     >
                         {tab.title}
                     </Tab>
