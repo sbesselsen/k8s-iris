@@ -19,10 +19,11 @@ export type AppFrameProps = {
     sidebar: ReactElement;
     content: ReactElement;
     title: ReactElement;
+    toolbar: ReactElement;
 };
 
 export const AppFrame: React.FC<AppFrameProps> = (props) => {
-    const { search, sidebar, content, title } = props;
+    const { search, sidebar, content, toolbar, title } = props;
 
     const [sidebarWidth, setSidebarWidth] = useState("250px");
     const sidebarMinWidth = 200;
@@ -120,8 +121,11 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                     flexGrow="0"
                     flexShrink="0"
                     flexBasis="250px"
+                    pl="85px"
                     h="100%"
-                ></Box>
+                >
+                    {toolbar}
+                </Box>
                 <Box
                     flexGrow="1"
                     flexShrink="0"

@@ -1,7 +1,6 @@
 import { Box, VStack } from "@chakra-ui/react";
 import React, {
     Fragment,
-    ReactElement,
     ReactNode,
     Suspense,
     useCallback,
@@ -31,6 +30,7 @@ import { useKeyListener, useModifierKeyRef } from "../../hook/keyboard";
 import { ClusterError } from "./ClusterError";
 import { useIpcCall } from "../../hook/ipc";
 import { AppNamespacesSelection } from "../../../common/route/app-route";
+import { AppToolbar } from "./AppToolbar";
 
 const ClusterOverview = React.lazy(async () => ({
     default: (await import("../cluster/ClusterOverview")).ClusterOverview,
@@ -182,6 +182,7 @@ export const RootAppUI: React.FunctionComponent = () => {
     return (
         <Fragment>
             <AppFrame
+                toolbar={<AppToolbar />}
                 title={
                     <Box p={2} maxWidth="300px" mx="auto">
                         <ContextSelectMenu ref={contextSelectMenuRef} />
