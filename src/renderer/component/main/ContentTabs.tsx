@@ -45,6 +45,8 @@ export const ContentTabs: React.FC<ContentTabsProps> = (props) => {
                 flex="0 0 0"
                 borderBottomColor={tabsBorderColor}
                 opacity={opacity}
+                pt={1}
+                mx={2}
             >
                 {tabs.map((tab) => (
                     <Tab
