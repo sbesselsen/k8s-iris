@@ -13,6 +13,9 @@ type AppRouteHistory = {
     size: number;
 };
 
+const historyMaxSize = 100;
+const historyMaxOverflow = 10;
+
 const appRoute: AppRoute = { ...emptyAppRoute };
 
 const hashParams = getHashParams();
@@ -73,10 +76,6 @@ export const useAppRouteActions = (): AppRouteActions => {
             createHistoryItem: boolean = true
         ): AppRoute => {
             const newHistory = store.set((history) => {
-                // TODO: don't keep an infinite list of history items, start rotating at some point
-                if (history.currentIndex > 1000) {
-                    console.log("History is growing very large; should rotate");
-                }
                 const newHistory = { ...history, routes: [...history.routes] };
                 const currentRoute = history.routes[history.currentIndex];
                 const route =
@@ -88,6 +87,17 @@ export const useAppRouteActions = (): AppRouteActions => {
                     newHistory.routes[newIndex] = route;
                     newHistory.currentIndex = newIndex;
                     newHistory.size = newIndex + 1;
+                    if (
+                        newHistory.size >=
+                        historyMaxSize + historyMaxOverflow
+                    ) {
+                        const numRoutesToDrop =
+                            newHistory.routes.length - historyMaxSize;
+                        newHistory.routes =
+                            newHistory.routes.slice(numRoutesToDrop);
+                        newHistory.currentIndex -= numRoutesToDrop;
+                        newHistory.size -= numRoutesToDrop;
+                    }
                 } else {
                     newHistory.routes[newHistory.currentIndex] = route;
                 }
