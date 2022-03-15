@@ -2,7 +2,7 @@ import React, { useCallback } from "react";
 import { Box, ButtonGroup, Icon, IconButton } from "@chakra-ui/react";
 
 import { MdArrowBackIosNew, MdArrowForwardIos } from "react-icons/md";
-import { useAppRouteHistory } from "../../context/route-history";
+import { useAppRouteHistory } from "../../context/route";
 import { useKeyListener, useModifierKeyRef } from "../../hook/keyboard";
 
 export const AppToolbar: React.FC = () => {
@@ -14,9 +14,9 @@ export const AppToolbar: React.FC = () => {
             (eventType, key) => {
                 if (eventType === "keydown" && metaKeyRef.current) {
                     if (key === "ArrowLeft") {
-                        console.log("back");
+                        goBack();
                     } else if (key === "ArrowRight") {
-                        console.log("forward");
+                        goForward();
                     }
                 }
             },
@@ -30,7 +30,6 @@ export const AppToolbar: React.FC = () => {
                 variant="ghost"
                 colorScheme="primary"
                 size="sm"
-                _focus={{}}
                 isAttached
             >
                 <IconButton
@@ -38,6 +37,7 @@ export const AppToolbar: React.FC = () => {
                     onClick={goBack}
                     icon={<Icon as={MdArrowBackIosNew} />}
                     aria-label="Back"
+                    _focus={{}}
                     tabIndex={-1}
                 />
                 <IconButton
@@ -45,6 +45,7 @@ export const AppToolbar: React.FC = () => {
                     onClick={goForward}
                     icon={<Icon as={MdArrowForwardIos} />}
                     aria-label="Forward"
+                    _focus={{}}
                     tabIndex={-1}
                 />
             </ButtonGroup>

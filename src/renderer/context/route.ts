@@ -5,7 +5,13 @@ import {
     emptyAppRoute,
 } from "../../common/route/app-route";
 import { getHashParams, setHashParams } from "../util/location";
-import { create } from "../util/state";
+import { create, UseStoreValue } from "../util/state";
+
+type AppRouteHistory = {
+    routes: AppRoute[];
+    currentIndex: number;
+    size: number;
+};
 
 const appRoute: AppRoute = { ...emptyAppRoute };
 
@@ -22,10 +28,28 @@ if (hashParams?.route) {
     }
 }
 
-const [useAppRouteStore, useAppRouteBase, rootAppRouteStore] = create(appRoute);
-export const useAppRoute = useAppRouteBase;
+const [
+    useAppRouteHistoryStore,
+    useAppRouteHistoryValue,
+    rootAppRouteHistoryStore,
+] = create({
+    routes: [appRoute],
+    currentIndex: 0,
+    size: 1,
+} as AppRouteHistory);
 
-rootAppRouteStore.subscribe((route) => {
+export const useAppRoute: UseStoreValue<AppRoute> = (
+    selector?: (data: AppRoute) => any
+) => {
+    return useAppRouteHistoryValue(
+        selector
+            ? (history) => selector(history.routes[history.currentIndex])
+            : (history) => history.routes[history.currentIndex]
+    );
+};
+
+rootAppRouteHistoryStore.subscribe((history) => {
+    const route = history.routes[history.currentIndex];
     const hashParams = getHashParams();
     setHashParams({ ...hashParams, route });
 });
@@ -36,27 +60,103 @@ export type AppRouteActions = {
     selectMenuItem: (menuItem: string) => AppRoute;
     selectContentRoute: (contentRoute: any | undefined) => AppRoute;
     setAppRoute: (
-        newRoute: AppRoute | ((oldRoute: AppRoute) => AppRoute)
+        newRoute: AppRoute | ((oldRoute: AppRoute) => AppRoute),
+        createHistoryItem?: boolean
     ) => AppRoute;
 };
 export const useAppRouteActions = (): AppRouteActions => {
-    const store = useAppRouteStore();
+    const store = useAppRouteHistoryStore();
 
-    return useMemo(
-        () => ({
+    return useMemo(() => {
+        const setRoute = (
+            newRoute: AppRoute | ((oldRoute: AppRoute) => AppRoute),
+            createHistoryItem: boolean = true
+        ): AppRoute => {
+            const newHistory = store.set((history) => {
+                // TODO: don't keep an infinite list of history items, start rotating at some point
+                if (history.currentIndex > 1000) {
+                    console.log("History is growing very large; should rotate");
+                }
+                const newHistory = { ...history, routes: [...history.routes] };
+                const currentRoute = history.routes[history.currentIndex];
+                const route =
+                    typeof newRoute === "function"
+                        ? newRoute(currentRoute)
+                        : newRoute;
+                if (createHistoryItem) {
+                    const newIndex = newHistory.currentIndex + 1;
+                    newHistory.routes[newIndex] = route;
+                    newHistory.currentIndex = newIndex;
+                    newHistory.size = newIndex + 1;
+                } else {
+                    newHistory.routes[newHistory.currentIndex] = route;
+                }
+                return newHistory;
+            });
+            return newHistory.routes[newHistory.currentIndex];
+        };
+        return {
             selectContext: (context: string) =>
-                store.set((route) => ({ ...route, context })),
-            selectNamespaces: (namespaces: AppNamespacesSelection) =>
-                store.set((route) => ({ ...route, namespaces })),
+                setRoute((route) => ({ ...route, context })),
+            selectNamespaces: (namespaces: AppNamespacesSelection) => {
+                const oldHistory = store.get();
+                const oldRoute = oldHistory.routes[oldHistory.currentIndex];
+                return setRoute(
+                    (route) => ({ ...route, namespaces }),
+                    namespaces.mode !== oldRoute.namespaces.mode ||
+                        (namespaces.mode === "selected" &&
+                            namespaces.selected.length <= 1)
+                );
+            },
             selectMenuItem: (menuItem: string) =>
-                store.set(({ contentRoute, ...route }) => ({
+                setRoute(({ contentRoute, ...route }) => ({
                     ...route,
                     menuItem,
                 })),
-            selectContentRoute: (contentRoute: any | undefined) =>
-                store.set((route) => ({ ...route, contentRoute })),
-            setAppRoute: (route) => store.set(route),
-        }),
-        [store]
-    );
+            selectContentRoute: (
+                contentRoute: any | undefined,
+                createHistoryItem: boolean = true
+            ) =>
+                setRoute(
+                    (route) => ({ ...route, contentRoute }),
+                    createHistoryItem
+                ),
+            setAppRoute: (route) => setRoute(route),
+        };
+    }, [store]);
+};
+
+export type AppRouteHistoryHook = {
+    canGoBack: boolean;
+    canGoForward: boolean;
+    goBack: () => void;
+    goForward: () => void;
+};
+
+export const useAppRouteHistory = (): AppRouteHistoryHook => {
+    const history = useAppRouteHistoryValue();
+    const historyStore = useAppRouteHistoryStore();
+
+    return useMemo(() => {
+        return {
+            canGoBack: history.currentIndex > 0,
+            canGoForward: history.currentIndex < history.size - 1,
+            goBack() {
+                if (history.currentIndex > 0) {
+                    historyStore.set((history) => ({
+                        ...history,
+                        currentIndex: history.currentIndex - 1,
+                    }));
+                }
+            },
+            goForward() {
+                if (history.currentIndex < history.size - 1) {
+                    historyStore.set((history) => ({
+                        ...history,
+                        currentIndex: history.currentIndex + 1,
+                    }));
+                }
+            },
+        };
+    }, [history, historyStore]);
 };
