@@ -18,21 +18,5 @@ export const theme = extendTheme({
                 },
             },
         },
-        Button: {
-            baseStyle: {
-                _focus: {},
-                _focusVisible: {
-                    boxShadow: "shadows.outline",
-                },
-            },
-        },
-        Tab: {
-            baseStyle: {
-                _focus: {},
-                _focusVisible: {
-                    boxShadow: "shadows.outline",
-                },
-            },
-        },
     },
 });

@@ -10,6 +10,7 @@ import {
     useColorModeValue,
     HStack,
     VStack,
+    useToken,
 } from "@chakra-ui/react";
 import React, {
     ElementType,
@@ -102,6 +103,8 @@ const SidebarMenuButton: React.FC<SidebarMenuButtonProps> = (props) => {
         />
     ) : null;
 
+    const focusShadow = useToken("shadows", "outline");
+
     return (
         <Button
             bg="transparent"
@@ -120,6 +123,10 @@ const SidebarMenuButton: React.FC<SidebarMenuButtonProps> = (props) => {
             _active={{
                 textColor: selectedTextColor,
                 bg: selectedBackgroundColor,
+            }}
+            _focus={{}}
+            _focusVisible={{
+                boxShadow: focusShadow,
             }}
             isActive={isSelected}
         >
@@ -226,6 +233,8 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
         [metaKeyRef, namespaces, onChangeSelection]
     );
 
+    const focusShadow = useToken("shadows", "outline");
+
     const buildMenuItem = (namespace: K8sObject) => {
         const name = namespace.metadata.name;
         return (
@@ -238,8 +247,7 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                     py={1}
                     borderColor={checkboxBorderColor}
                     flexShrink="0"
-                    isTruncated
-                ></Checkbox>
+                />
                 <Box
                     fontSize="sm"
                     onClick={onClickSingleNamespace[name]}
@@ -281,6 +289,10 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                         _hover={{
                             bg: namespacesToggleHoverColor,
                         }}
+                        _focus={{}}
+                        _focusVisible={{
+                            boxShadow: focusShadow,
+                        }}
                         onClick={onClickAll}
                     >
                         All
@@ -296,6 +308,10 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                         }}
                         _hover={{
                             bg: namespacesToggleHoverColor,
+                        }}
+                        _focus={{}}
+                        _focusVisible={{
+                            boxShadow: focusShadow,
                         }}
                         onClick={onClickSelected}
                     >
