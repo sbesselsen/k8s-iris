@@ -180,7 +180,7 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
 
     const checkboxBorderColor = useColorModeValue("primary.300", "primary.700");
 
-    const { query } = useAppSearch();
+    const query = useAppSearch((s) => s.query);
     const filteredNamespaces = useMemo(
         () => namespaces.filter((ns) => searchMatch(query, ns.metadata.name)),
         [namespaces, query]

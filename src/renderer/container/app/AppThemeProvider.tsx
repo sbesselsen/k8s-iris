@@ -7,7 +7,7 @@ import { useColorTheme } from "../../context/color-theme";
 export const AppThemeProvider: React.FC = (props) => {
     const { children } = props;
 
-    const { colorScheme } = useColorTheme();
+    const colorScheme = useColorTheme((t) => t.colorScheme);
     const currentTheme = useMemo(() => {
         const currentTheme = { ...theme };
         currentTheme.colors.primary = theme.colors[colorScheme];

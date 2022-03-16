@@ -12,7 +12,7 @@ export type UseStore<T> = () => Store<T>;
 
 export type UseStoreValue<T> = {
     (): T;
-    <U>(selector: (data: T) => U): U;
+    <U>(selector: (data: T) => U, deps?: any[]): U;
 };
 
 export type Store<T> = {
@@ -43,13 +43,7 @@ function createStore<T>(initialValue: T): InternalStore<T> {
                 value = newValue;
             }
             if (oldValue !== value) {
-                // Go through listeners in reverse order, because a component
-                // may be unmounted and unmounted based on an earlier listener
-                // of a component on a higher level, leading to state updates
-                // on unmounted components.
-                for (let i = listeners.length - 1; i >= 0; i--) {
-                    listeners[i](value);
-                }
+                listeners.forEach((l) => l(value));
             }
             return value;
         },
@@ -79,7 +73,10 @@ export function create<T>(
         return useContext(StoreContext);
     };
 
-    const useStoreValue: UseStoreValue<T> = <U>(selector?: (data: T) => U) => {
+    const useStoreValue: UseStoreValue<T> = <U>(
+        selector?: (data: T) => U,
+        deps?: any[]
+    ) => {
         const store = useStore();
         const value = store.get();
 
@@ -101,7 +98,7 @@ export function create<T>(
             return () => {
                 store.unsubscribe(listener);
             };
-        }, [selector, localValueRef, store, setRenderTrigger]);
+        }, [localValueRef, store, setRenderTrigger, ...(deps ?? [])]);
 
         return localValueRef.current;
     };
