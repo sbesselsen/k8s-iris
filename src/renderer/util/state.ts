@@ -43,7 +43,13 @@ function createStore<T>(initialValue: T): InternalStore<T> {
                 value = newValue;
             }
             if (oldValue !== value) {
-                listeners.forEach((l) => l(value));
+                // Go through listeners in reverse order, because a component
+                // may be unmounted and unmounted based on an earlier listener
+                // of a component on a higher level, leading to state updates
+                // on unmounted components.
+                for (let i = listeners.length - 1; i >= 0; i--) {
+                    listeners[i](value);
+                }
             }
             return value;
         },
