@@ -14,10 +14,11 @@ const defaultResourcesContentRoute: ResourcesContentRoute = {
 
 export const ResourcesOverview: React.FC<{}> = () => {
     const appRoute = useAppRoute();
-    const { contentRoute: baseContentRoute } = appRoute;
     const { selectContentRoute } = useAppRouteActions();
 
-    const contentRoute = baseContentRoute ?? defaultResourcesContentRoute;
+    const contentRoute = useAppRoute(
+        (route) => route.contentRoute ?? defaultResourcesContentRoute
+    );
 
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
 

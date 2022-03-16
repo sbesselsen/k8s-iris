@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import {
     AppNamespacesSelection,
     AppRoute,
@@ -51,6 +51,14 @@ export const useAppRoute: UseStoreValue<AppRoute> = (
     );
 };
 
+export const useAppRouteGetter = (): (() => AppRoute) => {
+    const store = useAppRouteHistoryStore();
+    return useCallback(() => {
+        const history = store.get();
+        return history.routes[history.currentIndex];
+    }, [store]);
+};
+
 rootAppRouteHistoryStore.subscribe((history) => {
     const route = history.routes[history.currentIndex];
     const hashParams = getHashParams();
@@ -91,6 +99,9 @@ export const useAppRouteActions = (): AppRouteActions => {
                         newHistory.size >=
                         historyMaxSize + historyMaxOverflow
                     ) {
+                        // Clean up history buffer so it does not grow unchecked.
+                        // The right way to do this is probably with a ringbuffer or whatever,
+                        // but I can't figure it out.
                         const numRoutesToDrop =
                             newHistory.routes.length - historyMaxSize;
                         newHistory.routes =

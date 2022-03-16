@@ -230,7 +230,7 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                     },
                 ])
             ),
-        [metaKeyRef, namespaces, onChangeSelection]
+        [metaKeyRef, namespaces, onChangeSelection, selection]
     );
 
     const focusShadow = useToken("shadows", "outline");

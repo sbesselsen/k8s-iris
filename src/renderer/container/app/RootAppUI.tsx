@@ -8,7 +8,11 @@ import React, {
     useMemo,
     useRef,
 } from "react";
-import { useAppRoute, useAppRouteActions } from "../../context/route";
+import {
+    useAppRoute,
+    useAppRouteActions,
+    useAppRouteGetter,
+} from "../../context/route";
 import { usePageTitle } from "../../hook/page-title";
 import { ContextSelectMenu } from "../k8s-context/ContextSelectMenu";
 import { AppFrame } from "../../component/main/AppFrame";
@@ -40,7 +44,6 @@ const ResourcesOverview = React.lazy(async () => ({
 }));
 
 export const RootAppUI: React.FunctionComponent = () => {
-    const appRoute = useAppRoute();
     const colorThemeStore = useColorThemeStore();
 
     const kubeContext = useK8sContext();
@@ -78,9 +81,12 @@ export const RootAppUI: React.FunctionComponent = () => {
         )
     );
 
-    const { namespaces: namespacesSelection, menuItem } = useAppRoute();
+    const namespacesSelection = useAppRoute((route) => route.namespaces);
+    const menuItem = useAppRoute((route) => route.menuItem);
+
     const { selectNamespaces, selectMenuItem } = useAppRouteActions();
 
+    const getAppRoute = useAppRouteGetter();
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
 
     const [loadingNamespaces, namespaces, namespacesError] = useK8sListWatch(
@@ -99,7 +105,7 @@ export const RootAppUI: React.FunctionComponent = () => {
             if (requestNewWindow) {
                 createWindow({
                     route: {
-                        ...appRoute,
+                        ...getAppRoute(),
                         namespaces,
                     },
                 });
@@ -107,7 +113,7 @@ export const RootAppUI: React.FunctionComponent = () => {
                 selectNamespaces(namespaces);
             }
         },
-        [appRoute, createWindow, selectNamespaces]
+        [createWindow, getAppRoute, selectNamespaces]
     );
 
     const setSearchValue = useCallback(
@@ -158,7 +164,7 @@ export const RootAppUI: React.FunctionComponent = () => {
             if (requestNewWindow) {
                 createWindow({
                     route: {
-                        ...appRoute,
+                        ...getAppRoute(),
                         menuItem: selection,
                     },
                 });
@@ -166,7 +172,7 @@ export const RootAppUI: React.FunctionComponent = () => {
                 selectMenuItem(selection);
             }
         },
-        [createWindow, selectMenuItem]
+        [createWindow, getAppRoute, selectMenuItem]
     );
 
     const isReady = contextualColorTheme !== null;
