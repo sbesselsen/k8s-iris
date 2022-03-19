@@ -4,6 +4,7 @@ import {
     useCallback,
     useContext,
     useEffect,
+    useRef,
     useState,
 } from "react";
 
@@ -74,21 +75,32 @@ export function createStoreHooks<T, S extends Store<T>>(
         deps?: any[]
     ) => {
         const store = useStore();
-        const storeValue = store.get();
-        const [localValue, setLocalValue] = useState<T | U>(
-            selector ? selector(storeValue) : storeValue
-        );
+
+        function getSelectedValue() {
+            const value = store.get();
+            return selector ? selector(value) : value;
+        }
+
+        const [localValue, setLocalValue] = useState<T | U>(getSelectedValue());
+        const localValueRef = useRef<T | U>(localValue);
 
         useEffect(() => {
-            const listener = (value: T) => {
-                const newValue = selector ? selector(value) : value;
-                setLocalValue(newValue);
+            const value = getSelectedValue();
+            if (localValueRef.current !== value) {
+                // Value was changed between last render and this useEffect call. Re-render.
+                localValueRef.current = value;
+                setLocalValue(value);
+            }
+            const listener = () => {
+                const value = getSelectedValue();
+                localValueRef.current = value;
+                setLocalValue(value);
             };
             store.subscribe(listener);
             return () => {
                 store.unsubscribe(listener);
             };
-        }, [setLocalValue, store, ...(deps ?? [])]);
+        }, [localValueRef, setLocalValue, store, ...(deps ?? [])]);
 
         return localValue;
     };

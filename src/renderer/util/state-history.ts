@@ -128,13 +128,6 @@ export function createHistoryStore<T>(
     };
 }
 
-export type HistoryStoreHooks<T> = {
-    useCurrentValue: UseStoreValue<T>;
-    useCurrentValueGetter: UseStoreValueGetter<T>;
-    useHistoryInfo: () => HistoryInfo;
-    useHistoryControls: HistoryControls<T>;
-};
-
 export type HistoryInfo = {
     canGoBack: boolean;
     canGoForward: boolean;
@@ -149,8 +142,8 @@ export const useCurrentValue =
     <T>(useStoreValueHook: UseStoreValue<HistoryOf<T>>): UseStoreValue<T> =>
     (selector = undefined, deps = []) =>
         useStoreValueHook((history) => {
-            const route = history.values[history.currentIndex];
-            return selector ? selector(route) : route;
+            const value = history.values[history.currentIndex];
+            return selector ? selector(value) : value;
         }, deps);
 
 export const useCurrentValueGetter =

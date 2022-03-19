@@ -4,65 +4,28 @@ import {
     AppRoute,
     emptyAppRoute,
 } from "../../common/route/app-route";
-import { getHashParams, setHashParams } from "../util/location";
-import {
-    createStoreHooks,
-    StoreUpdate,
-    UseStoreValue,
-    UseStoreValueGetter,
-} from "../util/state";
+import { createStoreHooks, StoreUpdate } from "../util/state";
 import {
     createHistoryStore,
     HistoryControls,
     HistoryInfo,
+    useCurrentValue,
+    useCurrentValueGetter,
     useHistoryControls,
     useHistoryInfo,
 } from "../util/state-history";
 
-const appRoute: AppRoute = { ...emptyAppRoute };
-
-const hashParams = getHashParams();
-if (hashParams?.route) {
-    const route = hashParams.route as any;
-    appRoute.context = route.context ?? null;
-    appRoute.namespaces = route.namespaces ?? null;
-    if (route.menuItem) {
-        appRoute.menuItem = route.menuItem;
-    }
-    if (route.contentRoute) {
-        appRoute.contentRoute = route.contentRoute;
-    }
-}
-
-const rootAppRouteHistoryStore = createHistoryStore(appRoute);
+const rootAppRouteHistoryStore = createHistoryStore(emptyAppRoute);
 const {
     useStore: useAppRouteHistoryStore,
     useStoreValue: useAppRouteHistoryValue,
 } = createStoreHooks(rootAppRouteHistoryStore);
 
-rootAppRouteHistoryStore.subscribe((history) => {
-    const route = history.values[history.currentIndex];
-    const hashParams = getHashParams();
-    setHashParams({ ...hashParams, route });
-});
+export { useAppRouteHistoryStore, useAppRouteHistoryValue };
 
-export const useAppRoute: UseStoreValue<AppRoute> = (
-    selector = undefined,
-    deps = []
-) => {
-    return useAppRouteHistoryValue((history) => {
-        const route = history.values[history.currentIndex];
-        return selector ? selector(route) : route;
-    }, deps);
-};
+export const useAppRoute = useCurrentValue(useAppRouteHistoryValue);
 
-export const useAppRouteGetter: UseStoreValueGetter<AppRoute> = () => {
-    const store = useAppRouteHistoryStore();
-    return () => {
-        const history = store.get();
-        return history.values[history.currentIndex];
-    };
-};
+export const useAppRouteGetter = useCurrentValueGetter(useAppRouteHistoryStore);
 
 export type AppRouteActions = {
     selectContext: (context: string) => AppRoute;
@@ -122,3 +85,5 @@ export const useAppRouteHistory = (): HistoryInfo &
         goForward,
     };
 };
+
+// TODO: local routes
