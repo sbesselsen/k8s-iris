@@ -8,7 +8,7 @@ export type K8sContextsInfo = Array<
     K8sContext & { cloudInfo?: CloudK8sContextInfo }
 >;
 
-const [useContextsStore, useContexts] = create<{
+const { useStore: useContextsStore, useStoreValue: useContexts } = create<{
     loading: boolean;
     initialized: boolean;
     info: K8sContextsInfo;

@@ -1,12 +1,13 @@
-import React, {
-    Context,
-    createContext,
-    createElement,
-    useContext,
-    useEffect,
-    useRef,
-    useState,
-} from "react";
+import { Context, createContext, useContext, useEffect, useState } from "react";
+
+export type StoreUpdate<T> = T | ((oldValue: T) => T);
+
+export type Store<T> = {
+    get(): T;
+    set(newValue: StoreUpdate<T>): T;
+    subscribe(listener: (value: T) => void);
+    unsubscribe(listener: (value: T) => void);
+};
 
 export type UseStore<T> = () => Store<T>;
 
@@ -15,22 +16,9 @@ export type UseStoreValue<T> = {
     <U>(selector: (data: T) => U, deps?: any[]): U;
 };
 
-export type Store<T> = {
-    get(): T;
-    set(newValue: T | ((oldValue: T) => T)): T;
-    subscribe(listener: (value: T) => void);
-    unsubscribe(listener: (value: T) => void);
-};
-
-export type InternalStore<T> = Store<T> & {
-    setReactContext(context: Context<Store<T>>): void;
-    getReactContext(): Context<Store<T>>;
-};
-
-function createStore<T>(initialValue: T): InternalStore<T> {
+export function createStore<T>(initialValue: T): Store<T> {
     let value = initialValue;
     let listeners: Array<(value: T) => void> = [];
-    let context: Context<Store<T>>;
     return {
         get() {
             return value;
@@ -53,70 +41,104 @@ function createStore<T>(initialValue: T): InternalStore<T> {
         unsubscribe(listener: (value: T) => void) {
             listeners = listeners.filter((l) => l !== listener);
         },
-        getReactContext(): Context<Store<T>> {
-            return context;
-        },
-        setReactContext(ctx: Context<Store<T>>) {
-            context = ctx;
-        },
     };
 }
 
-export function create<T>(
-    defaultValue: T
-): [UseStore<T>, UseStoreValue<T>, Store<T>] {
-    const store = createStore(defaultValue);
-    const StoreContext = createContext<Store<T>>(store);
-    store.setReactContext(StoreContext);
+export function createStoreContext<T>(store: Store<T>): Context<Store<T>> {
+    return createContext(store);
+}
 
-    const useStore: UseStore<T> = (): Store<T> => {
-        return useContext(StoreContext);
-    };
+export type StoreContextHooks<T> = {
+    useStoreValue: UseStoreValue<T>;
+    useStore: UseStore<T>;
+    useSetStoreValue: (newValue: StoreUpdate<T>) => T;
+};
+
+export function createStoreContextHooks<T>(
+    StoreContext: Context<Store<T>>
+): StoreContextHooks<T> {
+    const useStore: UseStore<T> = () => useContext(StoreContext);
 
     const useStoreValue: UseStoreValue<T> = <U>(
         selector?: (data: T) => U,
         deps?: any[]
     ) => {
         const store = useStore();
-        const value = store.get();
-
-        const localValueRef = useRef<T | U>();
-        localValueRef.current = selector ? selector(value) : value;
-
-        const [_, setRenderTrigger] = useState(0);
+        const storeValue = store.get();
+        const [localValue, setLocalValue] = useState<T | U>(
+            selector ? selector(storeValue) : storeValue
+        );
 
         useEffect(() => {
             const listener = (value: T) => {
                 const newValue = selector ? selector(value) : value;
-                if (newValue !== localValueRef.current) {
-                    // Time to update this component.
-                    localValueRef.current = newValue;
-                    setRenderTrigger((t) => t + 1);
-                }
+                setLocalValue(newValue);
             };
             store.subscribe(listener);
             return () => {
                 store.unsubscribe(listener);
             };
-        }, [localValueRef, store, setRenderTrigger, ...(deps ?? [])]);
+        }, [setLocalValue, store, ...(deps ?? [])]);
 
-        return localValueRef.current;
+        return localValue;
     };
 
-    return [useStore, useStoreValue, store];
+    const useSetStoreValue = (newValue: StoreUpdate<T>) =>
+        useStore().set(newValue);
+
+    return {
+        useStoreValue,
+        useStore,
+        useSetStoreValue,
+    };
 }
 
-export function useContextStore<T>(store: Store<T>): [Store<T>, React.FC] {
-    const ref = useRef<[Store<T>, React.FC]>();
-    if (!ref.current) {
-        const contextStore = createStore(store.get());
-        const StoreProvider: React.FC = ({ children }) => {
-            return createElement(
-                (store as InternalStore<T>).getReactContext().Provider,
-                { value: contextStore },
-                children
-            );
-        };
-        return [contextStore, StoreProvider];
-    }
+export type StoreComponents<T> = StoreContextHooks<T> & {
+    rootStore: Store<T>;
+    Context: Context<Store<T>>;
+};
+
+export function create<T>(defaultValue: T): StoreComponents<T> {
+    const rootStore = createStore(defaultValue);
+    const Context = createStoreContext(rootStore);
+    return {
+        ...createStoreContextHooks(Context),
+        rootStore,
+        Context,
+    };
+}
+
+export type ConnectedStore<T> = Store<T> & { disconnect(): void };
+
+export function connectedStore<T, U>(
+    parentStore: Store<T>,
+    get: (parentValue: T) => U,
+    set: (parentValue: T, newValue: (oldValue: U) => U) => T
+): ConnectedStore<U> {
+    const store = createStore(get(parentStore.get()));
+
+    const innerSet = store.set.bind(store);
+    store.set = (newValue) =>
+        get(
+            parentStore.set((oldParentValue) =>
+                set(
+                    oldParentValue,
+                    (typeof newValue === "function"
+                        ? newValue
+                        : () => newValue) as (oldValue: U) => U
+                )
+            )
+        );
+
+    const listener = (newParentValue: T) => {
+        innerSet(get(newParentValue));
+    };
+    parentStore.subscribe(listener);
+
+    return {
+        ...store,
+        disconnect() {
+            parentStore.unsubscribe(listener);
+        },
+    };
 }

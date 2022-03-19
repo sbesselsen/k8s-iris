@@ -8,4 +8,5 @@ const defaultColorTheme: ColorTheme = {
     colorScheme: "gray",
 };
 
-export const [useColorThemeStore, useColorTheme] = create(defaultColorTheme);
+export const { useStoreValue: useColorTheme, useStore: useColorThemeStore } =
+    create(defaultColorTheme);

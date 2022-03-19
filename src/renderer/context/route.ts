@@ -31,11 +31,11 @@ if (hashParams?.route) {
     }
 }
 
-const [
-    useAppRouteHistoryStore,
-    useAppRouteHistoryValue,
-    rootAppRouteHistoryStore,
-] = create({
+const {
+    useStore: useAppRouteHistoryStore,
+    useStoreValue: useAppRouteHistoryValue,
+    rootStore: rootAppRouteHistoryStore,
+} = create({
     routes: [appRoute],
     currentIndex: 0,
     size: 1,
