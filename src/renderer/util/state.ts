@@ -16,14 +16,16 @@ export type Store<T> = {
     unsubscribe(listener: (value: T) => void);
 };
 
-export type UseStore<T> = (() => Store<T>) & {
-    Context: Context<Store<T>>;
+export type UseStore<T, S extends Store<T>> = (() => S) & {
+    Context: Context<S>;
 };
 
 export type UseStoreValue<T> = {
     (): T;
     <U>(selector: (data: T) => U, deps?: any[]): U;
 };
+
+export type UseStoreValueGetter<T> = () => () => T;
 
 export function createStore<T>(initialValue: T): Store<T> {
     let value = initialValue;
@@ -53,17 +55,18 @@ export function createStore<T>(initialValue: T): Store<T> {
     };
 }
 
-export type StoreContextHooks<T> = {
+export type StoreContextHooks<T, S extends Store<T> = Store<T>> = {
+    useStore: UseStore<T, S>;
     useStoreValue: UseStoreValue<T>;
-    useStore: UseStore<T>;
-    useSetStoreValue: (newValue: StoreUpdate<T>) => T;
-    useStoreValueGetter: () => () => T;
+    useStoreValueGetter: UseStoreValueGetter<T>;
 };
 
-export function createStoreHooks<T>(store: Store<T>): StoreContextHooks<T> {
+export function createStoreHooks<T, S extends Store<T>>(
+    store: Store<T> & S
+): StoreContextHooks<T, S> {
     const StoreContext = createContext(store);
 
-    const useStore = (() => useContext(StoreContext)) as UseStore<T>;
+    const useStore = (() => useContext(StoreContext)) as UseStore<T, S>;
     useStore.Context = StoreContext;
 
     const useStoreValue: UseStoreValue<T> = <U>(
@@ -90,9 +93,6 @@ export function createStoreHooks<T>(store: Store<T>): StoreContextHooks<T> {
         return localValue;
     };
 
-    const useSetStoreValue = (newValue: StoreUpdate<T>) =>
-        useStore().set(newValue);
-
     const useStoreValueGetter = () => {
         const store = useStore();
         return useCallback(() => store.get(), [store]);
@@ -101,58 +101,18 @@ export function createStoreHooks<T>(store: Store<T>): StoreContextHooks<T> {
     return {
         useStoreValue,
         useStore,
-        useSetStoreValue,
         useStoreValueGetter,
     };
 }
 
-export type StoreComponents<T> = StoreContextHooks<T> & {
-    rootStore: Store<T>;
+export type StoreComponents<T, S extends Store<T>> = StoreContextHooks<T, S> & {
+    store: S & Store<T>;
 };
 
-export function create<T>(defaultValue: T): StoreComponents<T> {
-    const rootStore = createStore(defaultValue);
+export function create<T>(defaultValue: T): StoreComponents<T, Store<T>> {
+    const store = createStore(defaultValue);
     return {
-        rootStore,
-        ...createStoreHooks(rootStore),
+        store,
+        ...createStoreHooks(store),
     };
-}
-
-export type ConnectedStore<T> = Store<T> & { disconnect(): void };
-
-export function connectStore<T, U>(
-    parentStore: Store<T>,
-    get: (parentValue: T) => U,
-    set: (parentValue: T, newValue: (oldValue: U) => U) => T
-): ConnectedStore<U> {
-    const store = createStore(get(parentStore.get()));
-
-    const innerSet = store.set.bind(store);
-    store.set = (newValue) =>
-        get(
-            parentStore.set((oldParentValue) =>
-                set(
-                    oldParentValue,
-                    (typeof newValue === "function"
-                        ? newValue
-                        : () => newValue) as (oldValue: U) => U
-                )
-            )
-        );
-
-    const listener = (newParentValue: T) => {
-        innerSet(get(newParentValue));
-    };
-    parentStore.subscribe(listener);
-
-    return {
-        ...store,
-        disconnect() {
-            parentStore.unsubscribe(listener);
-        },
-    };
-}
-
-export function cloneStore<T>(store: Store<T>): Store<T> {
-    return createStore(store.get());
 }
