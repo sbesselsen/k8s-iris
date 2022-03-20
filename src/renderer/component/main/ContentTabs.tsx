@@ -23,10 +23,11 @@ export type ContentTabsProps = {
     tabs: ContentTab[];
     selected?: string;
     onChangeSelection?: (selection: string, requestNewWindow?: boolean) => void;
+    isLazy?: boolean;
 };
 
 export const ContentTabs: React.FC<ContentTabsProps> = (props) => {
-    const { onChangeSelection, selected, tabs } = props;
+    const { isLazy = false, onChangeSelection, selected, tabs } = props;
 
     const primaryColorIsGray =
         useToken("colors", "primary.500") === useToken("colors", "gray.500");
@@ -77,6 +78,7 @@ export const ContentTabs: React.FC<ContentTabsProps> = (props) => {
             variant="soft-rounded"
             colorScheme="primary"
             index={tabIndex}
+            isLazy={isLazy}
         >
             <TabList
                 flex="0 0 0"
