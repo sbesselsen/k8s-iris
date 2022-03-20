@@ -152,7 +152,7 @@ export const useCurrentValueGetter =
     ): UseStoreValueGetter<T> =>
     () => {
         const store = useStoreHook();
-        return () => store.getCurrent();
+        return useCallback(() => store.getCurrent(), [store]);
     };
 
 export const useHistoryInfo = <T>(

@@ -3,16 +3,19 @@ import React, {
     useCallback,
     useContext,
     useEffect,
+    useMemo,
     useRef,
 } from "react";
 import { AppRoute } from "../../common/route/app-route";
 import { StoreUpdate } from "../util/state";
-import { useAppRoute, useAppRouteActions } from "./route";
+import { useAppRoute, useAppRouteActions, useAppRouteGetter } from "./route";
 
-export type AppRouteParamSetter<T> = (
+export type AppRouteParamSetter<T> = ((
     newValue: StoreUpdate<T>,
     replace?: boolean
-) => void;
+) => void) & {
+    asRoute: (newValue: StoreUpdate<T>, fromRoute?: AppRoute) => AppRoute;
+};
 
 const NamespaceContext = createContext<string | null>(null);
 
@@ -52,28 +55,35 @@ export function useAppParam<T>(
         [fullName, initialValueRef]
     );
 
-    const value = useAppRoute(getValueFromRoute);
-
-    const setValue: AppRouteParamSetter<T> = useCallback(
-        (newValue, replace = false) => {
-            setAppRoute((route) => {
-                const value =
-                    typeof newValue === "function"
-                        ? (newValue as (oldValue: T) => T)(
-                              getValueFromRoute(route)
-                          )
-                        : newValue;
-                return {
-                    ...route,
-                    params: {
-                        ...route.params,
-                        [fullName]: value,
-                    },
-                };
-            }, replace);
+    const produceAppRoute = useCallback(
+        (route: AppRoute, newValue: StoreUpdate<T>): AppRoute => {
+            const value =
+                typeof newValue === "function"
+                    ? (newValue as (oldValue: T) => T)(getValueFromRoute(route))
+                    : newValue;
+            return {
+                ...route,
+                params: {
+                    ...route.params,
+                    [fullName]: value,
+                },
+            };
         },
-        [fullName, setAppRoute]
+        [getValueFromRoute]
     );
+
+    const value = useAppRoute(getValueFromRoute);
+    const getAppRoute = useAppRouteGetter();
+
+    const setValue: AppRouteParamSetter<T> = useMemo(() => {
+        const result = ((newValue, replace = false) => {
+            setAppRoute((route) => produceAppRoute(route, newValue), replace);
+        }) as AppRouteParamSetter<T>;
+        result.asRoute = (newValue, fromRoute = undefined) =>
+            produceAppRoute(fromRoute ?? getAppRoute(), newValue);
+
+        return result;
+    }, [getAppRoute, fullName, produceAppRoute, setAppRoute]);
 
     useEffect(() => {
         return () => {

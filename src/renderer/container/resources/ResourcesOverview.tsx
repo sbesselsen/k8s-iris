@@ -6,8 +6,6 @@ import { useAppRouteGetter } from "../../context/route";
 import { useIpcCall } from "../../hook/ipc";
 
 export const ResourcesOverview: React.FC<{}> = () => {
-    const getAppRoute = useAppRouteGetter();
-
     const [activeTab, setActiveTab] = useAppParam("tab", "workloads");
 
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
@@ -16,15 +14,13 @@ export const ResourcesOverview: React.FC<{}> = () => {
         (id: string, requestNewWindow: boolean = false) => {
             if (requestNewWindow) {
                 createWindow({
-                    route: {
-                        ...getAppRoute(),
-                    },
+                    route: setActiveTab.asRoute(id),
                 });
             } else {
                 setActiveTab(id);
             }
         },
-        [createWindow, getAppRoute, setActiveTab]
+        [createWindow, setActiveTab]
     );
 
     const tabs = [
