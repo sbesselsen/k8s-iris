@@ -1,9 +1,5 @@
-import { useMemo } from "react";
-import {
-    AppNamespacesSelection,
-    AppRoute,
-    emptyAppRoute,
-} from "../../common/route/app-route";
+import { useCallback } from "react";
+import { AppRoute, emptyAppRoute } from "../../common/route/app-route";
 import { createStoreHooks, StoreUpdate } from "../util/state";
 import {
     createHistoryStore,
@@ -27,44 +23,19 @@ export const useAppRoute = useCurrentValue(useAppRouteHistoryValue);
 
 export const useAppRouteGetter = useCurrentValueGetter(useAppRouteHistoryStore);
 
-export type AppRouteActions = {
-    selectContext: (context: string) => AppRoute;
-    selectNamespaces: (namespaces: AppNamespacesSelection) => AppRoute;
-    selectMenuItem: (menuItem: string) => AppRoute;
-    setAppRoute: (
-        newRoute: (oldRoute: AppRoute) => AppRoute,
-        replace?: boolean
-    ) => AppRoute;
-};
-export const useAppRouteActions = (): AppRouteActions => {
+export type AppRouteSetter = (
+    newRoute: (oldRoute: AppRoute) => AppRoute,
+    replace?: boolean
+) => AppRoute;
+
+export const useAppRouteSetter = (): AppRouteSetter => {
     const store = useAppRouteHistoryStore();
-
-    const setAppRoute = (newRoute: StoreUpdate<AppRoute>, replace = false) =>
-        store.setCurrent(newRoute, replace);
-
-    return useMemo(() => {
-        return {
-            selectContext: (context: string) =>
-                setAppRoute((route) => ({ ...route, context })),
-            selectNamespaces: (namespaces: AppNamespacesSelection) => {
-                const oldRoute = store.getCurrent();
-                const createHistoryItem =
-                    namespaces.mode !== oldRoute.namespaces.mode ||
-                    (namespaces.mode === "selected" &&
-                        namespaces.selected.length === 1);
-                return setAppRoute(
-                    () => ({ ...oldRoute, namespaces }),
-                    !createHistoryItem
-                );
-            },
-            selectMenuItem: (menuItem: string) =>
-                setAppRoute((route) => ({
-                    ...route,
-                    menuItem,
-                })),
-            setAppRoute,
-        };
-    }, [store]);
+    return useCallback(
+        (newRoute: StoreUpdate<AppRoute>, replace = false) => {
+            return store.setCurrent(newRoute, replace);
+        },
+        [store]
+    );
 };
 
 export const useAppRouteHistory = (): HistoryInfo &
@@ -79,5 +50,3 @@ export const useAppRouteHistory = (): HistoryInfo &
         goForward,
     };
 };
-
-// TODO: local routes

@@ -21,7 +21,7 @@ import React, {
 import { MenuInput } from "../../component/MenuInput";
 import { useK8sContext } from "../../context/k8s-context";
 import { useIpcCall } from "../../hook/ipc";
-import { useAppRouteActions } from "../../context/route";
+import { useAppRouteSetter } from "../../context/route";
 import { useModifierKeyRef } from "../../hook/keyboard";
 import { ChevronDownIcon } from "@chakra-ui/icons";
 import { K8sContext } from "../../../common/k8s/client";
@@ -45,7 +45,7 @@ type ContextOption = K8sContext &
 export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
     (_props, ref) => {
         const kubeContext = useK8sContext();
-        const { selectContext } = useAppRouteActions();
+        const setAppRoute = useAppRouteSetter();
 
         const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
 
@@ -69,12 +69,13 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
                             context,
                         },
                     });
+                    onDisclosureClose();
                 } else {
-                    selectContext(context);
+                    setAppRoute((route) => ({ ...route, context }));
                     onClose();
                 }
             },
-            [createWindow, onClose, selectContext]
+            [createWindow, onClose, onDisclosureClose, setAppRoute]
         );
 
         const [isLoading, contextsInfo] = useK8sContextsInfo();

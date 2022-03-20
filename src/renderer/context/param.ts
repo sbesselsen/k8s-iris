@@ -8,7 +8,7 @@ import React, {
 } from "react";
 import { AppRoute } from "../../common/route/app-route";
 import { StoreUpdate } from "../util/state";
-import { useAppRoute, useAppRouteActions, useAppRouteGetter } from "./route";
+import { useAppRoute, useAppRouteGetter, useAppRouteSetter } from "./route";
 
 export type AppRouteParamSetter<T> = ((
     newValue: StoreUpdate<T>,
@@ -32,8 +32,7 @@ export const ParamNamespace: React.FC<{ name: string }> = (props) => {
 
 export function useAppParam<T>(
     name: string,
-    initialValue: T,
-    persistent: boolean = true
+    initialValue: T
 ): [T, AppRouteParamSetter<T>] {
     if (name.indexOf("/") !== -1) {
         console.error(
@@ -42,8 +41,6 @@ export function useAppParam<T>(
     }
     const namespace = useContext(NamespaceContext);
     const fullName = namespace ? `${namespace}/${name}` : name;
-
-    const { setAppRoute } = useAppRouteActions();
 
     const initialValueRef = useRef(initialValue);
 
@@ -74,7 +71,9 @@ export function useAppParam<T>(
     );
 
     const value = useAppRoute(getValueFromRoute);
+
     const getAppRoute = useAppRouteGetter();
+    const setAppRoute = useAppRouteSetter();
 
     const setValue: AppRouteParamSetter<T> = useMemo(() => {
         const result = ((newValue, replace = false) => {
@@ -85,21 +84,6 @@ export function useAppParam<T>(
 
         return result;
     }, [getAppRoute, fullName, produceAppRoute, setAppRoute]);
-
-    useEffect(() => {
-        return () => {
-            if (!persistent) {
-                // Remove this param after unmount (or name change).
-                setAppRoute((route) => {
-                    const { [fullName]: _, ...params } = route.params;
-                    return {
-                        ...route,
-                        params,
-                    };
-                }, true);
-            }
-        };
-    }, [initialValueRef, fullName, persistent, setAppRoute, setValue]);
 
     return [value, setValue];
 }

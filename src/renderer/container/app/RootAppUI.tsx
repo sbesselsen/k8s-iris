@@ -10,8 +10,8 @@ import React, {
 } from "react";
 import {
     useAppRoute,
-    useAppRouteActions,
     useAppRouteGetter,
+    useAppRouteSetter,
 } from "../../context/route";
 import { usePageTitle } from "../../hook/page-title";
 import { ContextSelectMenu } from "../k8s-context/ContextSelectMenu";
@@ -85,9 +85,9 @@ export const RootAppUI: React.FunctionComponent = () => {
     const namespacesSelection = useAppRoute((route) => route.namespaces);
     const menuItem = useAppRoute((route) => route.menuItem);
 
-    const { selectNamespaces, selectMenuItem } = useAppRouteActions();
-
     const getAppRoute = useAppRouteGetter();
+    const setAppRoute = useAppRouteSetter();
+
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
 
     const [loadingNamespaces, namespaces, namespacesError] = useK8sListWatch(
@@ -111,10 +111,18 @@ export const RootAppUI: React.FunctionComponent = () => {
                     },
                 });
             } else {
-                selectNamespaces(namespaces);
+                const oldRoute = getAppRoute();
+                const createHistoryItem =
+                    namespaces.mode !== oldRoute.namespaces.mode ||
+                    (namespaces.mode === "selected" &&
+                        namespaces.selected.length === 1);
+                return setAppRoute(
+                    () => ({ ...oldRoute, namespaces }),
+                    !createHistoryItem
+                );
             }
         },
-        [createWindow, getAppRoute, selectNamespaces]
+        [createWindow, getAppRoute, setAppRoute]
     );
 
     const setSearchValue = useCallback(
@@ -170,10 +178,10 @@ export const RootAppUI: React.FunctionComponent = () => {
                     },
                 });
             } else {
-                selectMenuItem(selection);
+                setAppRoute((route) => ({ ...route, menuItem: selection }));
             }
         },
-        [createWindow, getAppRoute, selectMenuItem]
+        [createWindow, getAppRoute, setAppRoute]
     );
 
     const isReady = contextualColorTheme !== null;
