@@ -32,7 +32,8 @@ export const ParamNamespace: React.FC<{ name: string }> = (props) => {
 
 export function useAppParam<T>(
     name: string,
-    initialValue: T
+    initialValue: T,
+    persistent: boolean = true
 ): [T, AppRouteParamSetter<T>] {
     if (name.indexOf("/") !== -1) {
         console.error(
@@ -87,16 +88,18 @@ export function useAppParam<T>(
 
     useEffect(() => {
         return () => {
-            // Remove this param after unmount (or name change).
-            setAppRoute((route) => {
-                const { [fullName]: _, ...params } = route.params;
-                return {
-                    ...route,
-                    params,
-                };
-            }, true);
+            if (!persistent) {
+                // Remove this param after unmount (or name change).
+                setAppRoute((route) => {
+                    const { [fullName]: _, ...params } = route.params;
+                    return {
+                        ...route,
+                        params,
+                    };
+                }, true);
+            }
         };
-    }, [initialValueRef, fullName, setAppRoute, setValue]);
+    }, [initialValueRef, fullName, persistent, setAppRoute, setValue]);
 
     return [value, setValue];
 }

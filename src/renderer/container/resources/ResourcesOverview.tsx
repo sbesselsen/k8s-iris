@@ -32,6 +32,7 @@ export const ResourcesOverview: React.FC<{}> = () => {
             tabs={tabs}
             selected={activeTab}
             onChangeSelection={onChangeTabSelection}
+            isLazy
         />
     );
 };
