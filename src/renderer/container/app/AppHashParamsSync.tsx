@@ -16,8 +16,8 @@ export const AppHashParamsSync: React.FC = () => {
             if (route.menuItem) {
                 appRoute.menuItem = route.menuItem;
             }
-            if (route.contentRoute) {
-                appRoute.contentRoute = route.contentRoute;
+            if (route.params) {
+                appRoute.params = route.params;
             }
             store.setCurrent(appRoute, true);
         }

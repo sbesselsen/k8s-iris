@@ -1,24 +1,14 @@
 import { Box } from "@chakra-ui/react";
 import React, { useCallback } from "react";
 import { ContentTabs } from "../../component/main/ContentTabs";
-import { useAppRoute, useAppRouteActions } from "../../context/route";
+import { useAppParam } from "../../context/param";
+import { useAppRouteGetter } from "../../context/route";
 import { useIpcCall } from "../../hook/ipc";
 
-type ResourcesContentRoute = {
-    item: string;
-};
-
-const defaultResourcesContentRoute: ResourcesContentRoute = {
-    item: "workloads",
-};
-
 export const ResourcesOverview: React.FC<{}> = () => {
-    const appRoute = useAppRoute();
-    const { selectContentRoute } = useAppRouteActions();
+    const getAppRoute = useAppRouteGetter();
 
-    const contentRoute = useAppRoute(
-        (route) => route.contentRoute ?? defaultResourcesContentRoute
-    );
+    const [activeTab, setActiveTab] = useAppParam("tab", "workloads");
 
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
 
@@ -27,15 +17,14 @@ export const ResourcesOverview: React.FC<{}> = () => {
             if (requestNewWindow) {
                 createWindow({
                     route: {
-                        ...appRoute,
-                        contentRoute: { item: id },
+                        ...getAppRoute(),
                     },
                 });
             } else {
-                selectContentRoute({ item: id });
+                setActiveTab(id);
             }
         },
-        [appRoute, createWindow, selectContentRoute]
+        [createWindow, getAppRoute, setActiveTab]
     );
 
     const tabs = [
@@ -45,7 +34,7 @@ export const ResourcesOverview: React.FC<{}> = () => {
     return (
         <ContentTabs
             tabs={tabs}
-            selected={contentRoute.item}
+            selected={activeTab}
             onChangeSelection={onChangeTabSelection}
         />
     );

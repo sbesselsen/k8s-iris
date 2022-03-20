@@ -35,6 +35,7 @@ import { ClusterError } from "./ClusterError";
 import { useIpcCall } from "../../hook/ipc";
 import { AppNamespacesSelection } from "../../../common/route/app-route";
 import { AppToolbar } from "./AppToolbar";
+import { ParamNamespace } from "../../context/param";
 
 const ClusterOverview = React.lazy(async () => ({
     default: (await import("../cluster/ClusterOverview")).ClusterOverview,
@@ -247,7 +248,9 @@ const AppContent: React.FC = () => {
 
     return (
         <Suspense fallback={<Box />}>
-            {appComponents[menuItem] ?? <Box />}
+            <ParamNamespace name={menuItem}>
+                {appComponents[menuItem] ?? <Box />}
+            </ParamNamespace>
         </Suspense>
     );
 };

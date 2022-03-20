@@ -1,28 +1,14 @@
 import { Box } from "@chakra-ui/react";
 import React, { useCallback } from "react";
 import { ContentTabs } from "../../component/main/ContentTabs";
-import {
-    useAppRoute,
-    useAppRouteActions,
-    useAppRouteGetter,
-} from "../../context/route";
+import { useAppRouteGetter } from "../../context/route";
+import { useAppParam } from "../../context/param";
 import { useIpcCall } from "../../hook/ipc";
-
-type ClusterContentRoute = {
-    item: string;
-};
-
-const defaultClusterContentRoute: ClusterContentRoute = {
-    item: "info",
-};
 
 export const ClusterOverview: React.FC<{}> = () => {
     const getAppRoute = useAppRouteGetter();
-    const { selectContentRoute } = useAppRouteActions();
 
-    const contentRoute = useAppRoute(
-        (route) => route.contentRoute ?? defaultClusterContentRoute
-    );
+    const [activeTab, setActiveTab] = useAppParam("tab", "info");
 
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
 
@@ -32,14 +18,13 @@ export const ClusterOverview: React.FC<{}> = () => {
                 createWindow({
                     route: {
                         ...getAppRoute(),
-                        contentRoute: { item: id },
                     },
                 });
             } else {
-                selectContentRoute({ item: id });
+                setActiveTab(id);
             }
         },
-        [createWindow, getAppRoute, selectContentRoute]
+        [createWindow, getAppRoute, setActiveTab]
     );
 
     const tabs = [
@@ -50,7 +35,7 @@ export const ClusterOverview: React.FC<{}> = () => {
     return (
         <ContentTabs
             tabs={tabs}
-            selected={contentRoute.item}
+            selected={activeTab}
             onChangeSelection={onChangeTabSelection}
         />
     );

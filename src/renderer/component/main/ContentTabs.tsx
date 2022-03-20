@@ -8,6 +8,7 @@ import {
     useToken,
 } from "@chakra-ui/react";
 import React, { ReactNode, useCallback, useMemo, useRef } from "react";
+import { ParamNamespace } from "../../context/param";
 import { useModifierKeyRef } from "../../hook/keyboard";
 import { useWindowFocusValue } from "../../hook/window-focus";
 import { ScrollBox } from "./ScrollBox";
@@ -76,7 +77,6 @@ export const ContentTabs: React.FC<ContentTabsProps> = (props) => {
             variant="soft-rounded"
             colorScheme="primary"
             index={tabIndex}
-            isLazy
         >
             <TabList
                 flex="0 0 0"
@@ -120,7 +120,11 @@ export const ContentTabs: React.FC<ContentTabsProps> = (props) => {
                         overflow="hidden"
                         p={0}
                     >
-                        <ScrollBox>{tab.content}</ScrollBox>
+                        <ScrollBox>
+                            <ParamNamespace name={tab.id}>
+                                {tab.content}
+                            </ParamNamespace>
+                        </ScrollBox>
                     </TabPanel>
                 ))}
             </TabPanels>

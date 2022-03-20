@@ -31,7 +31,6 @@ export type AppRouteActions = {
     selectContext: (context: string) => AppRoute;
     selectNamespaces: (namespaces: AppNamespacesSelection) => AppRoute;
     selectMenuItem: (menuItem: string) => AppRoute;
-    selectContentRoute: (contentRoute: any | undefined) => AppRoute;
     setAppRoute: (
         newRoute: (oldRoute: AppRoute) => AppRoute,
         replace?: boolean
@@ -62,11 +61,6 @@ export const useAppRouteActions = (): AppRouteActions => {
                 setAppRoute((route) => ({
                     ...route,
                     menuItem,
-                })),
-            selectContentRoute: (contentRoute: any | undefined) =>
-                setAppRoute((route) => ({
-                    ...route,
-                    contentRoute,
                 })),
             setAppRoute,
         };
