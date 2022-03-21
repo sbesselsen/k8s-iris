@@ -1,4 +1,6 @@
 import {
+    Box,
+    HStack,
     Tab,
     TabList,
     TabPanel,
@@ -80,33 +82,34 @@ export const ContentTabs: React.FC<ContentTabsProps> = (props) => {
             index={tabIndex}
             isLazy={isLazy}
         >
-            <TabList
-                flex="0 0 0"
-                borderRadius={6}
-                bg={tabsBackgroundColor}
-                opacity={opacity}
-                m={2}
-            >
-                {tabs.map((tab, index) => (
-                    <Tab
-                        key={tab.id}
-                        borderRadius={6}
-                        _focus={{}}
-                        fontWeight="normal"
-                        textColor={tabTextColor}
-                        _focusVisible={{
-                            boxShadow: focusBoxShadow,
-                        }}
-                        _selected={{
-                            bg: selectedTabBackgroundColor,
-                            textColor: selectedTabTextColor,
-                        }}
-                        me={1}
-                        onClick={onChangeTabIndexes[index]}
-                    >
-                        {tab.title}
-                    </Tab>
-                ))}
+            <TabList flex="0 0 0" opacity={opacity} m={2}>
+                <HStack
+                    flex="0 0 0"
+                    bg={tabsBackgroundColor}
+                    borderRadius={6}
+                    spacing={1}
+                >
+                    {tabs.map((tab, index) => (
+                        <Tab
+                            key={tab.id}
+                            borderRadius={6}
+                            _focus={{}}
+                            fontWeight="normal"
+                            textColor={tabTextColor}
+                            _focusVisible={{
+                                boxShadow: focusBoxShadow,
+                            }}
+                            _selected={{
+                                bg: selectedTabBackgroundColor,
+                                textColor: selectedTabTextColor,
+                            }}
+                            onClick={onChangeTabIndexes[index]}
+                        >
+                            {tab.title}
+                        </Tab>
+                    ))}
+                </HStack>
+                <Box flex="1 0 0"></Box>
             </TabList>
             <TabPanels
                 flex="1 0 0"
@@ -118,15 +121,14 @@ export const ContentTabs: React.FC<ContentTabsProps> = (props) => {
                     <TabPanel
                         key={tab.id}
                         display="flex"
+                        flexDirection="column"
                         flex="1 0 0"
                         overflow="hidden"
                         p={0}
                     >
-                        <ScrollBox>
-                            <ParamNamespace name={tab.id}>
-                                {tab.content}
-                            </ParamNamespace>
-                        </ScrollBox>
+                        <ParamNamespace name={tab.id}>
+                            {tab.content}
+                        </ParamNamespace>
                     </TabPanel>
                 ))}
             </TabPanels>
