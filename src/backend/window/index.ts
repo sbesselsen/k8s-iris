@@ -1,6 +1,8 @@
 import {
     BrowserWindow,
     BrowserWindowConstructorOptions,
+    Menu,
+    MenuItem,
     nativeTheme,
 } from "electron";
 import * as path from "path";
@@ -107,6 +109,37 @@ export function createWindowManager(): WindowManager {
                 prefixEventChannel("app:window:focus-change"),
                 win.isFocused()
             );
+        });
+        win.webContents.on("context-menu", (_, props) => {
+            const menu = new Menu();
+            if (props.editFlags.canCut) {
+                menu.append(
+                    new MenuItem({
+                        label: "Cut",
+                        role: "cut",
+                        accelerator: "CommandOrControl+X",
+                    })
+                );
+            }
+            if (props.editFlags.canCopy) {
+                menu.append(
+                    new MenuItem({
+                        label: "Copy",
+                        role: "copy",
+                        accelerator: "CommandOrControl+C",
+                    })
+                );
+            }
+            if (props.editFlags.canPaste) {
+                menu.append(
+                    new MenuItem({
+                        label: "Paste",
+                        role: "paste",
+                        accelerator: "CommandOrControl+V",
+                    })
+                );
+            }
+            menu.popup();
         });
         win.on("focus", () => {
             win.webContents.send(
