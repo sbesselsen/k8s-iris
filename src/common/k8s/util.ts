@@ -42,3 +42,34 @@ export function deleteListObject<T extends K8sObject = K8sObject>(
         items: list.items.filter((item) => !objSameRef(item, obj)),
     };
 }
+
+export function parseCpu(cpu: string): number | null {
+    const match = cpu.match(/^([0-9\.]+)(m?)$/);
+    if (!match) {
+        return null;
+    }
+    const number = 1 * (match[1] as any);
+    return number / (match[2] === "m" ? 1000 : 1);
+}
+
+export function parseMemory(
+    memory: string,
+    targetUnit: "Ki" | "Mi" | "Gi" | "Ti"
+): number | null {
+    const match = memory.match(/^([0-9\.]+)([a-zA-Z]*)$/);
+    if (!match) {
+        return null;
+    }
+    const number = 1 * (match[1] as any);
+    const sourceUnit = match[2];
+    const unitAdjustments: Record<typeof targetUnit, number> = {
+        Ki: 1,
+        Mi: 1024,
+        Gi: 1024 * 1024,
+        Ti: 1024 * 1024 * 1024,
+    };
+    return (
+        (number * (unitAdjustments[sourceUnit] ?? 1)) /
+        (unitAdjustments[targetUnit] ?? 1)
+    );
+}

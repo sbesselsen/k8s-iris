@@ -3,6 +3,7 @@ import React, { useCallback, useEffect } from "react";
 import { ContentTabs } from "../../component/main/ContentTabs";
 import { useAppParam } from "../../context/param";
 import { useIpcCall } from "../../hook/ipc";
+import { ClusterInfoOverview } from "./ClusterInfoOverview";
 
 export const ClusterOverview: React.FC<{}> = () => {
     const [activeTab, setActiveTab] = useAppParam("tab", "info");
@@ -23,7 +24,7 @@ export const ClusterOverview: React.FC<{}> = () => {
     );
 
     const tabs = [
-        { id: "info", title: "Info", content: <TestContent /> },
+        { id: "info", title: "Info", content: <ClusterInfoOverview /> },
         { id: "nodes", title: "Nodes", content: <TestContent /> },
         { id: "cloud", title: "Cloud", content: <TestContent /> },
     ];
