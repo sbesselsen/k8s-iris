@@ -77,6 +77,7 @@ export function createHistoryStore<T>(
 
             if (replace) {
                 newHistory.values[newHistory.currentIndex] = value;
+                newHistory.size = newHistory.currentIndex + 1;
             } else {
                 const newIndex = newHistory.currentIndex + 1;
                 newHistory.values[newIndex] = value;

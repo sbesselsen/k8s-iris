@@ -2,23 +2,10 @@ import { Box, Button } from "@chakra-ui/react";
 import React, { useCallback, useEffect } from "react";
 import { ContentTabs } from "../../component/main/ContentTabs";
 import { useAppParam } from "../../context/param";
-import {
-    useAppRoute,
-    useAppRouteGetter,
-    useAppRouteSetter,
-} from "../../context/route";
 import { useIpcCall } from "../../hook/ipc";
 
 export const ClusterOverview: React.FC<{}> = () => {
-    const activeTab = useAppRoute((route) => route.subMenuItem ?? "info");
-    const getAppRoute = useAppRouteGetter();
-    const setAppRoute = useAppRouteSetter();
-    const setActiveTab = useCallback(
-        (tab: string) => {
-            setAppRoute((route) => ({ ...route, subMenuItem: tab }));
-        },
-        [setAppRoute]
-    );
+    const [activeTab, setActiveTab] = useAppParam("tab", "info");
 
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
 
@@ -26,13 +13,13 @@ export const ClusterOverview: React.FC<{}> = () => {
         (id: string, requestNewWindow: boolean = false) => {
             if (requestNewWindow) {
                 createWindow({
-                    route: { ...getAppRoute(), subMenuItem: id },
+                    route: setActiveTab.asRoute(id),
                 });
             } else {
                 setActiveTab(id);
             }
         },
-        [createWindow, getAppRoute, setActiveTab]
+        [createWindow, setActiveTab]
     );
 
     const tabs = [

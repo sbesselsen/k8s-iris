@@ -1,23 +1,11 @@
 import { Box } from "@chakra-ui/react";
 import React, { useCallback } from "react";
 import { ContentTabs } from "../../component/main/ContentTabs";
-import {
-    useAppRoute,
-    useAppRouteGetter,
-    useAppRouteSetter,
-} from "../../context/route";
+import { useAppParam } from "../../context/param";
 import { useIpcCall } from "../../hook/ipc";
 
 export const ResourcesOverview: React.FC<{}> = () => {
-    const activeTab = useAppRoute((route) => route.subMenuItem ?? "workloads");
-    const getAppRoute = useAppRouteGetter();
-    const setAppRoute = useAppRouteSetter();
-    const setActiveTab = useCallback(
-        (tab: string) => {
-            setAppRoute((route) => ({ ...route, subMenuItem: tab }));
-        },
-        [setAppRoute]
-    );
+    const [activeTab, setActiveTab] = useAppParam("tab", "workloads");
 
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
 
@@ -25,13 +13,13 @@ export const ResourcesOverview: React.FC<{}> = () => {
         (id: string, requestNewWindow: boolean = false) => {
             if (requestNewWindow) {
                 createWindow({
-                    route: { ...getAppRoute(), subMenuItem: id },
+                    route: setActiveTab.asRoute(id),
                 });
             } else {
                 setActiveTab(id);
             }
         },
-        [createWindow, getAppRoute, setActiveTab]
+        [createWindow, setActiveTab]
     );
 
     const tabs = [

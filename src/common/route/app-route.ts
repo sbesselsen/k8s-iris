@@ -1,8 +1,6 @@
 export type AppRoute = {
     context: string;
     namespaces: AppNamespacesSelection;
-    menuItem?: string;
-    subMenuItem?: string;
     params: Record<string, unknown>;
 };
 
@@ -17,6 +15,5 @@ export const emptyAppRoute: AppRoute = {
         mode: "all",
         selected: [],
     },
-    menuItem: "cluster",
     params: {},
 };

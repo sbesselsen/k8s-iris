@@ -13,9 +13,6 @@ export const AppHashParamsSync: React.FC = () => {
             const route = hashParams.route as any;
             appRoute.context = route.context ?? null;
             appRoute.namespaces = route.namespaces ?? null;
-            if (route.menuItem) {
-                appRoute.menuItem = route.menuItem;
-            }
             if (route.params) {
                 appRoute.params = route.params;
             }

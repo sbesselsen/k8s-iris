@@ -35,7 +35,7 @@ import { ClusterError } from "./ClusterError";
 import { useIpcCall } from "../../hook/ipc";
 import { AppNamespacesSelection } from "../../../common/route/app-route";
 import { AppToolbar } from "./AppToolbar";
-import { ParamNamespace } from "../../context/param";
+import { ParamNamespace, useAppParam } from "../../context/param";
 
 const ClusterOverview = React.lazy(async () => ({
     default: (await import("../cluster/ClusterOverview")).ClusterOverview,
@@ -83,7 +83,7 @@ export const RootAppUI: React.FunctionComponent = () => {
     );
 
     const namespacesSelection = useAppRoute((route) => route.namespaces);
-    const menuItem = useAppRoute((route) => route.menuItem);
+    const [menuItem, setMenuItem] = useAppParam("menuItem", "cluster");
 
     const getAppRoute = useAppRouteGetter();
     const setAppRoute = useAppRouteSetter();
@@ -172,16 +172,13 @@ export const RootAppUI: React.FunctionComponent = () => {
         (selection: string, requestNewWindow: boolean = false) => {
             if (requestNewWindow) {
                 createWindow({
-                    route: {
-                        ...getAppRoute(),
-                        menuItem: selection,
-                    },
+                    route: setMenuItem.asRoute(selection),
                 });
             } else {
-                setAppRoute((route) => ({ ...route, menuItem: selection }));
+                setMenuItem(selection);
             }
         },
-        [createWindow, getAppRoute, setAppRoute]
+        [createWindow, setMenuItem]
     );
 
     const isReady = contextualColorTheme !== null;
@@ -238,7 +235,7 @@ export const RootAppUI: React.FunctionComponent = () => {
                             <ClusterError error={namespacesError} />
                         </Box>
                     ) : (
-                        <AppContent />
+                        <AppContent menuItem={menuItem} />
                     )
                 }
             />
@@ -251,8 +248,8 @@ const appComponents: Record<string, ReactNode> = {
     cluster: <ClusterOverview />,
 };
 
-const AppContent: React.FC = () => {
-    const { menuItem } = useAppRoute();
+const AppContent: React.FC<{ menuItem: string }> = (props) => {
+    const { menuItem } = props;
 
     return (
         <Suspense fallback={<Box />}>
