@@ -1,4 +1,4 @@
-import React, { ReactNode, useMemo } from "react";
+import React, { useMemo } from "react";
 
 import { ScrollBox } from "../../component/main/ScrollBox";
 
@@ -6,13 +6,7 @@ import { useK8sListWatch } from "../../k8s/list-watch";
 import { useK8sContextsInfo } from "../../hook/k8s-contexts-info";
 import { useK8sContext } from "../../context/k8s-context";
 import {
-    BoxProps,
     Heading,
-    Spinner,
-    Stat,
-    StatHelpText,
-    StatLabel,
-    StatNumber,
     Table,
     Tbody,
     Td,
@@ -163,41 +157,6 @@ const CapacityTable: React.FC<{ nodes: K8sObject[] }> = (props) => {
                 </Tr>
             </Tbody>
         </Table>
-    );
-};
-
-type BasicStatProps = BoxProps & {
-    label: ReactNode;
-    number?: ReactNode;
-    isLoading?: boolean;
-    helpText?: ReactNode;
-};
-
-const BasicStat: React.FC<BasicStatProps> = (props) => {
-    const {
-        label,
-        number,
-        isLoading = false,
-        helpText,
-        children,
-        ...boxProps
-    } = props;
-
-    const borderColor = useColorModeValue("primary.300", "primary.700");
-
-    return (
-        <Stat
-            borderWidth="1px"
-            borderColor={borderColor}
-            p={3}
-            borderRadius="lg"
-            {...boxProps}
-        >
-            {label && <StatLabel>{label}</StatLabel>}
-            <StatNumber>{isLoading ? <Spinner /> : number}</StatNumber>
-            {helpText && <StatHelpText>{helpText}</StatHelpText>}
-            {children}
-        </Stat>
     );
 };
 
