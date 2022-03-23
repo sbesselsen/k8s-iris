@@ -194,14 +194,16 @@ export function createClient(
             resourceInfo.api.apiVersion === "v1" ? "api" : "apis",
             resourceInfo.api.apiVersion,
         ];
-        if (spec.namespace) {
+        if (spec.namespaces) {
             if (!resourceInfo.namespaced) {
                 throw new Error(
                     `Resource ${spec.apiVersion}.${spec.kind} is not namespaced`
                 );
             }
-            pathParts.push("namespaces");
-            pathParts.push(encodeURIComponent(spec.namespace));
+            if (spec.namespaces.length === 1) {
+                pathParts.push("namespaces");
+                pathParts.push(encodeURIComponent(spec.namespaces[0]));
+            }
         }
         pathParts.push(encodeURIComponent(resourceInfo.name));
 
@@ -274,6 +276,16 @@ export function createClient(
             });
         };
 
+        const passesNamespaceCheck = (obj: any) => {
+            if (!spec.namespaces) {
+                return true;
+            }
+            if (!obj?.metadata?.namespace) {
+                return false;
+            }
+            return spec.namespaces.includes(obj.metadata.namespace);
+        };
+
         (async () => {
             let path: string;
             let opts: request.CoreOptions;
@@ -319,7 +331,8 @@ export function createClient(
                                         reject(data);
                                         return;
                                     }
-                                    list.items = data.items;
+                                    data.items =
+                                        data.items.filter(passesNamespaceCheck);
                                     watcher(undefined, { list: data });
                                     resolve({ response, body: data });
                                 } catch (e) {
@@ -335,6 +348,9 @@ export function createClient(
             informer = k8s.makeInformer(kubeConfig, `/${path}`, listFn as any);
 
             informer.on("add", (obj: any) => {
+                if (!passesNamespaceCheck(obj)) {
+                    return;
+                }
                 const newList = addListObject(list, obj);
                 if (list === newList) {
                     // No rerender needed.
@@ -349,6 +365,9 @@ export function createClient(
                 });
             });
             informer.on("update", (obj: any) => {
+                if (!passesNamespaceCheck(obj)) {
+                    return;
+                }
                 list = updateListObject(list, obj);
                 watcher(undefined, {
                     list,
@@ -359,6 +378,9 @@ export function createClient(
                 });
             });
             informer.on("delete", (obj: any) => {
+                if (!passesNamespaceCheck(obj)) {
+                    return;
+                }
                 list = deleteListObject(list, obj);
                 watcher(undefined, {
                     list,
@@ -424,7 +446,9 @@ export function createClient(
         spec: K8sObjectListQuery,
         watcher: K8sObjectListWatcher<T>
     ): K8sObjectListWatch => {
-        const key = `${spec.apiVersion}::${spec.kind}::${spec.namespace ?? ""}`;
+        const key = `${spec.apiVersion}::${spec.kind}::${
+            spec.namespaces?.join(",") ?? ""
+        }`;
 
         if (!reusableListWatchHandles[key]) {
             reusableListWatchHandles[key] = [];

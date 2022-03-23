@@ -159,6 +159,13 @@ export function useK8sListWatchListener<T extends K8sObject = K8sObject>(
 
     useEffect(() => {
         try {
+            lastUpdateTimestampRef.current = 0;
+            if (updateTimeoutRef.current) {
+                clearTimeout(updateTimeoutRef.current);
+                updateTimeoutRef.current = null;
+            }
+            coalescedUpdateRef.current = null;
+
             const listWatch = client.listWatch<T>(spec, (error, message) => {
                 if (error) {
                     onWatchError(error);
@@ -166,7 +173,6 @@ export function useK8sListWatchListener<T extends K8sObject = K8sObject>(
                     coalescedOnUpdate(message);
                 }
             });
-
             listWatchRef.current = listWatch;
         } catch (e) {
             onWatchError(e);
@@ -174,5 +180,13 @@ export function useK8sListWatchListener<T extends K8sObject = K8sObject>(
         return () => {
             listWatchRef.current?.stop();
         };
-    }, [client, listWatchRef, coalescedOnUpdate, onWatchError, ...deps]);
+    }, [
+        client,
+        coalescedUpdateRef,
+        lastUpdateTimestampRef,
+        listWatchRef,
+        coalescedOnUpdate,
+        onWatchError,
+        ...deps,
+    ]);
 }

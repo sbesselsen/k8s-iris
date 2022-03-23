@@ -20,7 +20,7 @@ export type K8sObjectList<T extends K8sObject = K8sObject> =
     };
 
 export type K8sObjectListQuery = K8sResourceTypeIdentifier & {
-    namespace?: string;
+    namespaces?: string[];
 };
 
 export type K8sRemoveOptions = {
