@@ -1,13 +1,15 @@
 import { Box, BoxProps, useOutsideClick } from "@chakra-ui/react";
-import React, { useRef } from "react";
+import React, { MutableRefObject, useRef } from "react";
 
-export type SelectableProps = BoxProps;
+export type SelectableProps = BoxProps & {
+    containerRef?: MutableRefObject<HTMLElement>;
+};
 
 export const Selectable: React.FC<SelectableProps> = (props) => {
-    const { children, userSelect = "text", ...boxProps } = props;
+    const { children, containerRef, userSelect = "text", ...boxProps } = props;
     const ref = useRef<HTMLDivElement>();
     useOutsideClick({
-        ref,
+        ref: containerRef ?? ref,
         handler: () => {
             const selection = getSelection();
             if (
@@ -23,7 +25,8 @@ export const Selectable: React.FC<SelectableProps> = (props) => {
     return (
         <>
             <Box
-                display="inline"
+                as="span"
+                cursor="text"
                 userSelect={userSelect}
                 {...boxProps}
                 ref={ref}
