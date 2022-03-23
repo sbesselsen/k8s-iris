@@ -3,6 +3,7 @@ import {
     K8sObject,
     K8sObjectList,
     K8sObjectListQuery,
+    K8sObjectListUpdate,
     K8sObjectListWatch,
     K8sObjectListWatcherMessage,
 } from "../../common/k8s/client";
@@ -19,8 +20,20 @@ export type K8sListWatchOptions = {
     kubeContext?: string;
 };
 
+export type K8sCoalescedObjectListWatcherMessage<
+    T extends K8sObject = K8sObject
+> = {
+    list: K8sObjectList<T>;
+    updates: Array<K8sObjectListUpdate<T>>;
+};
+
+export type K8sListWatchHookOptions = K8sListWatchOptions & {
+    updateCoalesceInterval?: number;
+};
+
 export function useK8sListWatch<T extends K8sObject = K8sObject>(
     spec: K8sObjectListQuery,
+    opts: K8sListWatchHookOptions,
     deps: any[] = []
 ): [boolean, K8sObjectList<T> | undefined, any | undefined] {
     const kubeContext = useK8sContext();
@@ -35,7 +48,7 @@ export function useK8sListWatch<T extends K8sObject = K8sObject>(
     }, [kubeContext, setValue]);
 
     const onUpdate = useCallback(
-        (message: K8sObjectListWatcherMessage<K8sObject>) => {
+        (message: K8sCoalescedObjectListWatcherMessage<K8sObject>) => {
             setValue([false, message.list as any, undefined]);
         },
         [setValue]
@@ -51,6 +64,7 @@ export function useK8sListWatch<T extends K8sObject = K8sObject>(
     useK8sListWatchListener(
         spec,
         {
+            ...opts,
             onUpdate,
             onWatchError,
         },
@@ -62,9 +76,12 @@ export function useK8sListWatch<T extends K8sObject = K8sObject>(
 
 export type K8sListWatchListenerOptions<T extends K8sObject = K8sObject> =
     K8sListWatchOptions & {
-        onUpdate: (message: K8sObjectListWatcherMessage<T>) => void;
+        onUpdate: (message: K8sCoalescedObjectListWatcherMessage<T>) => void;
         onWatchError: (error: any) => void;
+        updateCoalesceInterval?: number;
     };
+
+const minUpdateCoalesceInterval = 10;
 
 export function useK8sListWatchListener<T extends K8sObject = K8sObject>(
     spec: K8sObjectListQuery,
@@ -74,7 +91,71 @@ export function useK8sListWatchListener<T extends K8sObject = K8sObject>(
     const client = useK8sClient(options.kubeContext);
     const listWatchRef = useRef<K8sObjectListWatch | undefined>();
 
-    const { onUpdate, onWatchError } = options;
+    const { onUpdate, onWatchError, updateCoalesceInterval = 0 } = options;
+
+    const lastUpdateTimestampRef = useRef(0);
+    const coalescedUpdateRef =
+        useRef<K8sCoalescedObjectListWatcherMessage<T>>();
+    const updateTimeoutRef = useRef<any>();
+    const coalescedOnUpdate = useCallback(
+        (message: K8sObjectListWatcherMessage<T>) => {
+            const boundedUpdateCoalesceInterval = Math.max(
+                minUpdateCoalesceInterval,
+                updateCoalesceInterval
+            );
+            const ts = new Date().getTime();
+            if (
+                lastUpdateTimestampRef.current + boundedUpdateCoalesceInterval >
+                ts
+            ) {
+                if (!coalescedUpdateRef.current) {
+                    coalescedUpdateRef.current = {
+                        list: message.list,
+                        updates: [],
+                    };
+                }
+                coalescedUpdateRef.current.list = message.list;
+                if (message.update) {
+                    coalescedUpdateRef.current.updates.push(message.update);
+                }
+
+                // Update is coming in too soon. Need to schedule it.
+                if (!updateTimeoutRef.current) {
+                    updateTimeoutRef.current = setTimeout(() => {
+                        onUpdate(coalescedUpdateRef.current);
+                        lastUpdateTimestampRef.current = ts;
+                        updateTimeoutRef.current = null;
+                        coalescedUpdateRef.current = null;
+                    }, lastUpdateTimestampRef.current + boundedUpdateCoalesceInterval - ts);
+                }
+                return;
+            }
+
+            // We can do the update immediately. Cancel any scheduled updates and go.
+            if (updateTimeoutRef.current) {
+                clearTimeout(updateTimeoutRef.current);
+                updateTimeoutRef.current = null;
+            }
+            coalescedUpdateRef.current = null;
+
+            const coalescedMessage: K8sCoalescedObjectListWatcherMessage<T> = {
+                list: message.list,
+                updates: [],
+            };
+            if (message.update) {
+                coalescedMessage.updates.push(message.update);
+            }
+            onUpdate(coalescedMessage);
+            lastUpdateTimestampRef.current = ts;
+        },
+        [
+            coalescedUpdateRef,
+            lastUpdateTimestampRef,
+            onUpdate,
+            updateCoalesceInterval,
+            updateTimeoutRef,
+        ]
+    );
 
     useEffect(() => {
         try {
@@ -82,7 +163,7 @@ export function useK8sListWatchListener<T extends K8sObject = K8sObject>(
                 if (error) {
                     onWatchError(error);
                 } else {
-                    onUpdate(message);
+                    coalescedOnUpdate(message);
                 }
             });
 
@@ -93,5 +174,5 @@ export function useK8sListWatchListener<T extends K8sObject = K8sObject>(
         return () => {
             listWatchRef.current?.stop();
         };
-    }, [client, listWatchRef, onUpdate, onWatchError, ...deps]);
+    }, [client, listWatchRef, coalescedOnUpdate, onWatchError, ...deps]);
 }

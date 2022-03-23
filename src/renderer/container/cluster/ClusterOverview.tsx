@@ -3,6 +3,7 @@ import React, { useCallback, useEffect } from "react";
 import { ContentTabs } from "../../component/main/ContentTabs";
 import { useAppParam } from "../../context/param";
 import { useIpcCall } from "../../hook/ipc";
+import { ClusterEventsOverview } from "./ClusterEventsOverview";
 import { ClusterInfoOverview } from "./ClusterInfoOverview";
 
 export const ClusterOverview: React.FC<{}> = () => {
@@ -25,6 +26,7 @@ export const ClusterOverview: React.FC<{}> = () => {
 
     const tabs = [
         { id: "info", title: "Info", content: <ClusterInfoOverview /> },
+        { id: "events", title: "Events", content: <ClusterEventsOverview /> },
         { id: "nodes", title: "Nodes", content: <TestContent /> },
         { id: "cloud", title: "Cloud", content: <TestContent /> },
     ];
@@ -33,7 +35,6 @@ export const ClusterOverview: React.FC<{}> = () => {
             tabs={tabs}
             selected={activeTab}
             onChangeSelection={onChangeTabSelection}
-            isLazy
         />
     );
 };

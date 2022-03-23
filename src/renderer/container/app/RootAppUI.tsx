@@ -95,6 +95,7 @@ export const RootAppUI: React.FunctionComponent = () => {
             apiVersion: "v1",
             kind: "Namespace",
         },
+        {},
         []
     );
 

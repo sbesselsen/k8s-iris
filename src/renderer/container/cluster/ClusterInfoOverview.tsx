@@ -25,6 +25,7 @@ export const ClusterInfoOverview: React.FC = () => {
             apiVersion: "v1",
             kind: "Node",
         },
+        {},
         []
     );
 
@@ -39,17 +40,21 @@ export const ClusterInfoOverview: React.FC = () => {
 
     return (
         <ScrollBox px={4} py={2}>
-            <Heading textColor={headingColor} size="md" mb={2} isTruncated>
-                <Selectable userSelect="all">{title}</Selectable>
+            <Heading textColor={headingColor} size="sm" mb={2} isTruncated>
+                Cluster
             </Heading>
             <Table size="sm">
                 <Tbody>
                     <Tr>
+                        <StatTh>Name</StatTh>
+                        <StatTd>
+                            <Selectable>{title}</Selectable>
+                        </StatTd>
+                    </Tr>
+                    <Tr>
                         <StatTh>Nodes</StatTh>
                         <StatTd>
-                            <Selectable userSelect="all">
-                                {nodes?.items.length ?? ""}
-                            </Selectable>
+                            <Selectable>{nodes?.items.length ?? ""}</Selectable>
                         </StatTd>
                     </Tr>
                 </Tbody>
@@ -124,15 +129,13 @@ const CapacityTable: React.FC<{ nodes: K8sObject[] }> = (props) => {
                 <Tr>
                     <StatTh>CPU</StatTh>
                     <StatTd>
-                        <Selectable userSelect="all">
-                            {cpu === 0 ? "" : cpu}
-                        </Selectable>
+                        <Selectable>{cpu === 0 ? "" : cpu}</Selectable>
                     </StatTd>
                 </Tr>
                 <Tr>
                     <StatTh>Memory</StatTh>
                     <StatTd>
-                        <Selectable userSelect="all">
+                        <Selectable>
                             {memory === 0
                                 ? ""
                                 : `${memory.toLocaleString(undefined, {
@@ -145,7 +148,7 @@ const CapacityTable: React.FC<{ nodes: K8sObject[] }> = (props) => {
                 <Tr>
                     <StatTh>Storage</StatTh>
                     <StatTd>
-                        <Selectable userSelect="all">
+                        <Selectable>
                             {storage === 0
                                 ? ""
                                 : `${storage.toLocaleString(undefined, {
