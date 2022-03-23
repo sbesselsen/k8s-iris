@@ -3,11 +3,8 @@ import React, { MutableRefObject, useMemo, useRef } from "react";
 import { ScrollBox } from "../../component/main/ScrollBox";
 
 import { useK8sListWatch } from "../../k8s/list-watch";
-import { useK8sContextsInfo } from "../../hook/k8s-contexts-info";
-import { useK8sContext } from "../../context/k8s-context";
 import {
     Badge,
-    Heading,
     Table,
     TableCellProps,
     Tbody,
@@ -19,18 +16,23 @@ import {
     useColorModeValue,
 } from "@chakra-ui/react";
 import { Selectable } from "../../component/main/Selectable";
-import { K8sObject } from "../../../common/k8s/client";
+import { useK8sNamespaces } from "../../context/k8s-namespaces";
 
 export const ClusterEventsOverview: React.FC = () => {
+    const namespaces = useK8sNamespaces();
+
     const [_loadingEvents, events, _eventsError] = useK8sListWatch(
         {
             apiVersion: "events.k8s.io/v1",
             kind: "Event",
+            ...(namespaces.mode === "all"
+                ? {}
+                : { namespaces: namespaces.selected }),
         },
         {
             updateCoalesceInterval: 5000,
         },
-        []
+        [namespaces]
     );
 
     const sortedEvents = useMemo(() => {
@@ -66,14 +68,14 @@ export const ClusterEventsOverview: React.FC = () => {
     const tableRef = useRef<HTMLTableElement>();
 
     return (
-        <ScrollBox px={4} position="relative">
-            <Table size="sm" ref={tableRef} m={0}>
+        <ScrollBox px={4} pb={10} w="100%">
+            <Table size="sm" ref={tableRef} m={0} sx={{ tableLayout: "fixed" }}>
                 <Thead>
                     <Tr>
-                        <EventTh w={1}>Last seen</EventTh>
-                        <EventTh w={1}>Count</EventTh>
-                        <EventTh w={1}>Namespace</EventTh>
-                        <EventTh w={1}>Type</EventTh>
+                        <EventTh w="150px">Last seen</EventTh>
+                        <EventTh w="70px">Count</EventTh>
+                        <EventTh w="150px">Namespace</EventTh>
+                        <EventTh w="100px">Type</EventTh>
                         <EventTh w="100%">Message</EventTh>
                     </Tr>
                 </Thead>
@@ -96,8 +98,6 @@ const EventRow: React.FC<{
     tableRef: MutableRefObject<HTMLElement>;
 }> = React.memo((props) => {
     const { event, tableRef } = props;
-
-    console.log("render event 2");
 
     return (
         <Tr>
@@ -139,7 +139,9 @@ const EventRow: React.FC<{
                 )}
             </EventTd>
             <EventTd>
-                <Selectable containerRef={tableRef}>{event.note}</Selectable>
+                <Selectable containerRef={tableRef} isTruncated>
+                    {event.note}
+                </Selectable>
             </EventTd>
         </Tr>
     );

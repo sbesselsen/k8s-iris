@@ -52,6 +52,7 @@ export function createWindowManager(): WindowManager {
             backgroundColor: nativeTheme.shouldUseDarkColors ? "#000" : "#fff",
             show: false,
             webPreferences: {
+                backgroundThrottling: false,
                 preload: path.join(__dirname, "..", "preload", "index.js"),
             },
         };
