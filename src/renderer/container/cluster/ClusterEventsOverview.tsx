@@ -5,6 +5,8 @@ import { ScrollBox } from "../../component/main/ScrollBox";
 import { useK8sListWatch } from "../../k8s/list-watch";
 import {
     Badge,
+    BadgeProps,
+    Box,
     Table,
     TableCellProps,
     Tbody,
@@ -72,10 +74,7 @@ export const ClusterEventsOverview: React.FC = () => {
             <Table size="sm" ref={tableRef} m={0} sx={{ tableLayout: "fixed" }}>
                 <Thead>
                     <Tr>
-                        <EventTh w="150px">Last seen</EventTh>
-                        <EventTh w="70px">Count</EventTh>
-                        <EventTh w="150px">Namespace</EventTh>
-                        <EventTh w="100px">Type</EventTh>
+                        <EventTh w="170px">Last seen</EventTh>
                         <EventTh w="100%">Message</EventTh>
                     </Tr>
                 </Thead>
@@ -93,55 +92,49 @@ export const ClusterEventsOverview: React.FC = () => {
     );
 };
 
+const eventTypeBadgeProps: Record<string, BadgeProps> = {
+    _: { colorScheme: "primary" },
+    Normal: {},
+    Warning: { colorScheme: "red" },
+};
+
 const EventRow: React.FC<{
     event: any;
     tableRef: MutableRefObject<HTMLElement>;
 }> = React.memo((props) => {
     const { event, tableRef } = props;
 
+    const typeBadgeProps: BadgeProps =
+        eventTypeBadgeProps[event.type] ?? eventTypeBadgeProps["_"];
+    const typeBadge = <Badge {...typeBadgeProps}>{event.type}</Badge>;
+
     return (
         <Tr>
-            {/*
-        <EventTd>
-            <Selectable containerRef={tableRef}>
-                <Datetime
-                    value={
-                        event.deprecatedCount > 1
-                            ? event.deprecatedFirstTimestamp
-                            : event.metadata
-                                  .creationTimestamp
-                    }
-                />
-            </Selectable>
-                </EventTd>*/}
             <EventTd>
                 <Selectable containerRef={tableRef}>
                     <Datetime value={event.deprecatedLastTimestamp} />
                 </Selectable>
             </EventTd>
-            <EventTd>
-                <Selectable containerRef={tableRef}>
-                    {event.deprecatedCount > 1 ? event.deprecatedCount : ""}
-                </Selectable>
-            </EventTd>
-            <EventTd>
-                <Selectable containerRef={tableRef}>
-                    {event.metadata?.namespace ?? ""}
-                </Selectable>
-            </EventTd>
-            <EventTd>
-                {event.type === "Normal" && <Badge>{event.type}</Badge>}
-                {event.type === "Warning" && (
-                    <Badge colorScheme="red">{event.type}</Badge>
-                )}
-                {event.type !== "Normal" && event.type !== "Warning" && (
-                    <Badge colorScheme="purple">{event.type}</Badge>
-                )}
-            </EventTd>
-            <EventTd>
-                <Selectable containerRef={tableRef} isTruncated>
-                    {event.note}
-                </Selectable>
+            <EventTd wrapText={false}>
+                <Box mb={1}>
+                    <Selectable containerRef={tableRef} lineHeight="1.3">
+                        {event.type !== "Normal" && typeBadge}{" "}
+                        {event.deprecatedCount > 1 ? (
+                            <Badge textTransform="none">
+                                {event.deprecatedCount}x
+                            </Badge>
+                        ) : (
+                            ""
+                        )}{" "}
+                        {event.note}
+                    </Selectable>
+                </Box>
+                <Text fontSize="xs" fontWeight="bold">
+                    {event?.regarding?.kind}:{" "}
+                    {event?.metadata?.namespace &&
+                        `${event.metadata.namespace}/`}
+                    {event?.regarding?.name}
+                </Text>
             </EventTd>
         </Tr>
     );
@@ -168,10 +161,14 @@ const EventTh: React.FC<TableCellProps> = ({ children, ...props }) => {
     );
 };
 
-const EventTd: React.FC<TableCellProps> = ({ children, ...props }) => {
+const EventTd: React.FC<TableCellProps & { wrapText?: boolean }> = ({
+    children,
+    wrapText = true,
+    ...props
+}) => {
     return (
         <Td verticalAlign="baseline" ps={0} py={2} {...props}>
-            <Text isTruncated>{children}&nbsp;</Text>
+            {wrapText ? <Text isTruncated>{children}&nbsp;</Text> : children}
         </Td>
     );
 };
