@@ -13,7 +13,6 @@ import React, { ReactNode, useCallback, useMemo, useRef } from "react";
 import { ParamNamespace } from "../../context/param";
 import { useModifierKeyRef } from "../../hook/keyboard";
 import { useWindowFocusValue } from "../../hook/window-focus";
-import { ScrollBox } from "./ScrollBox";
 
 export type ContentTab = {
     id: string;
@@ -35,7 +34,7 @@ export const ContentTabs: React.FC<ContentTabsProps> = (props) => {
         useToken("colors", "primary.500") === useToken("colors", "gray.500");
     const tabsBackgroundColor = useColorModeValue(
         "primary.100",
-        primaryColorIsGray ? "primary.800" : "primary.900"
+        primaryColorIsGray ? "primary.700" : "primary.900"
     );
     const focusBoxShadow = useToken("shadows", "outline");
 
