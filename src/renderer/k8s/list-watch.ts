@@ -179,6 +179,9 @@ export function useK8sListWatchListener<T extends K8sObject = K8sObject>(
         }
         return () => {
             listWatchRef.current?.stop();
+            if (updateTimeoutRef.current) {
+                clearTimeout(updateTimeoutRef.current);
+            }
         };
     }, [
         client,
