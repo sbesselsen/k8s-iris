@@ -60,6 +60,9 @@ export function useK8sClient(kubeContext?: string): K8sClient {
                         watcher(unwrapError(error));
                         return;
                     }
+                    if (!objectList) {
+                        objectList = message.list as K8sObjectList<T>;
+                    }
                     if (message.update !== undefined) {
                         // Process the update.
                         const update = message.update as K8sObjectListUpdate<T>;
@@ -94,7 +97,6 @@ export function useK8sClient(kubeContext?: string): K8sClient {
                                 break;
                         }
                     } else {
-                        objectList = message.list as K8sObjectList<T>;
                         watcher(undefined, { list: objectList });
                     }
                 }
