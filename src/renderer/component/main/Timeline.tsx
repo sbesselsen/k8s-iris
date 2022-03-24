@@ -65,6 +65,15 @@ export const Timeline: React.FC<TimelineProps> = (props) => {
                 borderLeftStyle="dashed"
                 borderLeftColor={lineColor}
             ></Box>
+            <Box
+                position="absolute"
+                zIndex={0}
+                left="0"
+                bottom="-4px"
+                h="2px"
+                w="10px"
+                bg={lineColor}
+            ></Box>
             <Box position="relative" ps="100px">
                 {renderItems}
             </Box>
