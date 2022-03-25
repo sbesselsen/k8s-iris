@@ -70,11 +70,7 @@ export const ClusterEventsOverview: React.FC = () => {
 
     return (
         <ScrollBox px={4} pt={3} pb={10} w="100%" ref={scrollBoxRef}>
-            {timelineEvents.length === 0 && !isLoadingEvents ? (
-                <Text>No events.</Text>
-            ) : (
-                <Timeline sort="none" pe={6} events={timelineEvents} />
-            )}
+            <Timeline sort="none" pe={6} events={timelineEvents} />
         </ScrollBox>
     );
 };
