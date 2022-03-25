@@ -129,7 +129,7 @@ export const ClusterInfoOverview: React.FC = () => {
                     )}
 
                     {contextInfo.cloudInfo?.accounts?.map((account, index) => (
-                        <Tr>
+                        <Tr key={account.accountId + ":" + account.accountName}>
                             <StatTh>{index === 0 ? "Account" : ""}</StatTh>
                             <StatTd>
                                 <Selectable>
