@@ -23,8 +23,10 @@ const cloudProviderNames: Record<string, string> = {
     aws: "AWS",
     azure: "Azure",
     gcp: "Google Cloud Platform",
+    local: "Local development",
 };
 const cloudServiceNames: Record<string, string> = {
+    colima: "colima",
     eks: "EKS",
 };
 
@@ -47,7 +49,7 @@ export const ClusterInfoOverview: React.FC = () => {
 
     const cloudProviderTitle = contextInfo?.cloudInfo?.cloudProvider
         ? cloudProviderNames[contextInfo.cloudInfo.cloudProvider] ??
-          contextInfo.cloudInfo.cloudProvider.toLocaleUpperCase()
+          contextInfo.cloudInfo.cloudProvider
         : "Cloud";
 
     const headingColor = useColorModeValue("primary.900", "white");
@@ -102,7 +104,6 @@ export const ClusterInfoOverview: React.FC = () => {
                 size="sm"
                 mt={6}
                 mb={2}
-                textTransform="capitalize"
                 isTruncated
             >
                 {cloudProviderTitle}
@@ -116,8 +117,7 @@ export const ClusterInfoOverview: React.FC = () => {
                             <StatTd>
                                 {cloudServiceNames[
                                     contextInfo.cloudInfo.cloudService
-                                ] ??
-                                    contextInfo.cloudInfo.cloudService.toLocaleUpperCase()}
+                                ] ?? contextInfo.cloudInfo.cloudService}
                             </StatTd>
                         </Tr>
                     )}
@@ -176,21 +176,6 @@ const CapacityTable: React.FC<{ nodes: K8sObject[] }> = (props) => {
         [nodes]
     );
 
-    const storage = useMemo(
-        () =>
-            sum(
-                nodes.map((node) =>
-                    parseMemory(
-                        (node as any)?.status?.capacity?.[
-                            "ephemeral-storage"
-                        ] ?? "0",
-                        "Gi"
-                    )
-                )
-            ),
-        [nodes]
-    );
-
     if (!nodes) {
         return null;
     }
@@ -211,19 +196,6 @@ const CapacityTable: React.FC<{ nodes: K8sObject[] }> = (props) => {
                             {memory === 0
                                 ? ""
                                 : `${memory.toLocaleString(undefined, {
-                                      maximumFractionDigits: 2,
-                                      minimumFractionDigits: 1,
-                                  })} Gi`}
-                        </Selectable>
-                    </StatTd>
-                </Tr>
-                <Tr>
-                    <StatTh>Storage</StatTh>
-                    <StatTd>
-                        <Selectable>
-                            {storage === 0
-                                ? ""
-                                : `${storage.toLocaleString(undefined, {
                                       maximumFractionDigits: 2,
                                       minimumFractionDigits: 1,
                                   })} Gi`}
