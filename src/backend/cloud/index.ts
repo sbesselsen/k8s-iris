@@ -20,16 +20,20 @@ export function createCloudManager(options?: {
     const augmentK8sContexts = async (
         contexts: K8sContext[]
     ): Promise<Record<string, CloudK8sContextInfo>> => {
-        const results = await Promise.all([
-            localDevAugmentK8sContexts(contexts),
-            awsAugmentK8sContexts(contexts),
-        ]);
         const output: Record<string, CloudK8sContextInfo> = {};
-        for (const result of results) {
+        const sources = [awsAugmentK8sContexts, localDevAugmentK8sContexts];
+        let remainingContexts = contexts;
+        for (const source of sources) {
+            if (remainingContexts.length === 0) {
+                break;
+            }
+            const result = await source(contexts);
+            remainingContexts = remainingContexts.filter(
+                (context) => !result[context.name]
+            );
+
             for (const [key, info] of Object.entries(result)) {
-                if (!output[key]) {
-                    output[key] = info;
-                }
+                output[key] = info;
             }
         }
         return output;
@@ -63,10 +67,11 @@ async function localDevAugmentK8sContexts(
 ): Promise<Record<string, CloudK8sContextInfo>> {
     const output: Record<string, CloudK8sContextInfo> = {};
     for (const context of contexts) {
-        if (context.name.match(/^(docker|minikube|colima)$/)) {
+        const match = context.name.match(/(docker|minikube|colima)/);
+        if (match) {
             output[context.name] = {
                 cloudProvider: "local",
-                cloudService: context.name,
+                cloudService: match[1],
             };
         }
     }
