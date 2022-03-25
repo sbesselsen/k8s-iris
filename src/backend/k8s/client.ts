@@ -331,9 +331,9 @@ export function createClient(
                                         reject(data);
                                         return;
                                     }
-                                    data.items =
+                                    list.items =
                                         data.items.filter(passesNamespaceCheck);
-                                    watcher(undefined, { list: data });
+                                    watcher(undefined, { list });
                                     resolve({ response, body: data });
                                 } catch (e) {
                                     watcher(e);
@@ -356,8 +356,9 @@ export function createClient(
                     // No rerender needed.
                     return;
                 }
+                list = newList;
                 watcher(undefined, {
-                    list: newList,
+                    list,
                     update: {
                         type: "add",
                         object: obj as any,
