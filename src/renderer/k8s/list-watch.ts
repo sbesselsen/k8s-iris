@@ -185,6 +185,7 @@ export function useK8sListWatchListener<T extends K8sObject = K8sObject>(
             coalescedUpdateRef.current = null;
             lastUpdateTimestampRef.current = 0;
             listWatchRef.current = null;
+            updateTimeoutRef.current = null;
         };
     }, [
         client,

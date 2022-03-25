@@ -35,6 +35,7 @@ export const ClusterOverview: React.FC<{}> = () => {
             tabs={tabs}
             selected={activeTab}
             onChangeSelection={onChangeTabSelection}
+            isLazy
         />
     );
 };

@@ -495,11 +495,22 @@ export function createClient(
                     (w) => w !== watcher
                 );
                 if (reusableHandle.watchers.length === 0) {
-                    // This was the last watcher. Stop watching and remove the reusable handle.
-                    reusableHandle.stop();
-                    reusableListWatchHandles[key] = reusableListWatchHandles[
-                        key
-                    ].filter((handle) => handle !== reusableHandle);
+                    // Stop watching, but only after a grace period to see if new watchers subscribe.
+                    setTimeout(() => {
+                        if (
+                            reusableListWatchHandles[key].includes(
+                                reusableHandle
+                            ) &&
+                            reusableHandle.watchers.length === 0
+                        ) {
+                            // Stop watching and remove the reusable handle.
+                            reusableHandle.stop();
+                            reusableListWatchHandles[key] =
+                                reusableListWatchHandles[key].filter(
+                                    (handle) => handle !== reusableHandle
+                                );
+                        }
+                    }, 100);
                 }
             },
         };
