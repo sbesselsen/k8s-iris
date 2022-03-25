@@ -182,6 +182,18 @@ export const RootAppUI: React.FunctionComponent = () => {
         [createWindow, setMenuItem]
     );
 
+    const sortedNamespaces = useMemo(
+        () =>
+            [...(namespaces?.items ?? [])].sort((x, y) => {
+                return x.metadata.name.localeCompare(
+                    y.metadata.name,
+                    undefined,
+                    { numeric: true }
+                );
+            }),
+        [namespaces]
+    );
+
     const isReady = contextualColorTheme !== null;
 
     useEffect(() => {
@@ -221,7 +233,7 @@ export const RootAppUI: React.FunctionComponent = () => {
                             selection={namespacesSelection}
                             onChangeSelection={onChangeNamespacesSelection}
                             isLoading={loadingNamespaces}
-                            namespaces={namespaces?.items ?? []}
+                            namespaces={sortedNamespaces}
                         />
                     </VStack>
                 }
