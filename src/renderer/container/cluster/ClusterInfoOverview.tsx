@@ -43,7 +43,7 @@ export const ClusterInfoOverview: React.FC = () => {
             <Heading textColor={headingColor} size="sm" mb={2} isTruncated>
                 Cluster
             </Heading>
-            <Table size="sm">
+            <Table size="sm" sx={{ tableLayout: "fixed" }}>
                 <Tbody>
                     <Tr>
                         <StatTh>Name</StatTh>
@@ -124,7 +124,7 @@ const CapacityTable: React.FC<{ nodes: K8sObject[] }> = (props) => {
     }
 
     return (
-        <Table size="sm">
+        <Table size="sm" sx={{ tableLayout: "fixed" }}>
             <Tbody>
                 <Tr>
                     <StatTh>CPU</StatTh>
@@ -166,7 +166,7 @@ const CapacityTable: React.FC<{ nodes: K8sObject[] }> = (props) => {
 const StatTh: React.FC<{}> = ({ children, ...props }) => {
     return (
         <Th
-            width="0"
+            width="150px"
             whiteSpace="nowrap"
             textAlign="left"
             verticalAlign="baseline"
