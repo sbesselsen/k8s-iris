@@ -16,8 +16,11 @@ import {
 import React, { useMemo } from "react";
 import { K8sObject } from "../../../common/k8s/client";
 import { parseCpu, parseMemory } from "../../../common/k8s/util";
+import { searchMatch } from "../../../common/util/search";
+import { k8sSmartCompare } from "../../../common/util/sort";
 import { ScrollBox } from "../../component/main/ScrollBox";
 import { Selectable } from "../../component/main/Selectable";
+import { useAppSearch } from "../../context/search";
 import { useK8sListPoll } from "../../k8s/list-poll";
 import { useK8sListWatch } from "../../k8s/list-watch";
 
@@ -53,6 +56,23 @@ export const ClusterNodesOverview: React.FC = (props) => {
         [nodeMetrics]
     );
 
+    const { query } = useAppSearch();
+    const filteredNodes = useMemo(() => {
+        if (!nodes || !query) {
+            return nodes?.items ?? [];
+        }
+        return nodes.items.filter((node) => {
+            return searchMatch(query, node.metadata.name);
+        });
+    }, [nodes, query]);
+    const sortedNodes = useMemo(
+        () =>
+            [...filteredNodes].sort((x, y) =>
+                k8sSmartCompare(x.metadata.name, y.metadata.name)
+            ),
+        [filteredNodes]
+    );
+
     return (
         <ScrollBox px={4} pt={3} pb={10} w="100%">
             <Table
@@ -70,7 +90,7 @@ export const ClusterNodesOverview: React.FC = (props) => {
                     </Tr>
                 </Thead>
                 <Tbody>
-                    {nodes?.items.map((node) => (
+                    {sortedNodes.map((node) => (
                         <NodeInfo
                             key={node.metadata.name}
                             node={node}
@@ -118,7 +138,7 @@ const NodeInfo: React.FC<NodeInfoProps> = React.memo((props) => {
 
     return (
         <Tr>
-            <Td px={2} verticalAlign="baseline">
+            <Td px={2} pb={0} verticalAlign="top">
                 <Box
                     mt={1}
                     w="10px"
@@ -127,7 +147,7 @@ const NodeInfo: React.FC<NodeInfoProps> = React.memo((props) => {
                     bg={statusColor}
                 />
             </Td>
-            <Td>
+            <Td verticalAlign="top">
                 <HStack mb={1}>
                     {isNew && <Badge colorScheme="primary">new</Badge>}
                     <Selectable isTruncated>{node.metadata.name}</Selectable>
@@ -138,7 +158,7 @@ const NodeInfo: React.FC<NodeInfoProps> = React.memo((props) => {
                     </HStack>
                 )}
             </Td>
-            <Td verticalAlign="baseline">
+            <Td verticalAlign="top">
                 {totalCpu > 0 && cpu !== null && (
                     <Tooltip
                         label={
@@ -157,7 +177,7 @@ const NodeInfo: React.FC<NodeInfoProps> = React.memo((props) => {
                 )}
                 {!totalCpu && cpu !== null && <Badge>{cpu.toFixed(1)}</Badge>}
             </Td>
-            <Td verticalAlign="baseline">
+            <Td verticalAlign="top">
                 {totalMemory > 0 && memory !== null && (
                     <Tooltip
                         w="100%"
