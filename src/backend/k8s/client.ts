@@ -396,7 +396,7 @@ export function createClient(
                     return;
                 }
                 watcher(err);
-                console.error(err);
+                console.error("Informer error", err);
                 // TODO: make this configurable or handlable somehow?
                 // Restart informer after 5sec.
                 retrySignal().then(() => {
@@ -412,6 +412,7 @@ export function createClient(
             informer.start();
         })().catch((e) => {
             // Send error to listener.
+            console.error("Listwatch error", e);
             watcher(e);
         });
 
