@@ -14,8 +14,14 @@ import {
     K8sObjectListWatcherMessage,
     K8sRemoveOptions,
     K8sRemoveStatus,
+    K8sResourceTypeIdentifier,
 } from "../../common/k8s/client";
-import { fetchApiResourceList, K8sApi, K8sApiResource } from "./meta";
+import {
+    fetchApiList,
+    fetchApiResourceList,
+    K8sApi,
+    K8sApiResource,
+} from "./meta";
 import {
     addListObject,
     deleteListObject,
@@ -517,6 +523,27 @@ export function createClient(
         };
     };
 
+    const listApiResourceTypes = async () => {
+        const apis = await fetchApiList(kubeConfig);
+        const resources = await Promise.all(
+            apis.map((api) => fetchApiResourceList(kubeConfig, api))
+        );
+        const allResources = resources
+            .reduce((all, resources) => all.concat(resources), [])
+            .map((apiResource) => ({
+                apiVersion: apiResource.api.apiVersion,
+                kind: apiResource.kind,
+            }));
+        const resourcesMap: Record<string, K8sResourceTypeIdentifier> =
+            Object.fromEntries(
+                allResources.map((resource) => [
+                    resource.apiVersion + ":" + resource.kind,
+                    resource,
+                ])
+            );
+        return Object.values(resourcesMap);
+    };
+
     return {
         read,
         apply,
@@ -526,5 +553,6 @@ export function createClient(
         list,
         listWatch,
         retryConnections,
+        listApiResourceTypes,
     };
 }

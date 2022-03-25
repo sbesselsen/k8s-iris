@@ -17,6 +17,7 @@ const replace = ipcInvoker("k8s:client:replace");
 const remove = ipcInvoker("k8s:client:remove");
 const list = ipcInvoker("k8s:client:list");
 const listWatch = ipcSubscriber("k8s:client:listWatch");
+const listApiResourceTypes = ipcInvoker("k8s:client:listApiResourceTypes");
 const onWindowFocusChange = ipcEventSubscriber<boolean>(
     "app:window:focus-change"
 );
@@ -39,5 +40,6 @@ contextBridge.exposeInMainWorld("charm", {
         remove,
         list,
         listWatch,
+        listApiResourceTypes,
     },
 } as IpcCalls);

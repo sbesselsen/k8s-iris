@@ -71,4 +71,5 @@ export type K8sClient = {
         spec: K8sObjectListQuery,
         watcher: K8sObjectListWatcher<T>
     ): K8sObjectListWatch;
+    listApiResourceTypes(): Promise<K8sResourceTypeIdentifier[]>;
 };

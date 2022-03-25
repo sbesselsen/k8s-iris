@@ -7,6 +7,7 @@ import {
     K8sObjectListUpdate,
     K8sRemoveOptions,
     K8sRemoveStatus,
+    K8sResourceTypeIdentifier,
 } from "../k8s/client";
 import { AppRoute } from "../route/app-route";
 
@@ -66,5 +67,8 @@ export type IpcCalls = {
             },
             watcher: K8sPartialObjectListWatcher<T>
         ): { stop: () => void };
+        listApiResourceTypes(params: {
+            context: string;
+        }): Promise<K8sResourceTypeIdentifier[]>;
     };
 };

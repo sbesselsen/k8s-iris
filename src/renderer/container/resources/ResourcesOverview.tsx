@@ -3,9 +3,10 @@ import React, { useCallback } from "react";
 import { ContentTabs } from "../../component/main/ContentTabs";
 import { useAppParam } from "../../context/param";
 import { useIpcCall } from "../../hook/ipc";
+import { ResourceAllOverview } from "./ResourceAllOverview";
 
 export const ResourcesOverview: React.FC<{}> = () => {
-    const [activeTab, setActiveTab] = useAppParam("tab", "workloads");
+    const [activeTab, setActiveTab] = useAppParam("tab", "all");
 
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
 
@@ -23,8 +24,8 @@ export const ResourcesOverview: React.FC<{}> = () => {
     );
 
     const tabs = [
+        { id: "all", title: "All", content: <ResourceAllOverview /> },
         { id: "workloads", title: "Workloads", content: <Box /> },
-        { id: "other", title: "Other", content: <Box /> },
     ];
     return (
         <ContentTabs

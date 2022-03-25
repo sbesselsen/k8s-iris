@@ -70,4 +70,9 @@ export const wireK8sClientIpc = (clientManager: K8sClientManager): void => {
             };
         }
     );
+    ipcHandle(
+        "k8s:client:listApiResourceTypes",
+        async ({ context }: { context: string }) =>
+            clientManager.clientForContext(context).listApiResourceTypes()
+    );
 };
