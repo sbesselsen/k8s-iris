@@ -5,6 +5,7 @@ import { useAppParam } from "../../context/param";
 import { useIpcCall } from "../../hook/ipc";
 import { ClusterEventsOverview } from "./ClusterEventsOverview";
 import { ClusterInfoOverview } from "./ClusterInfoOverview";
+import { ClusterNodesOverview } from "./ClusterNodesOverview";
 
 export const ClusterOverview: React.FC<{}> = () => {
     const [activeTab, setActiveTab] = useAppParam("tab", "info");
@@ -27,7 +28,7 @@ export const ClusterOverview: React.FC<{}> = () => {
     const tabs = [
         { id: "info", title: "Info", content: <ClusterInfoOverview /> },
         { id: "events", title: "Events", content: <ClusterEventsOverview /> },
-        { id: "nodes", title: "Nodes", content: <TestContent /> },
+        { id: "nodes", title: "Nodes", content: <ClusterNodesOverview /> },
         { id: "cloud", title: "Cloud", content: <TestContent /> },
     ];
     return (
