@@ -1,4 +1,4 @@
-import { Box, VStack } from "@chakra-ui/react";
+import { Box, HStack, VStack } from "@chakra-ui/react";
 import React, {
     Fragment,
     ReactNode,
@@ -37,6 +37,7 @@ import { AppNamespacesSelection } from "../../../common/route/app-route";
 import { AppToolbar } from "./AppToolbar";
 import { ParamNamespace, useAppParam } from "../../context/param";
 import { k8sSmartCompare } from "../../../common/util/sort";
+import { ContextUnlockButton } from "../k8s-context/ContextUnlockButton";
 
 const ClusterOverview = React.lazy(async () => ({
     default: (await import("../cluster/ClusterOverview")).ClusterOverview,
@@ -206,9 +207,10 @@ export const RootAppUI: React.FunctionComponent = () => {
             <AppFrame
                 toolbar={<AppToolbar />}
                 title={
-                    <Box p={2} maxWidth="300px" mx="auto">
+                    <HStack p={2} spacing="2px" maxWidth="350px" mx="auto">
                         <ContextSelectMenu ref={contextSelectMenuRef} />
-                    </Box>
+                        <ContextUnlockButton />
+                    </HStack>
                 }
                 search={
                     <Box px={2} py={2}>

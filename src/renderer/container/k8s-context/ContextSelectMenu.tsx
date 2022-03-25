@@ -172,6 +172,7 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
                     colorScheme="primary"
                     size="sm"
                     boxShadow="0 1px 2px rgba(0, 0, 0, 0.1)"
+                    flex="1 0 0"
                     _active={{
                         bg: "",
                     }}
