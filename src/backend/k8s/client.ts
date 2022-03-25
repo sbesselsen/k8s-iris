@@ -331,13 +331,8 @@ export function createClient(
                                         reject(data);
                                         return;
                                     }
-                                    list.items = data.items
-                                        .filter(passesNamespaceCheck)
-                                        .map((item) => ({
-                                            apiVersion: spec.apiVersion,
-                                            kind: spec.kind,
-                                            ...item,
-                                        }));
+                                    list.items =
+                                        data.items.filter(passesNamespaceCheck);
                                     watcher(undefined, { list });
                                     resolve({ response, body: data });
                                 } catch (e) {
