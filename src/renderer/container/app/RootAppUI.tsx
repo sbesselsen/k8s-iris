@@ -36,6 +36,7 @@ import { useIpcCall } from "../../hook/ipc";
 import { AppNamespacesSelection } from "../../../common/route/app-route";
 import { AppToolbar } from "./AppToolbar";
 import { ParamNamespace, useAppParam } from "../../context/param";
+import { k8sSmartCompare } from "../../../common/util/sort";
 
 const ClusterOverview = React.lazy(async () => ({
     default: (await import("../cluster/ClusterOverview")).ClusterOverview,
@@ -184,13 +185,9 @@ export const RootAppUI: React.FunctionComponent = () => {
 
     const sortedNamespaces = useMemo(
         () =>
-            [...(namespaces?.items ?? [])].sort((x, y) => {
-                return x.metadata.name.localeCompare(
-                    y.metadata.name,
-                    undefined,
-                    { numeric: true }
-                );
-            }),
+            [...(namespaces?.items ?? [])].sort((x, y) =>
+                k8sSmartCompare(x.metadata.name, y.metadata.name)
+            ),
         [namespaces]
     );
 
