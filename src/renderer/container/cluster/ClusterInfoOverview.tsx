@@ -19,6 +19,15 @@ import { Selectable } from "../../component/main/Selectable";
 import { K8sObject } from "../../../common/k8s/client";
 import { parseCpu, parseMemory } from "../../../common/k8s/util";
 
+const cloudProviderNames: Record<string, string> = {
+    aws: "AWS",
+    azure: "Azure",
+    gcp: "Google Cloud Platform",
+};
+const cloudServiceNames: Record<string, string> = {
+    eks: "EKS",
+};
+
 export const ClusterInfoOverview: React.FC = () => {
     const [_isLoadingNodes, nodes, _nodesError] = useK8sListWatch(
         {
@@ -36,6 +45,11 @@ export const ClusterInfoOverview: React.FC = () => {
 
     const title = contextInfo?.cluster ?? context;
 
+    const cloudProviderTitle = contextInfo?.cloudInfo?.cloudProvider
+        ? cloudProviderNames[contextInfo.cloudInfo.cloudProvider] ??
+          contextInfo.cloudInfo.cloudProvider.toLocaleUpperCase()
+        : "Cloud";
+
     const headingColor = useColorModeValue("primary.900", "white");
 
     return (
@@ -51,6 +65,18 @@ export const ClusterInfoOverview: React.FC = () => {
                             <Selectable>{title}</Selectable>
                         </StatTd>
                     </Tr>
+                    {contextInfo?.cluster !== contextInfo?.name && (
+                        <Tr>
+                            <StatTh>Cluster</StatTh>
+                            <StatTd>{contextInfo.cluster}</StatTd>
+                        </Tr>
+                    )}
+                    {contextInfo?.user !== contextInfo?.name && (
+                        <Tr>
+                            <StatTh>User</StatTh>
+                            <StatTd>{contextInfo.user}</StatTd>
+                        </Tr>
+                    )}
                     <Tr>
                         <StatTh>Nodes</StatTh>
                         <StatTd>
@@ -70,6 +96,52 @@ export const ClusterInfoOverview: React.FC = () => {
                 Capacity
             </Heading>
             {nodes && <CapacityTable nodes={nodes?.items} />}
+
+            <Heading
+                textColor={headingColor}
+                size="sm"
+                mt={6}
+                mb={2}
+                textTransform="capitalize"
+                isTruncated
+            >
+                {cloudProviderTitle}
+            </Heading>
+
+            <Table size="sm" sx={{ tableLayout: "fixed" }}>
+                <Tbody>
+                    {contextInfo?.cloudInfo?.cloudService && (
+                        <Tr>
+                            <StatTh>Service</StatTh>
+                            <StatTd>
+                                {cloudServiceNames[
+                                    contextInfo.cloudInfo.cloudService
+                                ] ??
+                                    contextInfo.cloudInfo.cloudService.toLocaleUpperCase()}
+                            </StatTd>
+                        </Tr>
+                    )}
+                    {contextInfo.cloudInfo?.region && (
+                        <Tr>
+                            <StatTh>Region</StatTh>
+                            <StatTd>{contextInfo.cloudInfo?.region}</StatTd>
+                        </Tr>
+                    )}
+
+                    {contextInfo.cloudInfo?.accounts?.map((account, index) => (
+                        <Tr>
+                            <StatTh>{index === 0 ? "Account" : ""}</StatTh>
+                            <StatTd>
+                                <Selectable>
+                                    {[account.accountId, account.accountName]
+                                        .filter((t) => t)
+                                        .join(" / ")}
+                                </Selectable>
+                            </StatTd>
+                        </Tr>
+                    ))}
+                </Tbody>
+            </Table>
         </ScrollBox>
     );
 };

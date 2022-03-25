@@ -29,7 +29,6 @@ export const ClusterOverview: React.FC<{}> = () => {
         { id: "info", title: "Info", content: <ClusterInfoOverview /> },
         { id: "events", title: "Events", content: <ClusterEventsOverview /> },
         { id: "nodes", title: "Nodes", content: <ClusterNodesOverview /> },
-        { id: "cloud", title: "Cloud", content: <TestContent /> },
     ];
     return (
         <ContentTabs
@@ -38,21 +37,5 @@ export const ClusterOverview: React.FC<{}> = () => {
             onChangeSelection={onChangeTabSelection}
             isLazy
         />
-    );
-};
-
-const TestContent: React.FC = () => {
-    useEffect(() => {
-        console.log("render");
-    }, []);
-    const [count, setCount] = useAppParam("count", 1);
-    const onClick = useCallback(() => {
-        setCount((c) => c + 1);
-    }, [setCount]);
-
-    return (
-        <Box p={6}>
-            <Button onClick={onClick}>{count}</Button>
-        </Box>
     );
 };
