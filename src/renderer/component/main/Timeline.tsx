@@ -16,7 +16,8 @@ export type TimelineProps = BoxProps & {
 export const Timeline: React.FC<TimelineProps> = (props) => {
     const { events, sort = "newest-first", ...boxProps } = props;
 
-    const lineColor = useColorModeValue("gray.200", "gray.700");
+    const lineColor = useColorModeValue("gray.200", "gray.600");
+    const markerBorderColor = useColorModeValue("gray.200", "gray.700");
 
     // TODO: sort events
     const sortedEvents = useMemo(() => {
@@ -38,7 +39,7 @@ export const Timeline: React.FC<TimelineProps> = (props) => {
                 <TimelineDateMarker
                     date={event.when}
                     key={`marker-${event.id}`}
-                    lineColor={lineColor}
+                    bgColor={lineColor}
                 />
             );
             prevDateString = dateString;
@@ -46,7 +47,7 @@ export const Timeline: React.FC<TimelineProps> = (props) => {
         renderItems.push(
             <TimelineItem
                 event={event}
-                lineColor={lineColor}
+                markerBorderColor={markerBorderColor}
                 key={`item-${event.id}`}
             />
         );
@@ -85,16 +86,16 @@ export const Timeline: React.FC<TimelineProps> = (props) => {
 
 type TimelineDateMarkerProps = {
     date: Date;
-    lineColor: string;
+    bgColor: string;
 };
 
 const TimelineDateMarker: React.FC<TimelineDateMarkerProps> = (props) => {
-    const { date, lineColor } = props;
+    const { date, bgColor } = props;
     return (
         <Box ml="-120px" mb={4}>
             <Box
                 display="inline-block"
-                bg={lineColor}
+                bg={bgColor}
                 borderRadius="full"
                 px={4}
                 py={2}
@@ -109,11 +110,11 @@ const TimelineDateMarker: React.FC<TimelineDateMarkerProps> = (props) => {
 
 type TimelineItemProps = {
     event: TimelineEvent;
-    lineColor: string;
+    markerBorderColor: string;
 };
 
 const TimelineItem: React.FC<TimelineItemProps> = (props) => {
-    const { event, lineColor } = props;
+    const { event, markerBorderColor } = props;
     return (
         <Box mb={4}>
             <Box
@@ -122,7 +123,7 @@ const TimelineItem: React.FC<TimelineItemProps> = (props) => {
                 bg="primary.500"
                 borderRadius="full"
                 borderWidth="2px"
-                borderColor={lineColor}
+                borderColor={markerBorderColor}
                 w="20px"
                 h="20px"
                 mt="3px"
