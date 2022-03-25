@@ -58,12 +58,21 @@ export function deleteListObject<T extends K8sObject = K8sObject>(
 }
 
 export function parseCpu(cpu: string): number | null {
-    const match = cpu.match(/^([0-9\.]+)(m?)$/);
+    const match = cpu.match(/^([0-9\.]+)([a-z]?)$/);
     if (!match) {
         return null;
     }
     const number = 1 * (match[1] as any);
-    return number / (match[2] === "m" ? 1000 : 1);
+    return (
+        number /
+        (match[2] === "n"
+            ? 1000000000
+            : match[2] === "u"
+            ? 1000000
+            : match[2] === "m"
+            ? 1000
+            : 1)
+    );
 }
 
 export function parseMemory(
