@@ -87,23 +87,25 @@ const EventContent: React.FC<{
 
     return (
         <Box maxWidth="1000px">
-            <Selectable containerRef={selectionContainerRef} lineHeight="1.3">
+            <Selectable containerRef={selectionContainerRef} fontSize="sm">
                 {event.type !== "Normal" && (
                     <Badge
-                        me={2}
                         colorScheme={event.type === "Warning" ? "red" : "gray"}
+                        verticalAlign="baseline"
                     >
                         {event.type}
                     </Badge>
-                )}
+                )}{" "}
                 {event.deprecatedCount > 1 ? (
-                    <Badge textTransform="none">{event.deprecatedCount}x</Badge>
+                    <Badge textTransform="none" verticalAlign="baseline">
+                        {event.deprecatedCount}x
+                    </Badge>
                 ) : (
                     ""
                 )}{" "}
                 {event.note}
             </Selectable>
-            <Text fontSize="xs" fontWeight="bold">
+            <Text fontSize="xs" fontWeight="bold" mt={1}>
                 {event?.regarding?.kind}:{" "}
                 {event?.metadata?.namespace && `${event.metadata.namespace}/`}
                 {event?.regarding?.name}
