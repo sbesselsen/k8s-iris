@@ -1,6 +1,7 @@
 import { K8sClientManager } from "./index";
 import { ipcHandle, ipcProvideSubscription } from "../../common/ipc/main";
 import { K8sObject, K8sObjectListQuery } from "../../common/k8s/client";
+import { K8sPartialObjectListWatcher } from "../../common/ipc-types";
 
 export const wireK8sClientIpc = (clientManager: K8sClientManager): void => {
     ipcHandle("k8s:listContexts", () => clientManager.listContexts());
@@ -44,7 +45,29 @@ export const wireK8sClientIpc = (clientManager: K8sClientManager): void => {
                 context: string;
                 spec: K8sObjectListQuery;
             },
-            send
-        ) => clientManager.clientForContext(context).listWatch(spec, send)
+            send: K8sPartialObjectListWatcher
+        ) => {
+            let didSendInitialList = false;
+            const listWatch = clientManager
+                .clientForContext(context)
+                .listWatch(spec, (error, message) => {
+                    if (error) {
+                        send(error);
+                    } else {
+                        if (!didSendInitialList) {
+                            send(undefined, { list: message.list });
+                            didSendInitialList = true;
+                        }
+                        if (message.update) {
+                            send(undefined, { update: message.update });
+                        }
+                    }
+                });
+            return {
+                stop() {
+                    listWatch.stop();
+                },
+            };
+        }
     );
 };

@@ -17,6 +17,7 @@ import {
 import { useK8sContext } from "../context/k8s-context";
 import { useIpcCall } from "../hook/ipc";
 import { unwrapError } from "../../common/ipc/shared";
+import { K8sPartialObjectListWatcherMessage } from "../../common/ipc-types";
 
 export function useK8sClient(kubeContext?: string): K8sClient {
     const sharedKubeContext = useK8sContext();
@@ -60,8 +61,10 @@ export function useK8sClient(kubeContext?: string): K8sClient {
                         watcher(unwrapError(error));
                         return;
                     }
-                    if (!objectList) {
+                    if (isListMessage(message)) {
                         objectList = message.list as K8sObjectList<T>;
+                        watcher(undefined, { list: objectList });
+                        return;
                     }
                     if (message.update !== undefined) {
                         // Process the update.
@@ -97,7 +100,6 @@ export function useK8sClient(kubeContext?: string): K8sClient {
                                 break;
                         }
                     } else {
-                        watcher(undefined, { list: objectList });
                     }
                 }
             );
@@ -135,4 +137,10 @@ export function useK8sClient(kubeContext?: string): K8sClient {
     ]);
 
     return client;
+}
+
+function isListMessage<T extends K8sObject>(
+    message: K8sPartialObjectListWatcherMessage<T>
+): message is { list: K8sObjectList<T> } {
+    return "list" in message;
 }

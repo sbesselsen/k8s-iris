@@ -4,11 +4,26 @@ import {
     K8sObject,
     K8sObjectList,
     K8sObjectListQuery,
-    K8sObjectListWatcher,
+    K8sObjectListUpdate,
     K8sRemoveOptions,
     K8sRemoveStatus,
 } from "../k8s/client";
 import { AppRoute } from "../route/app-route";
+
+export type K8sPartialObjectListWatcherMessage<
+    T extends K8sObject = K8sObject
+> =
+    | {
+          list: K8sObjectList<T>;
+      }
+    | {
+          update: K8sObjectListUpdate<T>;
+      };
+
+export type K8sPartialObjectListWatcher<T extends K8sObject = K8sObject> = (
+    error: any | undefined,
+    message?: K8sPartialObjectListWatcherMessage<T> | undefined
+) => void;
 
 export type IpcCalls = {
     app: {
@@ -49,7 +64,7 @@ export type IpcCalls = {
                 context: string;
                 spec: K8sObjectListQuery;
             },
-            watcher: K8sObjectListWatcher<T>
+            watcher: K8sPartialObjectListWatcher<T>
         ): { stop: () => void };
     };
 };
