@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { K8sResourceTypeIdentifier } from "../../common/k8s/client";
+import { K8sResourceTypeInfo } from "../../common/k8s/client";
 import { useK8sClient } from "./client";
 import { useK8sListWatch } from "./list-watch";
 
@@ -11,7 +11,7 @@ const loadingValue: [boolean, undefined, undefined] = [
 
 export function useK8sApiResourceTypes(): [
     boolean,
-    K8sResourceTypeIdentifier[] | undefined,
+    K8sResourceTypeInfo[] | undefined,
     any | undefined
 ] {
     const client = useK8sClient();
@@ -27,9 +27,9 @@ export function useK8sApiResourceTypes(): [
     );
 
     const [value, setValue] =
-        useState<
-            [boolean, K8sResourceTypeIdentifier[] | undefined, any | undefined]
-        >(loadingValue);
+        useState<[boolean, K8sResourceTypeInfo[] | undefined, any | undefined]>(
+            loadingValue
+        );
 
     useEffect(() => {
         (async () => {
