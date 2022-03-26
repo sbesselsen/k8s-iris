@@ -14,7 +14,7 @@ import {
     K8sObjectListWatcherMessage,
     K8sRemoveOptions,
     K8sRemoveStatus,
-    K8sResourceTypeIdentifier,
+    K8sResourceTypeInfo,
 } from "../../common/k8s/client";
 import {
     fetchApiList,
@@ -533,8 +533,9 @@ export function createClient(
             .map((apiResource) => ({
                 apiVersion: apiResource.api.apiVersion,
                 kind: apiResource.kind,
+                namespaced: apiResource.namespaced,
             }));
-        const resourcesMap: Record<string, K8sResourceTypeIdentifier> =
+        const resourcesMap: Record<string, K8sResourceTypeInfo> =
             Object.fromEntries(
                 allResources.map((resource) => [
                     resource.apiVersion + ":" + resource.kind,

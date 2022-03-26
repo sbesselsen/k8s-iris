@@ -10,6 +10,12 @@ export type K8sResourceTypeIdentifier = {
     kind: string;
 };
 
+export type K8sResourceTypeInfo = K8sResourceTypeIdentifier & {
+    apiVersion: string;
+    kind: string;
+    namespaced: boolean;
+};
+
 export type K8sObject = K8sResourceTypeIdentifier & {
     metadata: K8sObjectMetadata;
 };
@@ -71,5 +77,5 @@ export type K8sClient = {
         spec: K8sObjectListQuery,
         watcher: K8sObjectListWatcher<T>
     ): K8sObjectListWatch;
-    listApiResourceTypes(): Promise<K8sResourceTypeIdentifier[]>;
+    listApiResourceTypes(): Promise<K8sResourceTypeInfo[]>;
 };
