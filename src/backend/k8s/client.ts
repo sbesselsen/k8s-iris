@@ -528,21 +528,15 @@ export function createClient(
         const resources = await Promise.all(
             apis.map((api) => fetchApiResourceList(kubeConfig, api))
         );
-        const allResources = resources
+        return resources
             .reduce((all, resources) => all.concat(resources), [])
             .map((apiResource) => ({
                 apiVersion: apiResource.api.apiVersion,
                 kind: apiResource.kind,
                 namespaced: apiResource.namespaced,
+                isSubResource: apiResource.isSubResource,
+                ...(apiResource.verbs ? { verbs: apiResource.verbs } : {}),
             }));
-        const resourcesMap: Record<string, K8sResourceTypeInfo> =
-            Object.fromEntries(
-                allResources.map((resource) => [
-                    resource.apiVersion + ":" + resource.kind,
-                    resource,
-                ])
-            );
-        return Object.values(resourcesMap);
     };
 
     return {

@@ -12,6 +12,8 @@ export type K8sResourceTypeIdentifier = {
 
 export type K8sResourceTypeInfo = K8sResourceTypeIdentifier & {
     namespaced: boolean;
+    isSubResource: boolean;
+    verbs?: string[];
 };
 
 export type K8sObject = K8sResourceTypeIdentifier & {

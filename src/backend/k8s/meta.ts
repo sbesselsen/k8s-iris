@@ -12,8 +12,10 @@ export type K8sApiResource = {
     api: K8sApi;
     name: string;
     namespaced: boolean;
+    isSubResource: boolean;
     kind: string;
     misc: Record<string, any>;
+    verbs?: string[] | undefined;
 };
 
 export async function fetchApiList(
@@ -114,8 +116,13 @@ export async function fetchApiResourceList(
                                 api,
                                 name: resource.name,
                                 namespaced: resource.namespaced,
+                                isSubResource:
+                                    resource.name.indexOf("/") !== -1,
                                 kind: resource.kind,
                                 misc: resource,
+                                ...(resource.verbs
+                                    ? { verbs: resource.verbs }
+                                    : {}),
                             })
                         );
                         resolve(resources);
