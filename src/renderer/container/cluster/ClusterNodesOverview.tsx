@@ -138,27 +138,21 @@ const NodeInfo: React.FC<NodeInfoProps> = React.memo((props) => {
 
     return (
         <Tr>
-            <Td px={2} pb={0} verticalAlign="top">
-                <Box
-                    mt={1}
-                    w="10px"
-                    h="10px"
-                    borderRadius="full"
-                    bg={statusColor}
-                />
+            <Td px={2} pb={0} verticalAlign="baseline">
+                <Box w="10px" h="10px" borderRadius="full" bg={statusColor} />
             </Td>
-            <Td verticalAlign="top">
-                <HStack mb={1}>
+            <Td verticalAlign="baseline">
+                <HStack>
                     {isNew && <Badge colorScheme="primary">new</Badge>}
                     <Selectable isTruncated>{node.metadata.name}</Selectable>
                 </HStack>
                 {(node as any)?.spec?.taints?.length > 0 && (
-                    <HStack spacing={1}>
+                    <HStack spacing={1} mt={1}>
                         <TaintsList taints={(node as any)?.spec?.taints} />
                     </HStack>
                 )}
             </Td>
-            <Td verticalAlign="top">
+            <Td verticalAlign="baseline">
                 {totalCpu > 0 && cpu !== null && (
                     <Tooltip
                         label={
@@ -177,7 +171,7 @@ const NodeInfo: React.FC<NodeInfoProps> = React.memo((props) => {
                 )}
                 {!totalCpu && cpu !== null && <Badge>{cpu.toFixed(1)}</Badge>}
             </Td>
-            <Td verticalAlign="top">
+            <Td verticalAlign="baseline">
                 {totalMemory > 0 && memory !== null && (
                     <Tooltip
                         w="100%"
