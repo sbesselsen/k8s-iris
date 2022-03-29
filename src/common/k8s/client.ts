@@ -11,8 +11,6 @@ export type K8sResourceTypeIdentifier = {
 };
 
 export type K8sResourceTypeInfo = K8sResourceTypeIdentifier & {
-    apiVersion: string;
-    kind: string;
     namespaced: boolean;
 };
 

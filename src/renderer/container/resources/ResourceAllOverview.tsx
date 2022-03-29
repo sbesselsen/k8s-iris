@@ -4,14 +4,20 @@ import {
     AccordionItem,
     AccordionPanel,
     Box,
+    Button,
     Heading,
     HStack,
-    Link,
+    useColorModeValue,
+    useToken,
     VStack,
 } from "@chakra-ui/react";
-import React, { useMemo } from "react";
-import { K8sResourceTypeInfo } from "../../../common/k8s/client";
+import React, { useCallback, useMemo } from "react";
+import {
+    K8sResourceTypeIdentifier,
+    K8sResourceTypeInfo,
+} from "../../../common/k8s/client";
 import { ScrollBox } from "../../component/main/ScrollBox";
+import { useAppParam } from "../../context/param";
 import { useK8sApiResourceTypes } from "../../k8s/api-resources";
 
 type GroupedResourceGroup = { groupName: string; resources: GroupedResource[] };
@@ -35,52 +41,147 @@ export const ResourceAllOverview: React.FC = () => {
         [groupedResources]
     );
 
+    const [expandedResourceGroup, setExpandedResourceGroup] = useAppParam<
+        string | undefined
+    >("group", undefined);
+    const expandedIndex = useMemo(
+        () =>
+            sortedResources.findIndex(
+                (res) => res.groupName === expandedResourceGroup
+            ),
+        [expandedResourceGroup, sortedResources]
+    );
+    const onChangeExpandedIndex = useCallback(
+        (index: number) => {
+            setExpandedResourceGroup(sortedResources[index]?.groupName, true);
+        },
+        [setExpandedResourceGroup, sortedResources]
+    );
+
+    const [selectedResource, setSelectedResource] = useAppParam<
+        K8sResourceTypeIdentifier | undefined
+    >("resourceType", undefined);
+
+    const selectedGroupedResource = useMemo(
+        () =>
+            sortedResources
+                .flatMap(({ groupName, resources }) =>
+                    resources.map((resource) => ({ groupName, resource }))
+                )
+                .find(
+                    ({ groupName, resource }) =>
+                        resource.versions.some(
+                            (version) =>
+                                [groupName, version.versionName]
+                                    .filter((x) => x)
+                                    .join("/") === selectedResource?.apiVersion
+                        ) && resource.kindName === selectedResource?.kind
+                )?.resource,
+        [selectedResource, sortedResources]
+    );
+
     return (
         <HStack flex="1 0 0" overflow="hidden" spacing={0} alignItems="stretch">
             <ScrollBox px={2} py={2} flex="0 0 250px">
-                <Accordion allowToggle>
+                <Accordion
+                    index={expandedIndex}
+                    onChange={onChangeExpandedIndex}
+                    allowToggle
+                >
                     {sortedResources?.map((group) => (
                         <ResourceGroupMenu
                             key={group.groupName}
+                            selectedResource={selectedResource}
+                            onSelectResource={setSelectedResource}
                             group={group}
                         />
                     ))}
                 </Accordion>
             </ScrollBox>
             <ScrollBox px={4} py={2} flex="1 0 0">
-                {resources?.map((resource) => (
-                    <Box key={resource.apiVersion + " " + resource.kind}>
-                        {resource.apiVersion + " " + resource.kind}
-                    </Box>
-                ))}
+                {selectedGroupedResource && (
+                    <GroupedResourceOverview
+                        groupedResource={selectedGroupedResource}
+                    />
+                )}
             </ScrollBox>
         </HStack>
     );
 };
 
-const ResourceGroupMenu: React.FC<{ group: GroupedResourceGroup }> = (
-    props
-) => {
-    const { group } = props;
+type ResourceGroupMenuProps = {
+    group: GroupedResourceGroup;
+    onSelectResource?: (resource: K8sResourceTypeInfo) => void;
+    selectedResource?: K8sResourceTypeIdentifier | undefined;
+};
+
+const ResourceGroupMenu: React.FC<ResourceGroupMenuProps> = (props) => {
+    const { group, onSelectResource, selectedResource } = props;
+
+    const focusBoxShadow = useToken("shadows", "outline");
+    const onClickResourceHandlers = useMemo(
+        () =>
+            group.resources.map((resource) => {
+                // TODO: select the *best* version
+                return () => {
+                    onSelectResource?.(resource.versions[0].resource);
+                };
+            }),
+        [group, onSelectResource]
+    );
+
     return (
-        <AccordionItem>
-            <AccordionButton ps={2}>
+        <AccordionItem border="none">
+            <AccordionButton
+                ps={2}
+                _focus={{}}
+                _focusVisible={{
+                    boxShadow: focusBoxShadow,
+                }}
+            >
                 <Heading
                     textColor={"primary.500"}
                     fontWeight="semibold"
                     fontSize="xs"
                     textTransform="uppercase"
                 >
-                    {group.groupName || "Common"}
+                    {group.groupName || "Core"}
                 </Heading>
             </AccordionButton>
             <AccordionPanel ps={2}>
                 <VStack alignItems="stretch" spacing={0}>
-                    {group.resources.map((resource) => (
-                        <ResourceMenu
+                    {group.resources.map((resource, index) => (
+                        <Button
                             key={resource.kindName}
-                            resource={resource}
-                        />
+                            fontSize="sm"
+                            variant="link"
+                            textAlign="left"
+                            fontWeight="normal"
+                            display="block"
+                            py={0.5}
+                            borderRadius={0}
+                            _focus={{}}
+                            _focusVisible={{
+                                boxShadow: focusBoxShadow,
+                            }}
+                            _active={{
+                                fontWeight: "bold",
+                            }}
+                            _hover={{
+                                textDecoration: "none",
+                            }}
+                            onClick={onClickResourceHandlers[index]}
+                            isActive={resource.versions.some(
+                                (version) =>
+                                    version.resource.apiVersion ===
+                                        selectedResource?.apiVersion &&
+                                    version.resource.kind ===
+                                        selectedResource?.kind
+                            )}
+                            isTruncated
+                        >
+                            {resource.kindName}
+                        </Button>
                     ))}
                 </VStack>
             </AccordionPanel>
@@ -88,13 +189,25 @@ const ResourceGroupMenu: React.FC<{ group: GroupedResourceGroup }> = (
     );
 };
 
-const ResourceMenu: React.FC<{ resource: GroupedResource }> = (props) => {
-    const { resource } = props;
+type GroupedResourceOverviewProps = {
+    groupedResource: GroupedResource;
+};
+
+const GroupedResourceOverview: React.FC<GroupedResourceOverviewProps> = (
+    props
+) => {
+    const { groupedResource } = props;
+
+    const headingColor = useColorModeValue("primary.900", "white");
+
     return (
-        <Link fontSize="sm" tabIndex={0} isTruncated>
-            {resource.kindName}
-        </Link>
+        <Box>
+            <Heading size="md" textColor={headingColor}>
+                {groupedResource.kindName}
+            </Heading>
+        </Box>
     );
+    return null;
 };
 
 const groupResources = (
@@ -164,13 +277,15 @@ const sortResources = (
                 )
                 .map(({ kindName, versions }) => ({
                     kindName,
-                    versions: [...versions].sort((x, y) =>
-                        x.versionName.localeCompare(
-                            y.versionName,
-                            undefined,
-                            sortOptions
-                        )
-                    ),
+                    versions: sortVersions(versions),
                 })),
         }));
 };
+
+function sortVersions(
+    versions: GroupedResourceVersion[]
+): GroupedResourceVersion[] {
+    return [...versions].sort((x, y) =>
+        (x.versionName + "ZZZ").localeCompare(y.versionName + "ZZZ", undefined)
+    );
+}
