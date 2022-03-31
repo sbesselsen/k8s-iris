@@ -455,7 +455,7 @@ export function createClient(
         watcher: K8sObjectListWatcher<T>
     ): K8sObjectListWatch => {
         const key = `${spec.apiVersion}::${spec.kind}::${
-            spec.namespaces?.join(",") ?? ""
+            spec.namespaces?.join(",") ?? "<all>"
         }`;
 
         if (!reusableListWatchHandles[key]) {
