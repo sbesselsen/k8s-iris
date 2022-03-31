@@ -1,5 +1,6 @@
 import { Box, BoxProps, useColorModeValue } from "@chakra-ui/react";
 import React, { ReactNode, useMemo } from "react";
+import { formatDeveloperDate } from "../../util/date";
 import { Selectable } from "./Selectable";
 
 export type TimelineEvent = {
@@ -102,7 +103,7 @@ const TimelineDateMarker: React.FC<TimelineDateMarkerProps> = (props) => {
                 fontSize="xs"
                 fontWeight="extrabold"
             >
-                <Selectable>{date.toLocaleDateString()}</Selectable>
+                <Selectable>{formatDeveloperDate(date)}</Selectable>
             </Box>
         </Box>
     );
