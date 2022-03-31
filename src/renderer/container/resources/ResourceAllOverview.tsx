@@ -3,31 +3,35 @@ import {
     AccordionButton,
     AccordionItem,
     AccordionPanel,
+    Badge,
+    Box,
     Button,
     ButtonGroup,
     Heading,
     HStack,
-    useColorModeValue,
+    Table,
+    Tbody,
+    Td,
+    Th,
+    Thead,
+    Tr,
     useToken,
     VStack,
 } from "@chakra-ui/react";
 import React, { useCallback, useMemo } from "react";
 import {
+    K8sObject,
     K8sResourceTypeIdentifier,
     K8sResourceTypeInfo,
 } from "../../../common/k8s/client";
+import { k8sSmartCompare } from "../../../common/util/sort";
 import { ScrollBox } from "../../component/main/ScrollBox";
+import { Selectable } from "../../component/main/Selectable";
 import { useK8sNamespaces } from "../../context/k8s-namespaces";
 import { useAppParam } from "../../context/param";
 import { useK8sApiResourceTypes } from "../../k8s/api-resources";
 import { useK8sListWatch } from "../../k8s/list-watch";
-
-type GroupedResourceGroup = { groupName: string; resources: GroupedResource[] };
-type GroupedResource = { kindName: string; versions: GroupedResourceVersion[] };
-type GroupedResourceVersion = {
-    versionName: string;
-    resource: K8sResourceTypeInfo;
-};
+import { formatDeveloperDateTime } from "../../util/date";
 
 export const ResourceAllOverview: React.FC = () => {
     const [selectedResource, setSelectedResource] = useAppParam<
@@ -343,12 +347,83 @@ const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
         [namespaces, resourceTypeInfo]
     );
 
-    const headingColor = useColorModeValue("primary.900", "white");
+    const sortedResources = useMemo(
+        () =>
+            [...(resources?.items ?? [])].sort((x, y) =>
+                k8sSmartCompare(x.metadata.name, y.metadata.name)
+            ),
+        [resources]
+    );
+
+    const showNamespace =
+        resourceTypeInfo.namespaced &&
+        (namespaces.mode === "all" || namespaces.selected.length > 1);
 
     return (
-        <Heading flex="1 0 0" size="md" textColor={headingColor}>
-            {resourceTypeInfo.kind} ({resourceTypeInfo.apiVersion}):{" "}
-            {resources?.items.length}
-        </Heading>
+        <Box>
+            <Table
+                size="sm"
+                sx={{ tableLayout: "fixed" }}
+                width="100%"
+                maxWidth="1000px"
+            >
+                <Thead>
+                    <Tr>
+                        <Th ps={0}>Name</Th>
+                        {showNamespace && <Th width="150px">Namespace</Th>}
+                        <Th width="150px">Created</Th>
+                    </Tr>
+                </Thead>
+                <Tbody>
+                    {sortedResources.map((resource) => (
+                        <ResourceRow
+                            resource={resource}
+                            showNamespace={showNamespace}
+                            key={
+                                resource.metadata.namespace +
+                                ":" +
+                                resource.metadata.name
+                            }
+                        />
+                    ))}
+                </Tbody>
+            </Table>
+        </Box>
+    );
+};
+
+const ResourceRow: React.FC<{ resource: K8sObject; showNamespace: boolean }> = (
+    props
+) => {
+    const { resource, showNamespace } = props;
+
+    const creationDate = new Date((resource as any).metadata.creationTimestamp);
+
+    const isNew =
+        new Date().getTime() - creationDate.getTime() < 2 * 3600 * 1000;
+
+    return (
+        <Tr>
+            <Td ps={0} verticalAlign="baseline">
+                <HStack p={0}>
+                    <Selectable display="block" isTruncated>
+                        {resource.metadata.name}
+                    </Selectable>
+                    {isNew && <Badge colorScheme="primary">new</Badge>}
+                </HStack>
+            </Td>
+            {showNamespace && (
+                <Td verticalAlign="baseline">
+                    <Selectable display="block" isTruncated>
+                        {resource.metadata.namespace}
+                    </Selectable>
+                </Td>
+            )}
+            <Td verticalAlign="baseline">
+                <Selectable display="block" isTruncated>
+                    {formatDeveloperDateTime(creationDate)}
+                </Selectable>
+            </Td>
+        </Tr>
     );
 };

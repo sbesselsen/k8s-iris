@@ -143,8 +143,8 @@ const NodeInfo: React.FC<NodeInfoProps> = React.memo((props) => {
             </Td>
             <Td verticalAlign="baseline">
                 <HStack>
-                    {isNew && <Badge colorScheme="primary">new</Badge>}
                     <Selectable isTruncated>{node.metadata.name}</Selectable>
+                    {isNew && <Badge colorScheme="primary">new</Badge>}
                 </HStack>
                 {(node as any)?.spec?.taints?.length > 0 && (
                     <HStack spacing={1} mt={1}>
