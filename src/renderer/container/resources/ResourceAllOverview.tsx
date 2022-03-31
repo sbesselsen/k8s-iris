@@ -15,6 +15,7 @@ import {
     Th,
     Thead,
     Tr,
+    useBreakpointValue,
     useToken,
     VStack,
 } from "@chakra-ui/react";
@@ -31,6 +32,8 @@ import { Selectable } from "../../component/main/Selectable";
 import { useK8sNamespaces } from "../../context/k8s-namespaces";
 import { useAppParam } from "../../context/param";
 import { useAppSearch } from "../../context/search";
+import { useIpcCall } from "../../hook/ipc";
+import { useModifierKeyRef } from "../../hook/keyboard";
 import { useK8sApiResourceTypes } from "../../k8s/api-resources";
 import { useK8sListWatch } from "../../k8s/list-watch";
 import { formatDeveloperDateTime } from "../../util/date";
@@ -40,12 +43,28 @@ export const ResourceAllOverview: React.FC = () => {
         K8sResourceTypeIdentifier | undefined
     >("resourceType", undefined);
 
+    const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
+    const metaKeyRef = useModifierKeyRef("Meta");
+
+    const onSelectResource = useCallback(
+        (resource: K8sResourceTypeIdentifier | undefined) => {
+            if (metaKeyRef.current) {
+                createWindow({
+                    route: setSelectedResource.asRoute(resource),
+                });
+            } else {
+                setSelectedResource(resource);
+            }
+        },
+        [createWindow, metaKeyRef, setSelectedResource]
+    );
+
     return (
         <HStack flex="1 0 0" overflow="hidden" spacing={0} alignItems="stretch">
             <ScrollBox px={2} py={2} flex="0 0 250px">
                 <ResourceTypeMenu
                     selectedResource={selectedResource}
-                    onSelectResource={setSelectedResource}
+                    onSelectResource={onSelectResource}
                 />
             </ScrollBox>
             <ScrollBox px={4} py={2} flex="1 0 0">
@@ -368,9 +387,12 @@ const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
         [filteredResources]
     );
 
-    const showNamespace =
-        resourceTypeInfo.namespaced &&
-        (namespaces.mode === "all" || namespaces.selected.length > 1);
+    const showNamespace = useBreakpointValue({
+        base: false,
+        lg:
+            resourceTypeInfo.namespaced &&
+            (namespaces.mode === "all" || namespaces.selected.length > 1),
+    });
 
     return (
         <Box>
