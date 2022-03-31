@@ -24,11 +24,13 @@ import {
     K8sResourceTypeIdentifier,
     K8sResourceTypeInfo,
 } from "../../../common/k8s/client";
+import { resourceMatch } from "../../../common/util/search";
 import { k8sSmartCompare } from "../../../common/util/sort";
 import { ScrollBox } from "../../component/main/ScrollBox";
 import { Selectable } from "../../component/main/Selectable";
 import { useK8sNamespaces } from "../../context/k8s-namespaces";
 import { useAppParam } from "../../context/param";
+import { useAppSearch } from "../../context/search";
 import { useK8sApiResourceTypes } from "../../k8s/api-resources";
 import { useK8sListWatch } from "../../k8s/list-watch";
 import { formatDeveloperDateTime } from "../../util/date";
@@ -347,12 +349,23 @@ const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
         [namespaces, resourceTypeInfo]
     );
 
+    const { query } = useAppSearch();
+
+    const filteredResources = useMemo(() => {
+        if (!resources || !query) {
+            return resources?.items ?? [];
+        }
+        return resources.items.filter((resource) =>
+            resourceMatch(query, resource)
+        );
+    }, [resources, query]);
+
     const sortedResources = useMemo(
         () =>
-            [...(resources?.items ?? [])].sort((x, y) =>
+            [...filteredResources].sort((x, y) =>
                 k8sSmartCompare(x.metadata.name, y.metadata.name)
             ),
-        [resources]
+        [filteredResources]
     );
 
     const showNamespace =

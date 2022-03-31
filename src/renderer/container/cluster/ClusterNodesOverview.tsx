@@ -16,7 +16,7 @@ import {
 import React, { useMemo } from "react";
 import { K8sObject } from "../../../common/k8s/client";
 import { parseCpu, parseMemory } from "../../../common/k8s/util";
-import { searchMatch } from "../../../common/util/search";
+import { resourceMatch } from "../../../common/util/search";
 import { k8sSmartCompare } from "../../../common/util/sort";
 import { ScrollBox } from "../../component/main/ScrollBox";
 import { Selectable } from "../../component/main/Selectable";
@@ -61,9 +61,7 @@ export const ClusterNodesOverview: React.FC = (props) => {
         if (!nodes || !query) {
             return nodes?.items ?? [];
         }
-        return nodes.items.filter((node) => {
-            return searchMatch(query, node.metadata.name);
-        });
+        return nodes.items.filter((node) => resourceMatch(query, node));
     }, [nodes, query]);
     const sortedNodes = useMemo(
         () =>
