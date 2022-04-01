@@ -2,7 +2,7 @@ export type AppRoute = {
     context: string;
     namespaces: AppNamespacesSelection;
     params: Record<string, unknown>;
-    editors: Array<AppEditor>;
+    editors: AppEditors;
 };
 
 export type AppNamespacesSelection = {
@@ -10,7 +10,13 @@ export type AppNamespacesSelection = {
     selected: string[];
 };
 
+export type AppEditors = {
+    items?: AppEditor[];
+    selected?: string | undefined;
+};
+
 export type AppEditor = {
+    id: string;
     type: "resource";
     apiVersion: string;
     kind: string;
@@ -25,5 +31,5 @@ export const emptyAppRoute: AppRoute = {
         selected: [],
     },
     params: {},
-    editors: [],
+    editors: {},
 };

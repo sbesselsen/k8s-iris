@@ -16,6 +16,9 @@ export const AppHashParamsSync: React.FC = () => {
             if (route.params) {
                 appRoute.params = route.params;
             }
+            if (route.editors) {
+                appRoute.editors = route.editors;
+            }
             store.setCurrent(appRoute, true);
         }
 

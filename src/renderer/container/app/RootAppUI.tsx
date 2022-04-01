@@ -39,6 +39,7 @@ import { AppToolbar } from "./AppToolbar";
 import { ParamNamespace, useAppParam } from "../../context/param";
 import { k8sSmartCompare } from "../../../common/util/sort";
 import { ContextUnlockButton } from "../k8s-context/ContextUnlockButton";
+import { useAppEditors, useAppEditorsSetter } from "../../context/editors";
 
 const ClusterOverview = React.lazy(async () => ({
     default: (await import("../cluster/ClusterOverview")).ClusterOverview,
@@ -172,17 +173,30 @@ export const RootAppUI: React.FunctionComponent = () => {
         []
     );
 
+    const selectedEditor = useAppEditors((editors) => editors.selected);
+    const setAppEditors = useAppEditorsSetter();
+
     const onChangeMenuItemSelection = useCallback(
         (selection: string, requestNewWindow: boolean = false) => {
             if (requestNewWindow) {
                 createWindow({
-                    route: setMenuItem.asRoute(selection),
+                    route: setMenuItem.asRoute(
+                        selection,
+                        setAppEditors.asRoute((editors) => ({
+                            ...editors,
+                            selected: undefined,
+                        }))
+                    ),
                 });
             } else {
+                setAppEditors((editors) => ({
+                    ...editors,
+                    selected: undefined,
+                }));
                 setMenuItem(selection);
             }
         },
-        [createWindow, setMenuItem]
+        [createWindow, setAppEditors, setMenuItem]
     );
 
     const sortedNamespaces = useMemo(
@@ -195,14 +209,46 @@ export const RootAppUI: React.FunctionComponent = () => {
 
     const isReady = contextualColorTheme !== null;
 
-    const editors = useAppRoute((route) => route.editors ?? []);
+    const editors = useAppEditors((editors) => editors.items);
     const editorMenuItems = useMemo(
         () =>
-            editors.map((editor) => ({
+            (editors ?? []).map((editor) => ({
                 ...editor,
                 id: `${editor.apiVersion}:${editor.kind}:${editor.namespace}:${editor.name}`,
             })),
         [editors]
+    );
+
+    const onChangeSelectedEditor = useCallback(
+        (id: string | undefined) => {
+            if (metaKeyRef.current) {
+                if (id) {
+                    // Open a window with only the specified editor.
+                    createWindow({
+                        route: setAppEditors.asRoute((editors) => ({
+                            ...editors,
+                            selected: id,
+                            items: editors.items?.filter((e) => e.id === id),
+                        })),
+                    });
+                }
+            } else {
+                setAppEditors((editors) => ({ ...editors, selected: id }));
+            }
+        },
+        [createWindow, metaKeyRef, setAppEditors]
+    );
+
+    const onCloseEditor = useCallback(
+        (id: string) => {
+            setAppEditors((editors) => ({
+                ...editors,
+                selected:
+                    editors.selected === id ? undefined : editors.selected,
+                items: editors.items?.filter((editor) => editor.id !== id),
+            }));
+        },
+        [setAppEditors]
     );
 
     useEffect(() => {
@@ -241,11 +287,16 @@ export const RootAppUI: React.FunctionComponent = () => {
                     >
                         <SidebarMainMenu
                             items={sidebarMainMenuItems}
-                            selection={menuItem}
+                            selection={selectedEditor ? undefined : menuItem}
                             onChangeSelection={onChangeMenuItemSelection}
                         />
                         {editorMenuItems.length > 0 && (
-                            <SidebarEditorsMenu items={editorMenuItems} />
+                            <SidebarEditorsMenu
+                                items={editorMenuItems}
+                                selection={selectedEditor}
+                                onChangeSelection={onChangeSelectedEditor}
+                                onCloseEditor={onCloseEditor}
+                            />
                         )}
                         <SidebarNamespacesMenu
                             selection={namespacesSelection}
@@ -266,7 +317,10 @@ export const RootAppUI: React.FunctionComponent = () => {
                             <ClusterError error={namespacesError} />
                         </Box>
                     ) : (
-                        <AppContent menuItem={menuItem} />
+                        <AppContent
+                            menuItem={menuItem}
+                            editor={selectedEditor}
+                        />
                     )
                 }
             />
@@ -279,14 +333,22 @@ const appComponents: Record<string, ReactNode> = {
     cluster: <ClusterOverview />,
 };
 
-const AppContent: React.FC<{ menuItem: string }> = (props) => {
-    const { menuItem } = props;
+type AppContentProps = {
+    menuItem: string | undefined;
+    editor: string | undefined;
+};
+
+const AppContent: React.FC<AppContentProps> = (props) => {
+    const { editor, menuItem } = props;
 
     return (
         <Suspense fallback={<Box />}>
-            <ParamNamespace name={menuItem}>
-                {appComponents[menuItem] ?? <Box />}
-            </ParamNamespace>
+            {menuItem && !editor && (
+                <ParamNamespace name={menuItem}>
+                    {appComponents[menuItem] ?? <Box />}
+                </ParamNamespace>
+            )}
+            {editor && <ParamNamespace name={editor}>test</ParamNamespace>}
         </Suspense>
     );
 };

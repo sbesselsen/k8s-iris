@@ -218,6 +218,19 @@ export function createClient(
         return path;
     };
 
+    // Add apiVersion and kind from the query to the objects if they don't have them.
+    const assignTypeFromListQuery =
+        (spec: K8sObjectListQuery) =>
+        (obj: K8sObject): K8sObject => {
+            if (!obj.apiVersion) {
+                obj.apiVersion = spec.apiVersion;
+            }
+            if (!obj.kind) {
+                obj.kind = spec.kind;
+            }
+            return obj;
+        };
+
     const list = async <T extends K8sObject = K8sObject>(
         spec: K8sObjectListQuery
     ): Promise<K8sObjectList<T>> => {
@@ -242,6 +255,11 @@ export function createClient(
                             ) {
                                 reject(data);
                                 return;
+                            }
+                            if (data.items) {
+                                data.items = data.items.map(
+                                    assignTypeFromListQuery(spec)
+                                );
                             }
                             resolve(data);
                         } catch (e) {
@@ -337,8 +355,9 @@ export function createClient(
                                         reject(data);
                                         return;
                                     }
-                                    list.items =
-                                        data.items.filter(passesNamespaceCheck);
+                                    list.items = data.items
+                                        .filter(passesNamespaceCheck)
+                                        .map(assignTypeFromListQuery(spec));
                                     watcher(undefined, { list });
                                     resolve({ response, body: data });
                                 } catch (e) {

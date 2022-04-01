@@ -15,7 +15,7 @@ import {
 } from "@chakra-ui/react";
 import React, {
     ElementType,
-    Fragment,
+    KeyboardEvent,
     MouseEvent,
     ReactNode,
     useCallback,
@@ -346,21 +346,19 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
     );
 };
 
-export type SidebarEditorsMenuItem = AppEditor & {
-    id: string;
-};
+export type SidebarEditorsMenuItem = AppEditor;
 
 export type SidebarEditorsMenuProps = {
     items: SidebarEditorsMenuItem[];
     selection?: string | undefined;
     onChangeSelection?: (selection: string, requestNewWindow?: boolean) => void;
-    onCloseItem?: (id: string) => void;
+    onCloseEditor?: (id: string) => void;
 };
 
 export const SidebarEditorsMenu: React.FC<SidebarEditorsMenuProps> = (
     props
 ) => {
-    const { items, selection, onChangeSelection } = props;
+    const { items, selection, onChangeSelection, onCloseEditor } = props;
 
     const opacity = useWindowFocusValue(1.0, 0.5);
 
@@ -371,6 +369,13 @@ export const SidebarEditorsMenu: React.FC<SidebarEditorsMenuProps> = (
                 onChangeSelection?.(item.id, metaKeyRef.current);
             }),
         [items, metaKeyRef, onChangeSelection]
+    );
+    const onCloseEditorCallbacks = useMemo(
+        () =>
+            items.map((item) => () => {
+                onCloseEditor?.(item.id);
+            }),
+        [items, onCloseEditor]
     );
 
     return (
@@ -405,6 +410,7 @@ export const SidebarEditorsMenu: React.FC<SidebarEditorsMenuProps> = (
                         key={item.id}
                         isSelected={selection === item.id}
                         onSelect={onSelectCallbacks[index]}
+                        onClose={onCloseEditorCallbacks[index]}
                         item={item}
                     />
                 ))}
@@ -416,13 +422,14 @@ export const SidebarEditorsMenu: React.FC<SidebarEditorsMenuProps> = (
 type SidebarEditorsMenuButtonProps = {
     item: SidebarEditorsMenuItem;
     isSelected?: boolean;
+    onClose?: () => void;
     onSelect?: () => void;
 };
 
 const SidebarEditorsMenuButton: React.FC<SidebarEditorsMenuButtonProps> = (
     props
 ) => {
-    const { item, isSelected = false, onSelect } = props;
+    const { item, isSelected = false, onClose, onSelect } = props;
 
     const iconSize = 2;
 
@@ -434,19 +441,40 @@ const SidebarEditorsMenuButton: React.FC<SidebarEditorsMenuButtonProps> = (
         "primary.500",
         "primary.500"
     );
+
+    const onClickCloseCallback = useCallback(
+        (e: MouseEvent) => {
+            e.stopPropagation();
+            e.preventDefault();
+            onClose?.();
+        },
+        [onClose]
+    );
+
     const icon = (
         <CloseIcon
             verticalAlign="middle"
             w={iconSize}
             h={iconSize}
             color={isSelected ? selectedTextColor : iconColor}
+            onClick={onClickCloseCallback}
         />
+    );
+
+    const onKeyDown = useCallback(
+        (e: KeyboardEvent) => {
+            if (e.key === "Delete" || e.key === "Backspace") {
+                onClose?.();
+            }
+        },
+        [onClose]
     );
 
     const focusShadow = useToken("shadows", "outline");
 
     return (
         <AppTooltip
+            openDelay={500}
             label={
                 <>
                     <Box>
@@ -481,6 +509,7 @@ const SidebarEditorsMenuButton: React.FC<SidebarEditorsMenuButtonProps> = (
                 fontWeight="normal"
                 transition="none"
                 onClick={onSelect}
+                onKeyDown={onKeyDown}
                 _hover={{
                     bg: hoverBackgroundColor,
                 }}

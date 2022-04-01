@@ -9,6 +9,7 @@ import {
     ButtonGroup,
     Heading,
     HStack,
+    Link,
     Table,
     Tbody,
     Td,
@@ -29,6 +30,11 @@ import { resourceMatch } from "../../../common/util/search";
 import { k8sSmartCompare } from "../../../common/util/sort";
 import { ScrollBox } from "../../component/main/ScrollBox";
 import { Selectable } from "../../component/main/Selectable";
+import {
+    appEditorForK8sObject,
+    useAppEditorsSetter,
+    useAppEditorUpdater,
+} from "../../context/editors";
 import { useK8sNamespaces } from "../../context/k8s-namespaces";
 import { useAppParam } from "../../context/param";
 import { useAppSearch } from "../../context/search";
@@ -354,6 +360,9 @@ type InnerResourceListProps = {
 const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
     const { resourceTypeInfo } = props;
 
+    const updateAppEditor = useAppEditorUpdater();
+    const setAppEditors = useAppEditorsSetter();
+
     const namespaces = useK8sNamespaces();
 
     const [_isLoadingResources, resources, _resourcesError] = useK8sListWatch(
@@ -394,6 +403,34 @@ const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
             (namespaces.mode === "all" || namespaces.selected.length > 1),
     });
 
+    // TODO: make this easier to reuse; then reuse it
+    const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
+    const metaKeyRef = useModifierKeyRef("Meta");
+    const onOpenHandlers = useMemo(
+        () =>
+            sortedResources.map((resource) => () => {
+                const editor = appEditorForK8sObject(resource);
+                if (metaKeyRef.current) {
+                    createWindow({
+                        route: setAppEditors.asRoute((editors) => ({
+                            ...editors,
+                            selected: editor.id,
+                            items: [editor],
+                        })),
+                    });
+                } else {
+                    updateAppEditor(editor);
+                }
+            }),
+        [
+            createWindow,
+            metaKeyRef,
+            setAppEditors,
+            sortedResources,
+            updateAppEditor,
+        ]
+    );
+
     return (
         <Box>
             <Table
@@ -410,9 +447,10 @@ const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
                     </Tr>
                 </Thead>
                 <Tbody>
-                    {sortedResources.map((resource) => (
+                    {sortedResources.map((resource, index) => (
                         <ResourceRow
                             resource={resource}
+                            onOpen={onOpenHandlers[index]}
                             showNamespace={showNamespace}
                             key={
                                 resource.metadata.namespace +
@@ -427,10 +465,14 @@ const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
     );
 };
 
-const ResourceRow: React.FC<{ resource: K8sObject; showNamespace: boolean }> = (
-    props
-) => {
-    const { resource, showNamespace } = props;
+type ResourceRowProps = {
+    resource: K8sObject;
+    showNamespace: boolean;
+    onOpen: () => void;
+};
+
+const ResourceRow: React.FC<ResourceRowProps> = (props) => {
+    const { resource, onOpen, showNamespace } = props;
 
     const creationDate = new Date((resource as any).metadata.creationTimestamp);
 
@@ -442,7 +484,7 @@ const ResourceRow: React.FC<{ resource: K8sObject; showNamespace: boolean }> = (
             <Td ps={0} verticalAlign="baseline">
                 <HStack p={0}>
                     <Selectable display="block" isTruncated>
-                        {resource.metadata.name}
+                        <Link onClick={onOpen}>{resource.metadata.name}</Link>
                     </Selectable>
                     {isNew && <Badge colorScheme="primary">new</Badge>}
                 </HStack>
