@@ -475,7 +475,7 @@ const SidebarEditorsMenuButton: React.FC<SidebarEditorsMenuButtonProps> = (
 
     return (
         <AppTooltip
-            openDelay={500}
+            openDelay={1000}
             label={
                 <>
                     <Box>
