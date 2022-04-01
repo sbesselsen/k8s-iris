@@ -405,6 +405,7 @@ const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
 
     // TODO: make this easier to reuse; then reuse it
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
+    const altKeyRef = useModifierKeyRef("Alt");
     const metaKeyRef = useModifierKeyRef("Meta");
     const onOpenHandlers = useMemo(
         () =>
@@ -419,10 +420,14 @@ const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
                         })),
                     });
                 } else {
-                    updateAppEditor(editor);
+                    updateAppEditor({
+                        ...editor,
+                        selected: !altKeyRef.current,
+                    });
                 }
             }),
         [
+            altKeyRef,
             createWindow,
             metaKeyRef,
             setAppEditors,

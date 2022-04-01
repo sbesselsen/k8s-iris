@@ -452,13 +452,14 @@ const SidebarEditorsMenuButton: React.FC<SidebarEditorsMenuButtonProps> = (
     );
 
     const icon = (
-        <CloseIcon
-            verticalAlign="middle"
-            w={iconSize}
-            h={iconSize}
-            color={isSelected ? selectedTextColor : iconColor}
-            onClick={onClickCloseCallback}
-        />
+        <Box p={2} onClick={onClickCloseCallback} lineHeight={0}>
+            <CloseIcon
+                verticalAlign="middle"
+                w={iconSize}
+                h={iconSize}
+                color={isSelected ? selectedTextColor : iconColor}
+            />
+        </Box>
     );
 
     const onKeyDown = useCallback(
@@ -497,8 +498,8 @@ const SidebarEditorsMenuButton: React.FC<SidebarEditorsMenuButtonProps> = (
                 flex="0 0 auto"
                 bg="transparent"
                 textColor={itemTextColor}
-                px={3}
-                ps={2}
+                px={2}
+                pe={1}
                 py={0}
                 rightIcon={icon}
                 w="100%"
