@@ -1,3 +1,4 @@
+import { CloseIcon } from "@chakra-ui/icons";
 import {
     Box,
     Button,
@@ -21,12 +22,16 @@ import React, {
     useMemo,
 } from "react";
 import { K8sObject } from "../../../common/k8s/client";
-import { AppNamespacesSelection } from "../../../common/route/app-route";
+import {
+    AppEditor,
+    AppNamespacesSelection,
+} from "../../../common/route/app-route";
 import { searchMatch } from "../../../common/util/search";
 import { useAppSearch } from "../../context/search";
 import { useModifierKeyRef } from "../../hook/keyboard";
 import { useMultiSelectUpdater } from "../../hook/multi-select";
 import { useWindowFocusValue } from "../../hook/window-focus";
+import { AppTooltip } from "./AppTooltip";
 
 export type SidebarMainMenuItem = {
     id: string;
@@ -61,7 +66,7 @@ export const SidebarMainMenu: React.FC<SidebarMainMenuProps> = (props) => {
     );
 
     return (
-        <VStack mt={2} mx={2} spacing={0} opacity={opacity}>
+        <VStack pt={2} px={2} spacing={0} opacity={opacity}>
             {items.map((item) => (
                 <SidebarMenuButton
                     key={item.id}
@@ -252,6 +257,7 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                     fontSize="sm"
                     onClick={onClickSingleNamespace[name]}
                     flexGrow="1"
+                    textColor={itemTextColor}
                     isTruncated
                     pe={4}
                 >
@@ -262,7 +268,7 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
     };
 
     return (
-        <Fragment>
+        <VStack flex="1 0 0" alignItems="stretch">
             <Heading
                 textColor={"primary.500"}
                 fontWeight="semibold"
@@ -270,7 +276,6 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                 textTransform="uppercase"
                 opacity={opacity}
                 px={4}
-                pt={4}
             >
                 Namespaces
             </Heading>
@@ -337,6 +342,162 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                     </CheckboxGroup>
                 </Collapse>
             </Box>
-        </Fragment>
+        </VStack>
+    );
+};
+
+export type SidebarEditorsMenuItem = AppEditor & {
+    id: string;
+};
+
+export type SidebarEditorsMenuProps = {
+    items: SidebarEditorsMenuItem[];
+    selection?: string | undefined;
+    onChangeSelection?: (selection: string, requestNewWindow?: boolean) => void;
+    onCloseItem?: (id: string) => void;
+};
+
+export const SidebarEditorsMenu: React.FC<SidebarEditorsMenuProps> = (
+    props
+) => {
+    const { items, selection, onChangeSelection } = props;
+
+    const opacity = useWindowFocusValue(1.0, 0.5);
+
+    const metaKeyRef = useModifierKeyRef("Meta");
+    const onSelectCallbacks = useMemo(
+        () =>
+            items.map((item) => () => {
+                onChangeSelection?.(item.id, metaKeyRef.current);
+            }),
+        [items, metaKeyRef, onChangeSelection]
+    );
+
+    return (
+        <VStack
+            flex="0 0 auto"
+            spacing={0}
+            alignItems="stretch"
+            p={0}
+            opacity={opacity}
+        >
+            <Heading
+                textColor={"primary.500"}
+                fontWeight="semibold"
+                fontSize="xs"
+                textTransform="uppercase"
+                px={4}
+            >
+                Editors
+            </Heading>
+
+            <VStack
+                flex="0 0 auto"
+                overflow="hidden scroll"
+                sx={{ scrollbarGutter: "stable" }}
+                maxHeight="200px"
+                spacing={0}
+                px={2}
+                py={1}
+            >
+                {items.map((item, index) => (
+                    <SidebarEditorsMenuButton
+                        key={item.id}
+                        isSelected={selection === item.id}
+                        onSelect={onSelectCallbacks[index]}
+                        item={item}
+                    />
+                ))}
+            </VStack>
+        </VStack>
+    );
+};
+
+type SidebarEditorsMenuButtonProps = {
+    item: SidebarEditorsMenuItem;
+    isSelected?: boolean;
+    onSelect?: () => void;
+};
+
+const SidebarEditorsMenuButton: React.FC<SidebarEditorsMenuButtonProps> = (
+    props
+) => {
+    const { item, isSelected = false, onSelect } = props;
+
+    const iconSize = 2;
+
+    const itemTextColor = useColorModeValue("primary.900", "white");
+    const iconColor = "primary.500";
+    const selectedTextColor = "white";
+    const hoverBackgroundColor = useColorModeValue("primary.50", "primary.700");
+    const selectedBackgroundColor = useColorModeValue(
+        "primary.500",
+        "primary.500"
+    );
+    const icon = (
+        <CloseIcon
+            verticalAlign="middle"
+            w={iconSize}
+            h={iconSize}
+            color={isSelected ? selectedTextColor : iconColor}
+        />
+    );
+
+    const focusShadow = useToken("shadows", "outline");
+
+    return (
+        <AppTooltip
+            label={
+                <>
+                    <Box>
+                        <strong>{item.kind}: </strong>
+                        {item.name}
+                    </Box>
+                    <Box>
+                        <strong>API version:</strong> {item.apiVersion}
+                    </Box>
+                    {item.namespace && (
+                        <Box>
+                            <strong>Namespace: </strong>
+                            {item.namespace}
+                        </Box>
+                    )}
+                </>
+            }
+        >
+            <Button
+                flex="0 0 auto"
+                bg="transparent"
+                textColor={itemTextColor}
+                px={3}
+                ps={2}
+                py={0}
+                rightIcon={icon}
+                w="100%"
+                h={8}
+                fontSize="sm"
+                borderRadius={6}
+                justifyContent="start"
+                fontWeight="normal"
+                transition="none"
+                onClick={onSelect}
+                _hover={{
+                    bg: hoverBackgroundColor,
+                }}
+                _active={{
+                    textColor: selectedTextColor,
+                    bg: selectedBackgroundColor,
+                }}
+                _focus={{}}
+                _focusVisible={{
+                    boxShadow: focusShadow,
+                }}
+                isActive={isSelected}
+            >
+                <Box flex="1 0 0" textAlign="left" isTruncated>
+                    {item.name}
+                </Box>
+            </Button>
+        </AppTooltip>
     );
 };

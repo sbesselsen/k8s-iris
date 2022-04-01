@@ -25,6 +25,7 @@ import { useAppSearch, useAppSearchStore } from "../../context/search";
 import {
     SidebarMainMenu,
     SidebarMainMenuItem,
+    SidebarEditorsMenu,
     SidebarNamespacesMenu,
 } from "../../component/main/SidebarMenu";
 import { SiKubernetes } from "react-icons/si";
@@ -194,6 +195,16 @@ export const RootAppUI: React.FunctionComponent = () => {
 
     const isReady = contextualColorTheme !== null;
 
+    const editors = useAppRoute((route) => route.editors ?? []);
+    const editorMenuItems = useMemo(
+        () =>
+            editors.map((editor) => ({
+                ...editor,
+                id: `${editor.apiVersion}:${editor.kind}:${editor.namespace}:${editor.name}`,
+            })),
+        [editors]
+    );
+
     useEffect(() => {
         document.body.classList.toggle("app-ui-mounted", isReady);
     }, [isReady]);
@@ -222,12 +233,20 @@ export const RootAppUI: React.FunctionComponent = () => {
                     </Box>
                 }
                 sidebar={
-                    <VStack h="100%" position="relative" alignItems="stretch">
+                    <VStack
+                        h="100%"
+                        spacing={6}
+                        position="relative"
+                        alignItems="stretch"
+                    >
                         <SidebarMainMenu
                             items={sidebarMainMenuItems}
                             selection={menuItem}
                             onChangeSelection={onChangeMenuItemSelection}
                         />
+                        {editorMenuItems.length > 0 && (
+                            <SidebarEditorsMenu items={editorMenuItems} />
+                        )}
                         <SidebarNamespacesMenu
                             selection={namespacesSelection}
                             onChangeSelection={onChangeNamespacesSelection}

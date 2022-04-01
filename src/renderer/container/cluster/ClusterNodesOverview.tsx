@@ -18,6 +18,7 @@ import { K8sObject } from "../../../common/k8s/client";
 import { parseCpu, parseMemory } from "../../../common/k8s/util";
 import { resourceMatch } from "../../../common/util/search";
 import { k8sSmartCompare } from "../../../common/util/sort";
+import { AppTooltip } from "../../component/main/AppTooltip";
 import { ScrollBox } from "../../component/main/ScrollBox";
 import { Selectable } from "../../component/main/Selectable";
 import { useAppSearch } from "../../context/search";
@@ -152,7 +153,7 @@ const NodeInfo: React.FC<NodeInfoProps> = React.memo((props) => {
             </Td>
             <Td verticalAlign="baseline">
                 {totalCpu > 0 && cpu !== null && (
-                    <Tooltip
+                    <AppTooltip
                         label={
                             cpu.toFixed(1) +
                             " / " +
@@ -165,13 +166,13 @@ const NodeInfo: React.FC<NodeInfoProps> = React.memo((props) => {
                             colorScheme={cpu / totalCpu > 0.8 ? "red" : "gray"}
                             w="100%"
                         />
-                    </Tooltip>
+                    </AppTooltip>
                 )}
                 {!totalCpu && cpu !== null && <Badge>{cpu.toFixed(1)}</Badge>}
             </Td>
             <Td verticalAlign="baseline">
                 {totalMemory > 0 && memory !== null && (
-                    <Tooltip
+                    <AppTooltip
                         w="100%"
                         label={
                             memory.toFixed(1) +
@@ -188,7 +189,7 @@ const NodeInfo: React.FC<NodeInfoProps> = React.memo((props) => {
                             w="100%"
                             textTransform="none"
                         />
-                    </Tooltip>
+                    </AppTooltip>
                 )}
                 {!totalMemory && memory !== null && (
                     <Badge>{memory.toFixed(1)}</Badge>
