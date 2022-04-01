@@ -20,6 +20,11 @@ export type K8sObject = K8sResourceTypeIdentifier & {
     metadata: K8sObjectMetadata;
 };
 
+export type K8sObjectIdentifier = K8sResourceTypeIdentifier & {
+    name: string;
+    namespace?: string;
+};
+
 export type K8sObjectList<T extends K8sObject = K8sObject> =
     K8sResourceTypeIdentifier & {
         items: T[];

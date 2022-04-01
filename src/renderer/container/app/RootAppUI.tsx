@@ -47,6 +47,9 @@ const ClusterOverview = React.lazy(async () => ({
 const ResourcesOverview = React.lazy(async () => ({
     default: (await import("../resources/ResourcesOverview")).ResourcesOverview,
 }));
+const ResourceEditor = React.lazy(async () => ({
+    default: (await import("../editor/ResourceEditor")).ResourceEditor,
+}));
 
 export const RootAppUI: React.FunctionComponent = () => {
     const colorThemeStore = useColorThemeStore();
@@ -209,15 +212,7 @@ export const RootAppUI: React.FunctionComponent = () => {
 
     const isReady = contextualColorTheme !== null;
 
-    const editors = useAppEditors((editors) => editors.items);
-    const editorMenuItems = useMemo(
-        () =>
-            (editors ?? []).map((editor) => ({
-                ...editor,
-                id: `${editor.apiVersion}:${editor.kind}:${editor.namespace}:${editor.name}`,
-            })),
-        [editors]
-    );
+    const editors = useAppEditors((editors) => editors.items ?? []);
 
     const onChangeSelectedEditor = useCallback(
         (id: string | undefined) => {
@@ -290,9 +285,9 @@ export const RootAppUI: React.FunctionComponent = () => {
                             selection={selectedEditor ? undefined : menuItem}
                             onChangeSelection={onChangeMenuItemSelection}
                         />
-                        {editorMenuItems.length > 0 && (
+                        {editors.length > 0 && (
                             <SidebarEditorsMenu
-                                items={editorMenuItems}
+                                items={editors}
                                 selection={selectedEditor}
                                 onChangeSelection={onChangeSelectedEditor}
                                 onCloseEditor={onCloseEditor}
@@ -341,6 +336,12 @@ type AppContentProps = {
 const AppContent: React.FC<AppContentProps> = (props) => {
     const { editor, menuItem } = props;
 
+    const editorDefs = useAppEditors((editors) => editors.items ?? []);
+    const editorDef = useMemo(
+        () => editorDefs.find((e) => e.id === editor),
+        [editor, editorDefs]
+    );
+
     return (
         <Suspense fallback={<Box />}>
             {menuItem && !editor && (
@@ -348,7 +349,11 @@ const AppContent: React.FC<AppContentProps> = (props) => {
                     {appComponents[menuItem] ?? <Box />}
                 </ParamNamespace>
             )}
-            {editor && <ParamNamespace name={editor}>test</ParamNamespace>}
+            {editor && (
+                <ParamNamespace name="editor">
+                    <ResourceEditor editorResource={editorDef} />
+                </ParamNamespace>
+            )}
         </Suspense>
     );
 };
