@@ -9,7 +9,6 @@ import {
     ButtonGroup,
     Heading,
     HStack,
-    Link,
     Table,
     Tbody,
     Td,
@@ -30,11 +29,6 @@ import { resourceMatch } from "../../../common/util/search";
 import { k8sSmartCompare } from "../../../common/util/sort";
 import { ScrollBox } from "../../component/main/ScrollBox";
 import { Selectable } from "../../component/main/Selectable";
-import {
-    appEditorForK8sObject,
-    useAppEditorsSetter,
-    useAppEditorUpdater,
-} from "../../context/editors";
 import { useK8sNamespaces } from "../../context/k8s-namespaces";
 import { useAppParam } from "../../context/param";
 import { useAppSearch } from "../../context/search";
@@ -43,6 +37,7 @@ import { useModifierKeyRef } from "../../hook/keyboard";
 import { useK8sApiResourceTypes } from "../../k8s/api-resources";
 import { useK8sListWatch } from "../../k8s/list-watch";
 import { formatDeveloperDateTime } from "../../util/date";
+import { ResourceEditorLink } from "./ResourceEditorLink";
 
 export const ResourceAllOverview: React.FC = () => {
     const [selectedResource, setSelectedResource] = useAppParam<
@@ -360,9 +355,6 @@ type InnerResourceListProps = {
 const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
     const { resourceTypeInfo } = props;
 
-    const updateAppEditor = useAppEditorUpdater();
-    const setAppEditors = useAppEditorsSetter();
-
     const namespaces = useK8sNamespaces();
 
     const [_isLoadingResources, resources, _resourcesError] = useK8sListWatch(
@@ -403,39 +395,6 @@ const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
             (namespaces.mode === "all" || namespaces.selected.length > 1),
     });
 
-    // TODO: make this easier to reuse; then reuse it
-    const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
-    const altKeyRef = useModifierKeyRef("Alt");
-    const metaKeyRef = useModifierKeyRef("Meta");
-    const onOpenHandlers = useMemo(
-        () =>
-            sortedResources.map((resource) => () => {
-                const editor = appEditorForK8sObject(resource);
-                if (metaKeyRef.current) {
-                    createWindow({
-                        route: setAppEditors.asRoute((editors) => ({
-                            ...editors,
-                            selected: editor.id,
-                            items: [editor],
-                        })),
-                    });
-                } else {
-                    updateAppEditor({
-                        ...editor,
-                        selected: !altKeyRef.current,
-                    });
-                }
-            }),
-        [
-            altKeyRef,
-            createWindow,
-            metaKeyRef,
-            setAppEditors,
-            sortedResources,
-            updateAppEditor,
-        ]
-    );
-
     return (
         <Box>
             <Table
@@ -455,7 +414,6 @@ const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
                     {sortedResources.map((resource, index) => (
                         <ResourceRow
                             resource={resource}
-                            onOpen={onOpenHandlers[index]}
                             showNamespace={showNamespace}
                             key={
                                 resource.metadata.namespace +
@@ -473,11 +431,10 @@ const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
 type ResourceRowProps = {
     resource: K8sObject;
     showNamespace: boolean;
-    onOpen: () => void;
 };
 
 const ResourceRow: React.FC<ResourceRowProps> = (props) => {
-    const { resource, onOpen, showNamespace } = props;
+    const { resource, showNamespace } = props;
 
     const creationDate = new Date((resource as any).metadata.creationTimestamp);
 
@@ -489,7 +446,9 @@ const ResourceRow: React.FC<ResourceRowProps> = (props) => {
             <Td ps={0} verticalAlign="baseline">
                 <HStack p={0}>
                     <Selectable display="block" isTruncated>
-                        <Link onClick={onOpen}>{resource.metadata.name}</Link>
+                        <ResourceEditorLink editorResource={resource}>
+                            {resource.metadata.name}
+                        </ResourceEditorLink>
                     </Selectable>
                     {isNew && <Badge colorScheme="primary">new</Badge>}
                 </HStack>

@@ -24,6 +24,7 @@ import { Selectable } from "../../component/main/Selectable";
 import { useAppSearch } from "../../context/search";
 import { useK8sListPoll } from "../../k8s/list-poll";
 import { useK8sListWatch } from "../../k8s/list-watch";
+import { ResourceEditorLink } from "../resources/ResourceEditorLink";
 
 export const ClusterNodesOverview: React.FC = (props) => {
     const [_loadingNodes, nodes, _nodesError] = useK8sListWatch(
@@ -142,7 +143,11 @@ const NodeInfo: React.FC<NodeInfoProps> = React.memo((props) => {
             </Td>
             <Td verticalAlign="baseline">
                 <HStack>
-                    <Selectable isTruncated>{node.metadata.name}</Selectable>
+                    <Selectable isTruncated>
+                        <ResourceEditorLink editorResource={node}>
+                            {node.metadata.name}
+                        </ResourceEditorLink>
+                    </Selectable>
                     {isNew && <Badge colorScheme="primary">new</Badge>}
                 </HStack>
                 {(node as any)?.spec?.taints?.length > 0 && (
