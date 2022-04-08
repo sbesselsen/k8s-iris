@@ -344,12 +344,12 @@ const AppContent: React.FC<AppContentProps> = (props) => {
 
     return (
         <Suspense fallback={<Box />}>
-            {menuItem && !editor && (
+            {menuItem && !editorDef && (
                 <ParamNamespace name={menuItem}>
                     {appComponents[menuItem] ?? <Box />}
                 </ParamNamespace>
             )}
-            {editor && (
+            {editorDef && (
                 <ParamNamespace name="editor">
                     <ResourceEditor editorResource={editorDef} />
                 </ParamNamespace>

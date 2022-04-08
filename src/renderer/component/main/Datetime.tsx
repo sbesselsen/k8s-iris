@@ -1,11 +1,12 @@
 import React from "react";
 
-export const Datetime: React.FC<{ value: string | null | undefined }> = (
-    props
-) => {
+export const Datetime: React.FC<{
+    value: string | number | null | undefined;
+}> = (props) => {
     const { value } = props;
 
-    const parsedDate = Date.parse(value ?? "");
+    const parsedDate =
+        typeof value === "number" ? value : Date.parse(value ?? "");
     if (isNaN(parsedDate)) {
         return null;
     }
