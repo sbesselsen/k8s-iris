@@ -219,7 +219,11 @@ export const K8sInnerObjectViewer: React.FC<K8sInnerObjectViewerProps> =
                                 display="block"
                                 isTruncated
                             >
-                                <Text fontWeight="semibold" display="inline">
+                                <Text
+                                    fontWeight="semibold"
+                                    display="inline"
+                                    userSelect="inherit"
+                                >
                                     {key}
                                 </Text>
                                 {displayRule.keyValueSeparator ?? ": "}
