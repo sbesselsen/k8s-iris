@@ -20,6 +20,7 @@ import React, { useCallback, useMemo } from "react";
 import { K8sObject } from "../../../common/k8s/client";
 import { useAppParam } from "../../context/param";
 import { Datetime } from "../main/Datetime";
+import { Defer } from "../main/Defer";
 import { Selectable } from "../main/Selectable";
 
 export type K8sResourceDisplayRule = {
@@ -56,13 +57,6 @@ export const K8sObjectViewer: React.FC<K8sObjectViewerProps> = (props) => {
     );
 };
 
-export const RenderTester: React.FC<K8sInnerObjectViewerProps> = React.memo(
-    (props) => {
-        console.log("test render");
-        return <strong>test</strong>;
-    }
-);
-
 export type K8sInnerObjectViewerProps = {
     data: any;
     path: string;
@@ -81,112 +75,97 @@ const sortOptions = {
     ignorePunctuation: true,
 };
 
-export const K8sInnerObjectViewer: React.FC<K8sInnerObjectViewerProps> =
-    React.memo((props) => {
-        const { data, path, displayRulesMap } = props;
+export const K8sInnerObjectViewer: React.FC<K8sInnerObjectViewerProps> = (
+    props
+) => {
+    const { data, path, displayRulesMap } = props;
 
-        const displayRule = useMemo(
-            () => calcDisplayRule(path, displayRulesMap),
-            [path, displayRulesMap]
-        );
+    const displayRule = useMemo(
+        () => calcDisplayRule(path, displayRulesMap),
+        [path, displayRulesMap]
+    );
 
-        const emptyTextColor = useColorModeValue("gray.500", "gray.500");
+    const emptyTextColor = useColorModeValue("gray.500", "gray.500");
 
-        const isSimple = isSimpleValue(data);
-        const arrayIsSimple = useMemo(
-            () => Array.isArray(data) && isSimpleArray(data),
-            [data]
-        );
-        const keyField = useMemo(
-            () =>
-                Array.isArray(data) && !arrayIsSimple
-                    ? displayRule.subKeyField ?? detectKeyField(data)
-                    : undefined,
-            [arrayIsSimple, displayRule, data]
-        );
+    const isSimple = isSimpleValue(data);
+    const arrayIsSimple = useMemo(
+        () => Array.isArray(data) && isSimpleArray(data),
+        [data]
+    );
+    const keyField = useMemo(
+        () =>
+            Array.isArray(data) && !arrayIsSimple
+                ? displayRule.subKeyField ?? detectKeyField(data)
+                : undefined,
+        [arrayIsSimple, displayRule, data]
+    );
 
-        if (displayRule.displayAs === "hidden") {
-            return null;
+    if (displayRule.displayAs === "hidden") {
+        return null;
+    }
+
+    if (isSimple) {
+        const isEmpty =
+            data === "" ||
+            data === null ||
+            data === undefined ||
+            (typeof data === "object" && Object.keys(data).length === 0);
+        const isBoolean = typeof data === "boolean";
+        let isTimestamp = false;
+        let timestamp: number | undefined;
+        if (String(data).match(/^[0-9]{4}-[0-9]{2}-[0-9]{2}T/)) {
+            timestamp = Date.parse(String(data));
+            isTimestamp = !isNaN(timestamp);
         }
-
-        if (isSimple) {
-            const isEmpty =
-                data === "" ||
-                data === null ||
-                data === undefined ||
-                (typeof data === "object" && Object.keys(data).length === 0);
-            const isBoolean = typeof data === "boolean";
-            let isTimestamp = false;
-            let timestamp: number | undefined;
-            if (String(data).match(/^[0-9]{4}-[0-9]{2}-[0-9]{2}T/)) {
-                timestamp = Date.parse(String(data));
-                isTimestamp = !isNaN(timestamp);
-            }
+        return (
+            <Selectable
+                fontSize="sm"
+                display="block"
+                isTruncated
+                {...(isEmpty ? { textColor: emptyTextColor } : {})}
+            >
+                {isEmpty && "(empty)"}
+                {isBoolean && (
+                    <Checkbox isChecked={data} colorScheme="primary" readOnly />
+                )}
+                {isTimestamp && <Datetime value={timestamp} />}
+                {!isEmpty && !isBoolean && !isTimestamp && String(data)}
+            </Selectable>
+        );
+    }
+    if (Array.isArray(data)) {
+        if (data.length === 0) {
+            <Selectable
+                fontSize="sm"
+                display="block"
+                textColor={emptyTextColor}
+                isTruncated
+            >
+                (empty list)
+            </Selectable>;
+        }
+        if (arrayIsSimple) {
+            // Show a basic list.
             return (
-                <Selectable
-                    fontSize="sm"
-                    display="block"
-                    isTruncated
-                    {...(isEmpty ? { textColor: emptyTextColor } : {})}
-                >
-                    {isEmpty && "(empty)"}
-                    {isBoolean && (
-                        <Checkbox
-                            isChecked={data}
-                            colorScheme="primary"
-                            readOnly
-                        />
-                    )}
-                    {isTimestamp && <Datetime value={timestamp} />}
-                    {!isEmpty && !isBoolean && !isTimestamp && String(data)}
-                </Selectable>
+                <List>
+                    {data.map((value, index) => (
+                        <ListItem key={index}>
+                            <K8sInnerObjectViewer
+                                data={value}
+                                path={path}
+                                displayRulesMap={displayRulesMap}
+                            />
+                        </ListItem>
+                    ))}
+                </List>
             );
         }
-        if (Array.isArray(data)) {
-            if (data.length === 0) {
-                <Selectable
-                    fontSize="sm"
-                    display="block"
-                    textColor={emptyTextColor}
-                    isTruncated
-                >
-                    (empty list)
-                </Selectable>;
-            }
-            if (arrayIsSimple) {
-                // Show a basic list.
-                return (
-                    <List>
-                        {data.map((value, index) => (
-                            <ListItem key={index}>
-                                <K8sInnerObjectViewer
-                                    data={value}
-                                    path={path}
-                                    displayRulesMap={displayRulesMap}
-                                />
-                            </ListItem>
-                        ))}
-                    </List>
-                );
-            }
-            if (keyField) {
-                return (
-                    <K8sObjectAccordion
-                        path={path}
-                        items={data.map((item) => ({
-                            key: item[keyField],
-                            item,
-                            path,
-                        }))}
-                        displayRulesMap={displayRulesMap}
-                    />
-                );
-            }
+        if (keyField) {
             return (
                 <K8sObjectAccordion
                     path={path}
-                    items={data.map((item, index) => ({
-                        key: `[${index}]`,
+                    items={data.map((item) => ({
+                        key: item[keyField],
                         item,
                         path,
                     }))}
@@ -194,72 +173,80 @@ export const K8sInnerObjectViewer: React.FC<K8sInnerObjectViewerProps> =
                 />
             );
         }
-
-        if (!data) {
-            return null;
-        }
-
-        let entries = Object.entries(data);
-        if (entries.length === 0) {
-            return null;
-        }
-
-        // Sort the entries.
-        if (displayRule.keysOrder) {
-            sortEntriesByKeysOrder(entries, displayRule.keysOrder);
-        }
-
-        if (displayRule.displayAs === "string-key-pair") {
-            return (
-                <List>
-                    {Object.entries(data).map(([key, value]) => (
-                        <ListItem key={key}>
-                            <Selectable
-                                fontSize="sm"
-                                display="block"
-                                isTruncated
-                            >
-                                <Text
-                                    fontWeight="semibold"
-                                    display="inline"
-                                    userSelect="inherit"
-                                >
-                                    {key}
-                                </Text>
-                                {displayRule.keyValueSeparator ?? ": "}
-                                {value}
-                            </Selectable>
-                        </ListItem>
-                    ))}
-                </List>
-            );
-        }
-
-        if (displayRule.displayAs === "accordion") {
-            return (
-                <K8sObjectAccordion
-                    path={path}
-                    items={entries.map(([key, item]) => ({
-                        key,
-                        item,
-                        path: mergePath(path, key),
-                    }))}
-                    displayRulesMap={displayRulesMap}
-                />
-            );
-        }
-
         return (
-            <K8sObjectMap
+            <K8sObjectAccordion
+                path={path}
+                items={data.map((item, index) => ({
+                    key: `[${index}]`,
+                    item,
+                    path,
+                }))}
+                displayRulesMap={displayRulesMap}
+            />
+        );
+    }
+
+    if (!data) {
+        return null;
+    }
+
+    let entries = Object.entries(data);
+    if (entries.length === 0) {
+        return null;
+    }
+
+    // Sort the entries.
+    if (displayRule.keysOrder) {
+        sortEntriesByKeysOrder(entries, displayRule.keysOrder);
+    }
+
+    if (displayRule.displayAs === "string-key-pair") {
+        return (
+            <List>
+                {Object.entries(data).map(([key, value]) => (
+                    <ListItem key={key}>
+                        <Selectable fontSize="sm" display="block" isTruncated>
+                            <Text
+                                fontWeight="semibold"
+                                display="inline"
+                                userSelect="inherit"
+                            >
+                                {key}
+                            </Text>
+                            {displayRule.keyValueSeparator ?? ": "}
+                            {value}
+                        </Selectable>
+                    </ListItem>
+                ))}
+            </List>
+        );
+    }
+
+    if (displayRule.displayAs === "accordion") {
+        return (
+            <K8sObjectAccordion
+                path={path}
                 items={entries.map(([key, item]) => ({
-                    title: key,
+                    key,
                     item,
                     path: mergePath(path, key),
                 }))}
                 displayRulesMap={displayRulesMap}
             />
         );
-    });
+    }
+
+    return (
+        <K8sObjectMap
+            items={entries.map(([key, item]) => ({
+                title: key,
+                item,
+                path: mergePath(path, key),
+            }))}
+            displayRulesMap={displayRulesMap}
+        />
+    );
+};
 
 function mergePath(path: string, subPath: string): string {
     return path === "." ? path + subPath : path + "." + subPath;
@@ -382,7 +369,7 @@ const K8sObjectAccordion: React.FC<K8sObjectAccordionProps> = (props) => {
 
     return (
         <Accordion allowMultiple index={indexes} onChange={onChangeIndexes}>
-            {displayableItems.map(({ key, item, path }) => {
+            {displayableItems.map(({ key, item, path }, index) => {
                 return (
                     <AccordionItem key={key}>
                         <Heading>
@@ -398,11 +385,13 @@ const K8sObjectAccordion: React.FC<K8sObjectAccordionProps> = (props) => {
                             </AccordionButton>
                         </Heading>
                         <AccordionPanel ps={4}>
-                            <K8sInnerObjectViewer
-                                data={item}
-                                path={path}
-                                displayRulesMap={displayRulesMap}
-                            />
+                            <Defer initialize={indexes.includes(index)}>
+                                <K8sInnerObjectViewer
+                                    data={item}
+                                    path={path}
+                                    displayRulesMap={displayRulesMap}
+                                />
+                            </Defer>
                         </AccordionPanel>
                     </AccordionItem>
                 );
