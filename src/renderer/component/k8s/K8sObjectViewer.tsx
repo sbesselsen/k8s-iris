@@ -319,6 +319,8 @@ const K8sObjectMap: React.FC<K8sObjectMapProps> = (props) => {
                 if (displayRule.displayAs === "hidden") {
                     return null;
                 }
+                const shouldIncludeMargin =
+                    !isSimple && displayRule.displayAs !== "string-key-pair";
 
                 let displayTitle = title.replace(
                     /([a-z])([A-Z])/g,
@@ -341,13 +343,12 @@ const K8sObjectMap: React.FC<K8sObjectMapProps> = (props) => {
                 return (
                     <Box key={path}>
                         <PropHeading>{displayTitle}</PropHeading>
-                        {isSimple ? (
-                            valueViewer
-                        ) : (
-                            <Box mt={2} ps={4}>
-                                {valueViewer}
-                            </Box>
-                        )}
+                        <Box
+                            mt={shouldIncludeMargin ? 2 : 0}
+                            ps={shouldIncludeMargin ? 4 : 0}
+                        >
+                            {valueViewer}
+                        </Box>
                     </Box>
                 );
             })}
