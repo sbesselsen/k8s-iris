@@ -2,7 +2,7 @@ import seedrandom from "seedrandom";
 import { ColorTheme } from "../context/color-theme";
 
 const themes: ColorTheme[] = [
-    { colorScheme: "gray" },
+    //    { colorScheme: "gray" },
     { colorScheme: "red" },
     { colorScheme: "orange" },
     { colorScheme: "green" },
