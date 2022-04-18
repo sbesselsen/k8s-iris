@@ -1,4 +1,12 @@
-import { Box, Checkbox, HStack, VStack } from "@chakra-ui/react";
+import {
+    Box,
+    Button,
+    ButtonGroup,
+    HStack,
+    useColorModeValue,
+    useToken,
+    VStack,
+} from "@chakra-ui/react";
 import React, { useCallback, useMemo } from "react";
 import { K8sObject, K8sObjectIdentifier } from "../../../common/k8s/client";
 import {
@@ -83,6 +91,7 @@ const detailSelectors: string[] = [
     ".spec.priority",
     ".spec.priorityClassName",
     ".spec.restartPolicy",
+    ".spec.rules.http.paths.pathType",
     ".spec.schedulerName",
     ".spec.terminationGracePeriodSeconds",
     ".spec.tolerations",
@@ -172,9 +181,12 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
     const metadata = object?.metadata;
 
     const [showDetails, setShowDetails] = useAppParam("showDetails", false);
-    const toggleDetails = useCallback(() => {
-        setShowDetails((x) => !x, true);
-    }, [setShowDetails]);
+    const onChangeShowDetails = useCallback(
+        (value: boolean) => {
+            setShowDetails(value, true);
+        },
+        [setShowDetails]
+    );
 
     const [expandedItems, setExpandedItems] = useAppParam<string[]>(
         "expandedItems",
@@ -203,13 +215,10 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
                         flex="1 0 0"
                     />
                     <Box>
-                        <Checkbox
-                            onChange={toggleDetails}
-                            isChecked={showDetails}
-                            colorScheme="primary"
-                        >
-                            Show details
-                        </Checkbox>
+                        <ShowDetailsToggle
+                            value={showDetails}
+                            onChange={onChangeShowDetails}
+                        />
                     </Box>
                 </HStack>
                 {object && (
@@ -228,3 +237,71 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
         </ScrollBox>
     );
 });
+
+const ShowDetailsToggle: React.FC<{
+    value: boolean;
+    onChange: (showDetails: boolean) => void;
+}> = (props) => {
+    const { value, onChange } = props;
+
+    const onClickSimple = useCallback(() => {
+        onChange(false);
+    }, [onChange]);
+
+    const onClickDetailed = useCallback(() => {
+        onChange(true);
+    }, [onChange]);
+
+    const itemTextColor = useColorModeValue("primary.900", "white");
+
+    const namespacesToggleBorderColor = "primary.500";
+    const namespacesToggleHoverColor = useColorModeValue(
+        "primary.50",
+        "primary.900"
+    );
+    const focusShadow = useToken("shadows", "outline");
+
+    return (
+        <ButtonGroup variant="outline" size="xs" isAttached>
+            <Button
+                mr="-1px"
+                borderColor={namespacesToggleBorderColor}
+                textColor={itemTextColor}
+                isActive={!value}
+                _active={{
+                    bg: namespacesToggleBorderColor,
+                    textColor: "white",
+                }}
+                _hover={{
+                    bg: namespacesToggleHoverColor,
+                }}
+                _focus={{}}
+                _focusVisible={{
+                    boxShadow: focusShadow,
+                }}
+                onClick={onClickSimple}
+            >
+                Simple
+            </Button>
+            <Button
+                borderColor={namespacesToggleBorderColor}
+                textColor={itemTextColor}
+                isActive={value}
+                _active={{
+                    bg: namespacesToggleBorderColor,
+                    textColor: "white",
+                }}
+                _hover={{
+                    bg: namespacesToggleHoverColor,
+                }}
+                _focus={{}}
+                _focusVisible={{
+                    boxShadow: focusShadow,
+                }}
+                onClick={onClickDetailed}
+            >
+                Detailed
+            </Button>
+        </ButtonGroup>
+    );
+};
