@@ -91,13 +91,17 @@ export function createStoreHooks<T, S extends Store<T>>(
                 localValueRef.current = value;
                 setLocalValue(value);
             }
+            let subscribed = true;
             const listener = () => {
-                const value = getSelectedValue();
-                localValueRef.current = value;
-                setLocalValue(value);
+                if (subscribed) {
+                    const value = getSelectedValue();
+                    localValueRef.current = value;
+                    setLocalValue(value);
+                }
             };
             store.subscribe(listener);
             return () => {
+                subscribed = false;
                 store.unsubscribe(listener);
             };
         }, [localValueRef, setLocalValue, store, ...(deps ?? [])]);
