@@ -1,4 +1,5 @@
 import React from "react";
+import { formatDeveloperDate } from "../../util/date";
 
 export const Datetime: React.FC<{
     value: string | number | null | undefined;
@@ -12,11 +13,11 @@ export const Datetime: React.FC<{
     }
 
     const now = new Date();
-    const currentDateString = now.toLocaleDateString(undefined);
+    const currentDateString = formatDeveloperDate(now);
 
     const date = new Date(parsedDate);
     const timeString = date.toLocaleTimeString(undefined, { hour12: false });
-    let dateString = date.toLocaleDateString(undefined, { hour12: false });
+    let dateString = formatDeveloperDate(date);
     if (dateString === currentDateString) {
         dateString = "today";
     }
