@@ -71,6 +71,7 @@ const detailSelectors: string[] = [
     "..uid",
     "..providerID",
     "..finalizers",
+    ".metadata.generation",
     ".metadata.generateName",
     ".metadata.ownerReferences",
     ".spec.containers.terminationMessagePath",
@@ -175,6 +176,18 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
         setShowDetails((x) => !x, true);
     }, [setShowDetails]);
 
+    const [expandedItems, setExpandedItems] = useAppParam<string[]>(
+        "expandedItems",
+        []
+    );
+
+    const onChangeExpandedItems = useCallback(
+        (items: string[]) => {
+            setExpandedItems(items, true);
+        },
+        [setExpandedItems]
+    );
+
     if (!kind || !apiVersion || !metadata) {
         return null;
     }
@@ -202,6 +215,8 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
                 {object && (
                     <K8sObjectViewer
                         data={object}
+                        expandedItems={expandedItems}
+                        onChangeExpandedItems={onChangeExpandedItems}
                         displayRules={
                             showDetails
                                 ? detailedDisplayRules

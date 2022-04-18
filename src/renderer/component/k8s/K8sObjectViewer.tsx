@@ -14,11 +14,11 @@ import {
     ListItem,
     Text,
     useColorModeValue,
+    useControllableState,
     VStack,
 } from "@chakra-ui/react";
-import React, { useCallback, useMemo } from "react";
+import React, { createContext, useCallback, useContext, useMemo } from "react";
 import { K8sObject } from "../../../common/k8s/client";
-import { useAppParam } from "../../context/param";
 import { Datetime } from "../main/Datetime";
 import { Defer } from "../main/Defer";
 import { Selectable } from "../main/Selectable";
@@ -35,10 +35,29 @@ export type K8sResourceDisplayRule = {
 export type K8sObjectViewerProps = {
     data: any;
     displayRules?: K8sResourceDisplayRule[];
+    expandedItems?: string[];
+    onChangeExpandedItems?: (items: string[]) => void;
+    defaultExpandedItems?: string[];
 };
+
+type K8sObjectViewerContext = {
+    displayRulesMap: Record<string, K8sResourceDisplayRule>;
+    expandedKeysForPath(path: string): [string[], (keys: string[]) => void];
+};
+
+const K8sObjectViewerContext = createContext<K8sObjectViewerContext>({
+    displayRulesMap: {},
+    expandedKeysForPath: () => [[], () => {}],
+});
 
 export const K8sObjectViewer: React.FC<K8sObjectViewerProps> = (props) => {
     const { data, displayRules } = props;
+
+    const [expandedItems, setExpandedItems] = useControllableState({
+        value: props.expandedItems,
+        onChange: props.onChangeExpandedItems,
+        defaultValue: props.defaultExpandedItems ?? [],
+    });
 
     const displayRulesMap = useMemo(
         () =>
@@ -48,19 +67,38 @@ export const K8sObjectViewer: React.FC<K8sObjectViewerProps> = (props) => {
         [displayRules]
     );
 
+    const ctx: K8sObjectViewerContext = useMemo(() => {
+        return {
+            displayRulesMap,
+            expandedKeysForPath(path: string) {
+                const prefix = `${path}::`;
+                return [
+                    expandedItems
+                        .filter((item) => item.startsWith(prefix))
+                        .map((x) => x.substring(prefix.length)),
+                    (items: string[]) => {
+                        setExpandedItems((expandedItems) => [
+                            ...expandedItems.filter(
+                                (item) => !item.startsWith(prefix)
+                            ),
+                            ...items.map((item) => prefix + item),
+                        ]);
+                    },
+                ];
+            },
+        };
+    }, [displayRulesMap, expandedItems, setExpandedItems]);
+
     return (
-        <K8sInnerObjectViewer
-            data={data}
-            path="."
-            displayRulesMap={displayRulesMap}
-        />
+        <K8sObjectViewerContext.Provider value={ctx}>
+            <K8sInnerObjectViewer data={data} path="." />
+        </K8sObjectViewerContext.Provider>
     );
 };
 
 export type K8sInnerObjectViewerProps = {
     data: any;
     path: string;
-    displayRulesMap: Record<string, K8sResourceDisplayRule>;
 };
 
 const defaultDisplayRule: K8sResourceDisplayRule = {
@@ -78,7 +116,9 @@ const sortOptions = {
 export const K8sInnerObjectViewer: React.FC<K8sInnerObjectViewerProps> = (
     props
 ) => {
-    const { data, path, displayRulesMap } = props;
+    const { data, path } = props;
+
+    const { displayRulesMap } = useContext(K8sObjectViewerContext);
 
     const displayRule = useMemo(
         () => calcDisplayRule(path, displayRulesMap),
@@ -150,11 +190,7 @@ export const K8sInnerObjectViewer: React.FC<K8sInnerObjectViewerProps> = (
                 <List>
                     {data.map((value, index) => (
                         <ListItem key={index}>
-                            <K8sInnerObjectViewer
-                                data={value}
-                                path={path}
-                                displayRulesMap={displayRulesMap}
-                            />
+                            <K8sInnerObjectViewer data={value} path={path} />
                         </ListItem>
                     ))}
                 </List>
@@ -169,7 +205,6 @@ export const K8sInnerObjectViewer: React.FC<K8sInnerObjectViewerProps> = (
                         item,
                         path,
                     }))}
-                    displayRulesMap={displayRulesMap}
                 />
             );
         }
@@ -181,7 +216,6 @@ export const K8sInnerObjectViewer: React.FC<K8sInnerObjectViewerProps> = (
                     item,
                     path,
                 }))}
-                displayRulesMap={displayRulesMap}
             />
         );
     }
@@ -231,7 +265,6 @@ export const K8sInnerObjectViewer: React.FC<K8sInnerObjectViewerProps> = (
                     item,
                     path: mergePath(path, key),
                 }))}
-                displayRulesMap={displayRulesMap}
             />
         );
     }
@@ -243,7 +276,6 @@ export const K8sInnerObjectViewer: React.FC<K8sInnerObjectViewerProps> = (
                 item,
                 path: mergePath(path, key),
             }))}
-            displayRulesMap={displayRulesMap}
         />
     );
 };
@@ -274,11 +306,11 @@ type SimpleValue = string | number | boolean | null | undefined;
 
 type K8sObjectMapProps = {
     items: Array<{ title: string; path: string; item: any }>;
-    displayRulesMap: Record<string, K8sResourceDisplayRule>;
 };
 
 const K8sObjectMap: React.FC<K8sObjectMapProps> = (props) => {
-    const { items, displayRulesMap } = props;
+    const { items } = props;
+    const { displayRulesMap } = useContext(K8sObjectViewerContext);
     return (
         <VStack spacing={3} alignItems="stretch">
             {items.map(({ title, path, item }) => {
@@ -304,11 +336,7 @@ const K8sObjectMap: React.FC<K8sObjectMapProps> = (props) => {
                 }
 
                 const valueViewer = (
-                    <K8sInnerObjectViewer
-                        data={displayValue}
-                        path={path}
-                        displayRulesMap={displayRulesMap}
-                    />
+                    <K8sInnerObjectViewer data={displayValue} path={path} />
                 );
                 return (
                     <Box key={path}>
@@ -329,12 +357,12 @@ const K8sObjectMap: React.FC<K8sObjectMapProps> = (props) => {
 
 type K8sObjectAccordionProps = {
     items: Array<{ key: string; path: string; item: any }>;
-    displayRulesMap: Record<string, K8sResourceDisplayRule>;
     path: string;
 };
 
 const K8sObjectAccordion: React.FC<K8sObjectAccordionProps> = (props) => {
-    const { items, displayRulesMap, path } = props;
+    const { items, path } = props;
+    const { displayRulesMap } = useContext(K8sObjectViewerContext);
 
     const displayRules = useMemo(
         () => items.map(({ path }) => calcDisplayRule(path, displayRulesMap)),
@@ -344,24 +372,18 @@ const K8sObjectAccordion: React.FC<K8sObjectAccordionProps> = (props) => {
         (_, index) => displayRules[index].displayAs !== "hidden"
     );
 
-    const [expandedKeys, setExpandedKeys] = useAppParam<
-        Record<string, boolean>
-    >(`accordionKeys.${path}`, {});
+    const [expandedKeys, setExpandedKeys] = useContext(
+        K8sObjectViewerContext
+    ).expandedKeysForPath(path);
 
     const indexes = displayableItems
-        .map((item, index) => (expandedKeys[item.key] ? index : -1))
+        .map((item, index) => (expandedKeys.includes(item.key) ? index : -1))
         .filter((x) => x !== -1);
     const onChangeIndexes = useCallback(
         (indexes: number | number[]) => {
             const indexesArray = Array.isArray(indexes) ? indexes : [indexes];
             setExpandedKeys(
-                Object.fromEntries(
-                    indexesArray
-                        .map((index) => displayableItems[index]?.key)
-                        .filter((x) => x)
-                        .map((key) => [key, true])
-                ),
-                true
+                indexesArray.map((index) => displayableItems[index]?.key)
             );
         },
         [displayableItems, setExpandedKeys]
@@ -386,11 +408,7 @@ const K8sObjectAccordion: React.FC<K8sObjectAccordionProps> = (props) => {
                         </Heading>
                         <AccordionPanel ps={4}>
                             <Defer initialize={indexes.includes(index)}>
-                                <K8sInnerObjectViewer
-                                    data={item}
-                                    path={path}
-                                    displayRulesMap={displayRulesMap}
-                                />
+                                <K8sInnerObjectViewer data={item} path={path} />
                             </Defer>
                         </AccordionPanel>
                     </AccordionItem>
@@ -448,7 +466,15 @@ export const K8sObjectHeading: React.FC<K8sObjectHeadingProps> = (props) => {
 };
 
 function detectKeyField<T>(items: T[]): keyof T | undefined {
-    let possibleKeyFields = ["name", "id", "key", "type"];
+    let possibleKeyFields = [
+        "name",
+        "id",
+        "key",
+        "type",
+        "host",
+        "path",
+        "hostname",
+    ];
     const keyValues: Record<string, string[]> = {};
 
     for (const item of items) {
