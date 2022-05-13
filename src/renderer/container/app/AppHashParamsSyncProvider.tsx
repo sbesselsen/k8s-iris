@@ -3,7 +3,7 @@ import { emptyAppRoute } from "../../../common/route/app-route";
 import { useAppRouteHistoryStore } from "../../context/route";
 import { getHashParams, setHashParams } from "../../util/location";
 
-export const AppHashParamsSync: React.FC = () => {
+export const AppHashParamsSyncProvider: React.FC = ({ children }) => {
     const store = useAppRouteHistoryStore();
 
     useEffect(() => {
@@ -16,8 +16,8 @@ export const AppHashParamsSync: React.FC = () => {
             if (route.params) {
                 appRoute.params = route.params;
             }
-            if (route.editors) {
-                appRoute.editors = route.editors;
+            if (route.activeEditor) {
+                appRoute.activeEditor = route.activeEditor;
             }
             store.setCurrent(appRoute, true);
         }
@@ -33,5 +33,5 @@ export const AppHashParamsSync: React.FC = () => {
         };
     }, [store]);
 
-    return null;
+    return <>{children}</>;
 };

@@ -34,12 +34,15 @@ import { useK8sListWatch } from "../../k8s/list-watch";
 import { useKeyListener, useModifierKeyRef } from "../../hook/keyboard";
 import { ClusterError } from "./ClusterError";
 import { useIpcCall } from "../../hook/ipc";
-import { AppNamespacesSelection } from "../../../common/route/app-route";
+import {
+    AppNamespacesSelection,
+    AppRoute,
+} from "../../../common/route/app-route";
 import { AppToolbar } from "./AppToolbar";
 import { ParamNamespace, useAppParam } from "../../context/param";
 import { k8sSmartCompare } from "../../../common/util/sort";
 import { ContextUnlockButton } from "../k8s-context/ContextUnlockButton";
-import { useAppEditors, useAppEditorsSetter } from "../../context/editors";
+import { useAppEditors, useAppEditorsStore } from "../../context/editors";
 
 const ClusterOverview = React.lazy(async () => ({
     default: (await import("../cluster/ClusterOverview")).ClusterOverview,
@@ -176,18 +179,16 @@ export const RootAppUI: React.FunctionComponent = () => {
         []
     );
 
-    const selectedEditor = useAppEditors((editors) => editors.selected);
-    const setAppEditors = useAppEditorsSetter();
+    const editors = useAppEditors();
+    const editorsStore = useAppEditorsStore();
+    const selectedEditor = useAppRoute((route) => route.activeEditor)?.id;
 
     const onChangeMenuItemSelection = useCallback(
         (selection: string, requestNewWindow: boolean = false) => {
-            const newRoute = setMenuItem.asRoute(
-                selection,
-                setAppEditors.asRoute((editors) => ({
-                    ...editors,
-                    selected: undefined,
-                }))
-            );
+            const newRoute: AppRoute = {
+                ...setMenuItem.asRoute(selection),
+                activeEditor: null,
+            };
             if (requestNewWindow) {
                 createWindow({
                     route: newRoute,
@@ -196,7 +197,7 @@ export const RootAppUI: React.FunctionComponent = () => {
                 setAppRoute(() => newRoute);
             }
         },
-        [createWindow, setAppEditors, setMenuItem]
+        [createWindow, setMenuItem]
     );
 
     const sortedNamespaces = useMemo(
@@ -209,38 +210,37 @@ export const RootAppUI: React.FunctionComponent = () => {
 
     const isReady = contextualColorTheme !== null;
 
-    const editors = useAppEditors((editors) => editors.items ?? []);
-
     const onChangeSelectedEditor = useCallback(
         (id: string | undefined) => {
             if (metaKeyRef.current) {
                 if (id) {
                     // Open a window with only the specified editor.
                     createWindow({
-                        route: setAppEditors.asRoute((editors) => ({
-                            ...editors,
-                            selected: id,
-                            items: editors.items?.filter((e) => e.id === id),
-                        })),
+                        route: {
+                            ...getAppRoute(),
+                            activeEditor: editors.find(
+                                (editor) => editor.id === id
+                            ),
+                        },
                     });
                 }
             } else {
-                setAppEditors((editors) => ({ ...editors, selected: id }));
+                setAppRoute((route) => ({
+                    ...route,
+                    activeEditor: editors.find((editor) => editor.id === id),
+                }));
             }
         },
-        [createWindow, metaKeyRef, setAppEditors]
+        [createWindow, editors, metaKeyRef, getAppRoute, setAppRoute]
     );
 
     const onCloseEditor = useCallback(
         (id: string) => {
-            setAppEditors((editors) => ({
-                ...editors,
-                selected:
-                    editors.selected === id ? undefined : editors.selected,
-                items: editors.items?.filter((editor) => editor.id !== id),
-            }));
+            editorsStore.set((editors) =>
+                editors.filter((editor) => editor.id !== id)
+            );
         },
-        [setAppEditors]
+        [editorsStore]
     );
 
     useEffect(() => {
@@ -333,7 +333,7 @@ type AppContentProps = {
 const AppContent: React.FC<AppContentProps> = (props) => {
     const { editor, menuItem } = props;
 
-    const editorDefs = useAppEditors((editors) => editors.items ?? []);
+    const editorDefs = useAppEditors();
     const editorDef = useMemo(
         () => editorDefs.find((e) => e.id === editor),
         [editor, editorDefs]

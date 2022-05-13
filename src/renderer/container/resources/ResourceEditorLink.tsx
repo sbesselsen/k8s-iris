@@ -4,9 +4,8 @@ import { K8sObject, K8sObjectIdentifier } from "../../../common/k8s/client";
 import {
     appEditorForK8sObject,
     appEditorForK8sObjectIdentifier,
-    useAppEditorsSetter,
-    useAppEditorUpdater,
 } from "../../context/editors";
+import { useAppRouteGetter, useAppRouteSetter } from "../../context/route";
 import { useIpcCall } from "../../hook/ipc";
 import { useModifierKeyRef } from "../../hook/keyboard";
 
@@ -23,8 +22,8 @@ export const ResourceEditorLink: React.FC<ResourceEditorLinkProps> = (
     const altKeyRef = useModifierKeyRef("Alt");
     const metaKeyRef = useModifierKeyRef("Meta");
 
-    const setAppEditors = useAppEditorsSetter();
-    const updateAppEditor = useAppEditorUpdater();
+    const getAppRoute = useAppRouteGetter();
+    const setAppRoute = useAppRouteSetter();
 
     const onClick = useCallback(() => {
         const editor = isK8sObject(editorResource)
@@ -32,25 +31,21 @@ export const ResourceEditorLink: React.FC<ResourceEditorLinkProps> = (
             : appEditorForK8sObjectIdentifier(editorResource);
         if (metaKeyRef.current) {
             createWindow({
-                route: setAppEditors.asRoute((editors) => ({
-                    ...editors,
-                    selected: editor.id,
-                    items: [editor],
-                })),
+                route: {
+                    ...getAppRoute(),
+                    activeEditor: editor,
+                },
             });
         } else {
-            updateAppEditor({
-                ...editor,
-                selected: !altKeyRef.current,
-            });
+            setAppRoute((route) => ({ ...route, activeEditor: editor }));
         }
     }, [
         altKeyRef,
         createWindow,
         editorResource,
         metaKeyRef,
-        setAppEditors,
-        updateAppEditor,
+        getAppRoute,
+        setAppRoute,
     ]);
 
     return <Link onClick={onClick} {...linkProps} />;

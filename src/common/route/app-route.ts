@@ -2,17 +2,12 @@ export type AppRoute = {
     context: string;
     namespaces: AppNamespacesSelection;
     params: Record<string, unknown>;
-    editors: AppEditors;
+    activeEditor: AppEditor | null;
 };
 
 export type AppNamespacesSelection = {
     mode: "all" | "selected";
     selected: string[];
-};
-
-export type AppEditors = {
-    items?: AppEditor[];
-    selected?: string | undefined;
 };
 
 export type AppEditor = {
@@ -31,5 +26,5 @@ export const emptyAppRoute: AppRoute = {
         selected: [],
     },
     params: {},
-    editors: {},
+    activeEditor: null,
 };
