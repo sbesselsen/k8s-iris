@@ -283,7 +283,10 @@ export function createClient(
             return new Promise<void>((resolve) => {
                 let retryConnectionsListener: any;
 
+                console.log("retrySignal: set");
+
                 const timeout = setTimeout(() => {
+                    console.log("retrySignal: timeout runs");
                     retryConnectionsListeners =
                         retryConnectionsListeners.filter(
                             (l) => l !== retryConnectionsListener
@@ -292,6 +295,7 @@ export function createClient(
                 }, 5000);
 
                 retryConnectionsListener = () => {
+                    console.log("retrySignal: listener runs");
                     clearTimeout(timeout);
                     resolve();
                 };

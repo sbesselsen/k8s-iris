@@ -55,8 +55,13 @@ const displayRules: K8sResourceDisplayRule[] = [
         keysOrder: ["containers", "volumes", "*"],
     },
     {
-        selector: ".spec.containers",
+        selector: ".spec.template.spec",
+        keysOrder: ["containers", "volumes", "*"],
+    },
+    {
+        selector: "..containers",
         autoExpandSingleItem: true,
+        displayAs: "accordion",
     },
     {
         selector: ".status.podIPs",
@@ -71,6 +76,11 @@ const displayRules: K8sResourceDisplayRule[] = [
         displayAs: "string-key-pair",
         keyValueSeparator: "=",
     },
+    {
+        selector: "..matchLabels",
+        displayAs: "string-key-pair",
+        keyValueSeparator: "=",
+    },
 ];
 
 const detailSelectors: string[] = [
@@ -82,21 +92,24 @@ const detailSelectors: string[] = [
     ".metadata.generation",
     ".metadata.generateName",
     ".metadata.ownerReferences",
-    ".spec.containers.terminationMessagePath",
-    ".spec.containers.terminationMessagePolicy",
-    ".spec.dnsPolicy",
-    ".spec.enableServiceLinks",
+    "..terminationMessagePath",
+    "..terminationMessagePolicy",
+    "..dnsPolicy",
+    "..enableServiceLinks",
     ".spec.nodeName",
     ".spec.preemptionPolicy",
     ".spec.priority",
     ".spec.priorityClassName",
-    ".spec.restartPolicy",
+    ".spec.progressDeadlineSeconds",
+    "..revisionHistoryLimit",
     ".spec.rules.http.paths.pathType",
-    ".spec.schedulerName",
-    ".spec.terminationGracePeriodSeconds",
+    "..schedulerName",
+    ".spec.template.metadata.creationTimestamp",
+    "..terminationGracePeriodSeconds",
     ".spec.tolerations",
     ".status.qosClass",
     ".status.containerStatuses.containerID",
+    ".status.observedGeneration",
 ];
 
 export const ResourceEditor: React.FC<ResourceEditorProps> = (props) => {
@@ -254,26 +267,23 @@ const ShowDetailsToggle: React.FC<{
 
     const itemTextColor = useColorModeValue("primary.900", "white");
 
-    const namespacesToggleBorderColor = "primary.500";
-    const namespacesToggleHoverColor = useColorModeValue(
-        "primary.50",
-        "primary.900"
-    );
+    const borderColor = "primary.500";
+    const hoverColor = useColorModeValue("primary.50", "primary.900");
     const focusShadow = useToken("shadows", "outline");
 
     return (
         <ButtonGroup variant="outline" size="xs" isAttached>
             <Button
                 mr="-1px"
-                borderColor={namespacesToggleBorderColor}
+                borderColor={borderColor}
                 textColor={itemTextColor}
                 isActive={!value}
                 _active={{
-                    bg: namespacesToggleBorderColor,
+                    bg: borderColor,
                     textColor: "white",
                 }}
                 _hover={{
-                    bg: namespacesToggleHoverColor,
+                    bg: hoverColor,
                 }}
                 _focus={{}}
                 _focusVisible={{
@@ -284,15 +294,15 @@ const ShowDetailsToggle: React.FC<{
                 Simple
             </Button>
             <Button
-                borderColor={namespacesToggleBorderColor}
+                borderColor={borderColor}
                 textColor={itemTextColor}
                 isActive={value}
                 _active={{
-                    bg: namespacesToggleBorderColor,
+                    bg: borderColor,
                     textColor: "white",
                 }}
                 _hover={{
-                    bg: namespacesToggleHoverColor,
+                    bg: hoverColor,
                 }}
                 _focus={{}}
                 _focusVisible={{

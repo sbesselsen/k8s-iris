@@ -181,22 +181,19 @@ export const RootAppUI: React.FunctionComponent = () => {
 
     const onChangeMenuItemSelection = useCallback(
         (selection: string, requestNewWindow: boolean = false) => {
-            if (requestNewWindow) {
-                createWindow({
-                    route: setMenuItem.asRoute(
-                        selection,
-                        setAppEditors.asRoute((editors) => ({
-                            ...editors,
-                            selected: undefined,
-                        }))
-                    ),
-                });
-            } else {
-                setAppEditors((editors) => ({
+            const newRoute = setMenuItem.asRoute(
+                selection,
+                setAppEditors.asRoute((editors) => ({
                     ...editors,
                     selected: undefined,
-                }));
-                setMenuItem(selection);
+                }))
+            );
+            if (requestNewWindow) {
+                createWindow({
+                    route: newRoute,
+                });
+            } else {
+                setAppRoute(() => newRoute);
             }
         },
         [createWindow, setAppEditors, setMenuItem]

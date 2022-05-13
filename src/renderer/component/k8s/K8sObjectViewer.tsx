@@ -201,30 +201,6 @@ export const K8sInnerObjectViewer: React.FC<K8sInnerObjectViewerProps> = (
                 </List>
             );
         }
-        if (keyField) {
-            return (
-                <K8sObjectAccordion
-                    path={path}
-                    items={data.map((item, index) => ({
-                        key: item[keyField],
-                        item,
-                        path: mergePath(path, index),
-                        selector,
-                    }))}
-                />
-            );
-        }
-        return (
-            <K8sObjectAccordion
-                path={path}
-                items={data.map((item, index) => ({
-                    key: `[${index}]`,
-                    item,
-                    path: mergePath(path, index),
-                    selector,
-                }))}
-            />
-        );
     }
 
     if (!data) {
@@ -279,12 +255,14 @@ export const K8sInnerObjectViewer: React.FC<K8sInnerObjectViewerProps> = (
 
     return (
         <K8sObjectMap
-            items={entries.map(([key, item]) => ({
-                title: key,
-                item,
-                path: mergePath(path, key),
-                selector: mergePath(selector, key),
-            }))}
+            items={flattenObjectMapEntries(
+                entries.map(([key, item]) => ({
+                    title: key,
+                    item,
+                    path: mergePath(path, key),
+                    selector: mergePath(selector, key),
+                }))
+            )}
         />
     );
 };
@@ -313,9 +291,36 @@ function sortEntriesByKeysOrder<T>(
 
 type SimpleValue = string | number | boolean | null | undefined;
 
-type K8sObjectMapProps = {
-    items: Array<{ title: string; path: string; item: any; selector: string }>;
+type ObjectMapEntry = {
+    title: string;
+    path: string;
+    item: any;
+    selector: string;
 };
+
+type K8sObjectMapProps = {
+    items: ObjectMapEntry[];
+};
+
+function flattenObjectMapEntries(entries: ObjectMapEntry[]): ObjectMapEntry[] {
+    const output: ObjectMapEntry[] = [];
+    for (let entry of entries) {
+        if (Array.isArray(entry.item) && !isSimpleArray(entry.item)) {
+            // We need to flatten this item.
+            for (let i = 0; i < entry.item.length; i++) {
+                output.push({
+                    title: `${entry.title}[${i}]`,
+                    path: mergePath(entry.path, i),
+                    item: entry.item[i],
+                    selector: entry.selector,
+                });
+            }
+        } else {
+            output.push(entry);
+        }
+    }
+    return output;
+}
 
 const K8sObjectMap: React.FC<K8sObjectMapProps> = (props) => {
     const { items } = props;
@@ -325,6 +330,7 @@ const K8sObjectMap: React.FC<K8sObjectMapProps> = (props) => {
             {items.map(({ title, path, selector, item }) => {
                 const isSimple = isSimpleValue(item);
                 const displayRule = calcDisplayRule(selector, displayRulesMap);
+
                 if (displayRule.displayAs === "hidden") {
                     return null;
                 }
