@@ -19,7 +19,7 @@ import {
     useToken,
     VStack,
 } from "@chakra-ui/react";
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
     K8sObject,
     K8sResourceTypeIdentifier,
@@ -169,10 +169,16 @@ const ResourceTypeMenu: React.FC<ResourceTypeMenuProps> = (props) => {
         [setExpandedResourceGroup, groupedResources]
     );
 
+    const [reduceMotion, setReduceMotion] = useState(true);
+    useEffect(() => {
+        setReduceMotion(false);
+    }, [setReduceMotion]);
+
     return (
         <Accordion
             index={expandedIndex}
             onChange={onChangeExpandedIndex}
+            reduceMotion={reduceMotion}
             allowToggle
         >
             {groupedResources?.map((group) => (
