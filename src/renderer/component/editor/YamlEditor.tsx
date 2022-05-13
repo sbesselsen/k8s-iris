@@ -81,7 +81,10 @@ export const YamlEditor: React.FC<YamlEditorProps> = (props) => {
     }, [theme]);
 
     useEffect(() => {
-        editorRef.current?.getModel()?.setValue(yamlValue);
+        const model = editorRef.current?.getModel();
+        if (model && "setValue" in model) {
+            model.setValue(yamlValue);
+        }
     }, [editorRef, yamlValue]);
 
     return <Box flex="1 0 0" ref={containerRef}></Box>;
