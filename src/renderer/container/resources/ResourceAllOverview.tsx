@@ -259,6 +259,7 @@ const ResourceGroupMenu: React.FC<ResourceGroupMenuProps> = (props) => {
         <AccordionItem border="none">
             <AccordionButton
                 ps={2}
+                textAlign="left"
                 _focus={{}}
                 _focusVisible={{
                     boxShadow: focusBoxShadow,
