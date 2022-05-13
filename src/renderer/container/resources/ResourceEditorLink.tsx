@@ -4,6 +4,7 @@ import { K8sObject, K8sObjectIdentifier } from "../../../common/k8s/client";
 import {
     appEditorForK8sObject,
     appEditorForK8sObjectIdentifier,
+    useAppEditorsStore,
 } from "../../context/editors";
 import { useAppRouteGetter, useAppRouteSetter } from "../../context/route";
 import { useIpcCall } from "../../hook/ipc";
@@ -25,6 +26,8 @@ export const ResourceEditorLink: React.FC<ResourceEditorLinkProps> = (
     const getAppRoute = useAppRouteGetter();
     const setAppRoute = useAppRouteSetter();
 
+    const appEditorsStore = useAppEditorsStore();
+
     const onClick = useCallback(() => {
         const editor = isK8sObject(editorResource)
             ? appEditorForK8sObject(editorResource)
@@ -37,7 +40,17 @@ export const ResourceEditorLink: React.FC<ResourceEditorLinkProps> = (
                 },
             });
         } else {
-            setAppRoute((route) => ({ ...route, activeEditor: editor }));
+            if (altKeyRef.current) {
+                // Option+click: open in background.
+                appEditorsStore.set((editors) => {
+                    if (editors.find((e) => e.id === editor.id)) {
+                        return editors;
+                    }
+                    return [...editors, editor];
+                });
+            } else {
+                setAppRoute((route) => ({ ...route, activeEditor: editor }));
+            }
         }
     }, [
         altKeyRef,
