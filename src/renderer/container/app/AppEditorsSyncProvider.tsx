@@ -46,6 +46,7 @@ export const AppEditorsSyncProvider: React.FC<{}> = (props) => {
                     return route;
                 });
             }
+            oldValue = newValue;
         };
         appEditorsStore.subscribe(listener);
         return () => {
