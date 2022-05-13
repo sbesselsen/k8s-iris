@@ -479,11 +479,8 @@ const SidebarEditorsMenuButton: React.FC<SidebarEditorsMenuButtonProps> = (
             label={
                 <>
                     <Box>
-                        <strong>{item.kind}: </strong>
-                        {item.name}
-                    </Box>
-                    <Box>
-                        <strong>API version:</strong> {item.apiVersion}
+                        <strong>Kind: </strong>
+                        {item.kind}
                     </Box>
                     {item.namespace && (
                         <Box>
