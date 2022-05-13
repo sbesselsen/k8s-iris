@@ -7,8 +7,9 @@ import {
     useToken,
     VStack,
 } from "@chakra-ui/react";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo } from "react";
 import { K8sObject, K8sObjectIdentifier } from "../../../common/k8s/client";
+import { applyDiff, diff } from "../../../common/util/diff";
 import { YamlEditor } from "../../component/editor/YamlEditor";
 import {
     K8sObjectHeading,
@@ -17,9 +18,10 @@ import {
 } from "../../component/k8s/K8sObjectViewer";
 import { ContentTabs } from "../../component/main/ContentTabs";
 import { ScrollBox } from "../../component/main/ScrollBox";
+import { useContextLock } from "../../context/context-lock";
 import { useAppParam } from "../../context/param";
 import { useIpcCall } from "../../hook/ipc";
-import { useStableK8sObject } from "../../hook/stable-k8s-object";
+import { useK8sClient } from "../../k8s/client";
 import { useK8sListWatch } from "../../k8s/list-watch";
 
 export type ResourceEditorProps = {
@@ -340,11 +342,36 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
 ) => {
     const { object } = props;
 
-    const stableObject = useStableK8sObject(object);
+    const client = useK8sClient();
+    const shouldEnableSave = !useContextLock();
 
-    const onChangeCallback = useCallback(() => {
-        console.log("onChange");
-    }, []);
+    const mergeChanges = (
+        oldValue: object,
+        newValue: object,
+        editorValue: object
+    ): object => {
+        const myDiff = diff(oldValue, editorValue);
+        return applyDiff(
+            JSON.parse(JSON.stringify(newValue)),
+            myDiff
+        ) as object;
+    };
 
-    return <YamlEditor value={stableObject} />;
+    const onChange = useCallback(
+        (newValue: object) => {
+            return (async () => {
+                await client.apply(newValue as K8sObject);
+            })();
+        },
+        [client]
+    );
+
+    return (
+        <YamlEditor
+            value={object}
+            mergeChanges={mergeChanges}
+            onChange={onChange}
+            shouldEnableSave={shouldEnableSave}
+        />
+    );
 };

@@ -148,7 +148,12 @@ export function createClient(
         if (await exists(spec)) {
             return patch(spec);
         }
-        const { body } = await objectApi.create(spec);
+        const { body } = await objectApi.create(
+            spec,
+            undefined,
+            undefined,
+            "k8s-charm"
+        );
         return onlyFullObject(body);
     };
 
@@ -156,7 +161,12 @@ export function createClient(
         if (opts.readonly) {
             throw new Error("Running in readonly mode");
         }
-        const { body } = await objectApi.patch(spec);
+        const { body } = await objectApi.patch(
+            spec,
+            undefined,
+            undefined,
+            "k8s-charm"
+        );
         return onlyFullObject(body);
     };
 
@@ -164,7 +174,12 @@ export function createClient(
         if (opts.readonly) {
             throw new Error("Running in readonly mode");
         }
-        const { body } = await objectApi.replace(spec);
+        const { body } = await objectApi.replace(
+            spec,
+            undefined,
+            undefined,
+            "k8s-charm"
+        );
         return onlyFullObject(body);
     };
 
