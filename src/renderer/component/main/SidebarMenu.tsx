@@ -31,7 +31,6 @@ import { useAppSearch } from "../../context/search";
 import { useModifierKeyRef } from "../../hook/keyboard";
 import { useMultiSelectUpdater } from "../../hook/multi-select";
 import { useWindowFocusValue } from "../../hook/window-focus";
-import { AppTooltip } from "./AppTooltip";
 
 export type SidebarMainMenuItem = {
     id: string;
@@ -471,60 +470,71 @@ const SidebarEditorsMenuButton: React.FC<SidebarEditorsMenuButtonProps> = (
         [onClose]
     );
 
+    const onMouseDown = useCallback(
+        (e: MouseEvent) => {
+            if (e.button === 1) {
+                // Middle button click.
+                onClose?.();
+            }
+        },
+        [onClose]
+    );
+
     const focusShadow = useToken("shadows", "outline");
 
     return (
-        <AppTooltip
-            openDelay={1000}
-            label={
-                <>
-                    <Box>
-                        <strong>Kind: </strong>
-                        {item.kind}
-                    </Box>
-                    {item.namespace && (
-                        <Box>
-                            <strong>Namespace: </strong>
-                            {item.namespace}
-                        </Box>
-                    )}
-                </>
-            }
+        // <AppTooltip
+        //     openDelay={1000}
+        //     label={
+        //         <Box>
+        //             <Box>
+        //                 <strong>Kind: </strong>
+        //                 {item.kind}
+        //             </Box>
+        //             {item.namespace && (
+        //                 <Box>
+        //                     <strong>Namespace: </strong>
+        //                     {item.namespace}
+        //                 </Box>
+        //             )}
+        //         </Box>
+        //     }
+        // >
+        <Button
+            flex="0 0 auto"
+            bg="transparent"
+            textColor={itemTextColor}
+            px={2}
+            pe={1}
+            py={0}
+            rightIcon={icon}
+            w="100%"
+            h={8}
+            fontSize="sm"
+            borderRadius={6}
+            justifyContent="start"
+            fontWeight="normal"
+            transition="none"
+            onClick={onSelect}
+            onKeyDown={onKeyDown}
+            onMouseDown={onMouseDown}
+            _hover={{
+                bg: hoverBackgroundColor,
+            }}
+            _active={{
+                textColor: selectedTextColor,
+                bg: selectedBackgroundColor,
+            }}
+            _focus={{}}
+            _focusVisible={{
+                boxShadow: focusShadow,
+            }}
+            isActive={isSelected}
         >
-            <Button
-                flex="0 0 auto"
-                bg="transparent"
-                textColor={itemTextColor}
-                px={2}
-                pe={1}
-                py={0}
-                rightIcon={icon}
-                w="100%"
-                h={8}
-                fontSize="sm"
-                borderRadius={6}
-                justifyContent="start"
-                fontWeight="normal"
-                transition="none"
-                onClick={onSelect}
-                onKeyDown={onKeyDown}
-                _hover={{
-                    bg: hoverBackgroundColor,
-                }}
-                _active={{
-                    textColor: selectedTextColor,
-                    bg: selectedBackgroundColor,
-                }}
-                _focus={{}}
-                _focusVisible={{
-                    boxShadow: focusShadow,
-                }}
-                isActive={isSelected}
-            >
-                <Box flex="1 0 0" textAlign="left" isTruncated>
-                    {item.name}
-                </Box>
-            </Button>
-        </AppTooltip>
+            <Box flex="1 0 0" textAlign="left" isTruncated>
+                {item.name}
+            </Box>
+        </Button>
+        // </AppTooltip>
     );
 };
