@@ -7,8 +7,9 @@ import {
     useToken,
     VStack,
 } from "@chakra-ui/react";
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { K8sObject, K8sObjectIdentifier } from "../../../common/k8s/client";
+import { YamlEditor } from "../../component/editor/YamlEditor";
 import {
     K8sObjectHeading,
     K8sObjectViewer,
@@ -18,6 +19,7 @@ import { ContentTabs } from "../../component/main/ContentTabs";
 import { ScrollBox } from "../../component/main/ScrollBox";
 import { useAppParam } from "../../context/param";
 import { useIpcCall } from "../../hook/ipc";
+import { useStableK8sObject } from "../../hook/stable-k8s-object";
 import { useK8sListWatch } from "../../k8s/list-watch";
 
 export type ResourceEditorProps = {
@@ -158,7 +160,11 @@ export const ResourceEditor: React.FC<ResourceEditorProps> = (props) => {
             title: "View",
             content: <ResourceViewer object={object} />,
         },
-        { id: "edit", title: "Edit", content: <Box /> },
+        {
+            id: "edit",
+            title: "Edit",
+            content: <ResourceYamlEditor object={object} />,
+        },
     ];
     return (
         <ContentTabs
@@ -314,4 +320,31 @@ const ShowDetailsToggle: React.FC<{
             </Button>
         </ButtonGroup>
     );
+};
+
+type ResourceYamlEditorProps = {
+    object: K8sObject | undefined;
+};
+
+const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (props) => {
+    const { object } = props;
+    return object ? <InnerResourceYamlEditor {...props} /> : null;
+};
+
+type InnerResourceYamlEditorProps = {
+    object: K8sObject;
+};
+
+const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
+    props
+) => {
+    const { object } = props;
+
+    const stableObject = useStableK8sObject(object);
+
+    const onChangeCallback = useCallback(() => {
+        console.log("onChange");
+    }, []);
+
+    return <YamlEditor value={stableObject} />;
 };

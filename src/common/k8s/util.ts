@@ -1,6 +1,6 @@
 import { K8sObject, K8sObjectList } from "./client";
 
-function objSameRef(
+export function objSameRef(
     obj1: K8sObject,
     obj2: K8sObject,
     checkKind = true
