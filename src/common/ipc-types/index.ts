@@ -1,10 +1,12 @@
 import { CloudK8sContextInfo } from "../cloud/k8s";
 import {
+    K8sApplyOptions,
     K8sContext,
     K8sObject,
     K8sObjectList,
     K8sObjectListQuery,
     K8sObjectListUpdate,
+    K8sPatchOptions,
     K8sRemoveOptions,
     K8sRemoveStatus,
     K8sResourceTypeInfo,
@@ -47,8 +49,16 @@ export type IpcCalls = {
             context: string;
             spec: K8sObject;
         }): Promise<K8sObject | null>;
-        apply(params: { context: string; spec: K8sObject }): Promise<K8sObject>;
-        patch(params: { context: string; spec: K8sObject }): Promise<K8sObject>;
+        apply(params: {
+            context: string;
+            spec: K8sObject;
+            options: K8sApplyOptions;
+        }): Promise<K8sObject>;
+        patch(params: {
+            context: string;
+            spec: K8sObject;
+            options: K8sPatchOptions;
+        }): Promise<K8sObject>;
         replace(params: {
             context: string;
             spec: K8sObject;

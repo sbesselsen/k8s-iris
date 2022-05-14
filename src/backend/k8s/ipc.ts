@@ -1,6 +1,11 @@
 import { K8sClientManager } from "./index";
 import { ipcHandle, ipcProvideSubscription } from "../../common/ipc/main";
-import { K8sObject, K8sObjectListQuery } from "../../common/k8s/client";
+import {
+    K8sApplyOptions,
+    K8sObject,
+    K8sObjectListQuery,
+    K8sPatchOptions,
+} from "../../common/k8s/client";
 import { K8sPartialObjectListWatcher } from "../../common/ipc-types";
 
 export const wireK8sClientIpc = (clientManager: K8sClientManager): void => {
@@ -12,13 +17,27 @@ export const wireK8sClientIpc = (clientManager: K8sClientManager): void => {
     );
     ipcHandle(
         "k8s:client:apply",
-        async ({ context, spec }: { context: string; spec: K8sObject }) =>
-            clientManager.clientForContext(context).apply(spec)
+        async ({
+            context,
+            spec,
+            options,
+        }: {
+            context: string;
+            spec: K8sObject;
+            options: K8sApplyOptions;
+        }) => clientManager.clientForContext(context).apply(spec, options)
     );
     ipcHandle(
         "k8s:client:patch",
-        async ({ context, spec }: { context: string; spec: K8sObject }) =>
-            clientManager.clientForContext(context).patch(spec)
+        async ({
+            context,
+            spec,
+            options,
+        }: {
+            context: string;
+            spec: K8sObject;
+            options: K8sPatchOptions;
+        }) => clientManager.clientForContext(context).patch(spec, options)
     );
     ipcHandle(
         "k8s:client:replace",

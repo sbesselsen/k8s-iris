@@ -165,7 +165,6 @@ export function createClient(
         spec: K8sObject,
         options?: K8sPatchOptions
     ): Promise<K8sObject> => {
-        console.log("Patch", spec);
         if (opts.readonly) {
             throw new Error("Running in readonly mode");
         }

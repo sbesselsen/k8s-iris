@@ -5,6 +5,7 @@ import {
     updateListObject,
 } from "../../common/k8s/util";
 import {
+    K8sApplyOptions,
     K8sClient,
     K8sObject,
     K8sObjectList,
@@ -12,6 +13,7 @@ import {
     K8sObjectListUpdate,
     K8sObjectListWatch,
     K8sObjectListWatcher,
+    K8sPatchOptions,
     K8sRemoveOptions,
 } from "../../common/k8s/client";
 import { useK8sContext } from "../context/k8s-context";
@@ -48,17 +50,17 @@ export function useK8sClient(kubeContext?: string): K8sClient {
         listWatchesRef.current = [];
 
         const read = (spec: K8sObject) => ipcRead({ context, spec });
-        const apply = (spec: K8sObject) => {
+        const apply = (spec: K8sObject, options?: K8sApplyOptions) => {
             if (isLockedRef.current) {
                 throw new ContextLockedError("Cluster is locked");
             }
-            return ipcApply({ context, spec });
+            return ipcApply({ context, spec, options });
         };
-        const patch = (spec: K8sObject) => {
+        const patch = (spec: K8sObject, options?: K8sPatchOptions) => {
             if (isLockedRef.current) {
                 throw new ContextLockedError("Cluster is locked");
             }
-            return ipcPatch({ context, spec });
+            return ipcPatch({ context, spec, options });
         };
         const replace = (spec: K8sObject) => {
             if (isLockedRef.current) {
