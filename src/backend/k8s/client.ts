@@ -150,7 +150,7 @@ export function createClient(
             throw new Error("Running in readonly mode");
         }
         if (await exists(spec)) {
-            return patch(spec, options);
+            return await patch(spec, options);
         }
         const { body } = await objectApi.create(
             spec,
@@ -169,11 +169,7 @@ export function createClient(
         if (opts.readonly) {
             throw new Error("Running in readonly mode");
         }
-        const {
-            forcePatch = false,
-            serverSideApply = true,
-            onConflict = () => ({ force: false }),
-        } = options ?? {};
+        const { forcePatch = false, serverSideApply = true } = options ?? {};
         const headers: Record<string, string> = {};
         if (serverSideApply) {
             headers["Content-type"] = "application/apply-patch+yaml";
@@ -196,17 +192,8 @@ export function createClient(
         } catch (e) {
             if ("statusCode" in e && e.statusCode === 409) {
                 // Conflict! See if the caller wants to force the patch.
-                if (!forcePatch) {
-                    const resolution = await onConflict({
-                        message: (e as any).body.message ?? "Patch conflict",
-                    });
-                    if (resolution.force) {
-                        return await patch(spec, {
-                            ...options,
-                            forcePatch: true,
-                        });
-                    }
-                }
+                e.isConflictError = true;
+                e.conflictData = (e as any).body;
             }
             throw e;
         }

@@ -37,9 +37,6 @@ export type K8sObjectListQuery = K8sResourceTypeIdentifier & {
 export type K8sPatchOptions = {
     serverSideApply?: boolean;
     forcePatch?: boolean;
-    onConflict?: (
-        details: K8sPatchConflictDetails
-    ) => Promise<K8sPatchConflictResolution>;
 };
 
 export type K8sPatchConflictDetails = {
