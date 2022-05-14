@@ -1,6 +1,7 @@
 import { app, BrowserWindow } from "electron";
 import { ipcHandle } from "../common/ipc/main";
 import { emptyAppRoute } from "../common/route/app-route";
+import { DialogOptions, DialogResult } from "../common/ui/dialog";
 import { createCloudManager } from "./cloud";
 import { wireCloudIpc } from "./cloud/ipc";
 import { createClientManager } from "./k8s";
@@ -41,6 +42,13 @@ import { createWindowManager, WindowParameters } from "./window";
     ipcHandle("app:createWindow", (params?: WindowParameters) => {
         windowManager.createWindow(params);
     });
+
+    ipcHandle(
+        "app:showDialog",
+        async (options: DialogOptions): Promise<DialogResult> => {
+            return windowManager.showDialog(options);
+        }
+    );
 
     // Set default params for new windows.
     windowManager.setDefaultWindowParameters({

@@ -7,6 +7,7 @@ import {
 import { IpcCalls } from "../common/ipc-types";
 
 const createWindow = ipcInvoker("app:createWindow");
+const showDialog = ipcInvoker("app:showDialog");
 const augmentK8sContexts = ipcInvoker("cloud:augmentK8sContexts");
 const loginForContext = ipcInvoker("cloud:loginForContext");
 const listContexts = ipcInvoker("k8s:listContexts");
@@ -26,6 +27,7 @@ contextBridge.exposeInMainWorld("charm", {
     app: {
         createWindow,
         onWindowFocusChange,
+        showDialog,
     },
     cloud: {
         augmentK8sContexts,

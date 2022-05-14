@@ -10,6 +10,7 @@ import {
     K8sResourceTypeInfo,
 } from "../k8s/client";
 import { AppRoute } from "../route/app-route";
+import { DialogOptions, DialogResult } from "../ui/dialog";
 
 export type K8sPartialObjectListWatcherMessage<
     T extends K8sObject = K8sObject
@@ -32,6 +33,7 @@ export type IpcCalls = {
         onWindowFocusChange(handler: (data: boolean) => void): {
             stop: () => void;
         };
+        showDialog(options: DialogOptions): Promise<DialogResult>;
     };
     cloud: {
         augmentK8sContexts(

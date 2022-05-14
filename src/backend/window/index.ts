@@ -4,10 +4,12 @@ import {
     Menu,
     MenuItem,
     nativeTheme,
+    dialog,
 } from "electron";
 import * as path from "path";
 import { prefixEventChannel } from "../../common/ipc/shared";
 import { AppRoute, emptyAppRoute } from "../../common/route/app-route";
+import { DialogOptions, DialogResult } from "../../common/ui/dialog";
 import { isDev } from "../util/dev";
 
 export type WindowManager = {
@@ -15,6 +17,7 @@ export type WindowManager = {
     createWindow(params?: WindowParameters): Promise<string>;
     openDevTools(): void;
     setDefaultWindowParameters(params: WindowParameters): void;
+    showDialog(options: DialogOptions): Promise<DialogResult>;
 };
 
 export type WindowParameters = {
@@ -87,6 +90,7 @@ export function createWindowManager(): WindowManager {
                 }
             }
         }
+        const windowId = generateWindowId();
 
         const win = new BrowserWindow(options);
         const windowHash = Buffer.from(
@@ -94,6 +98,7 @@ export function createWindowManager(): WindowManager {
                 ...defaultWindowParameters,
                 ...inheritedParams,
                 ...params,
+                windowId,
             }),
             "utf-8"
         ).toString("base64");
@@ -162,7 +167,6 @@ export function createWindowManager(): WindowManager {
             win.show();
         });
 
-        const windowId = generateWindowId();
         windowHandles[windowId] = {
             window: win,
         };
@@ -184,10 +188,29 @@ export function createWindowManager(): WindowManager {
         defaultWindowParameters = params;
     };
 
+    const showDialog = async (
+        options: DialogOptions
+    ): Promise<DialogResult> => {
+        const { attachToWindow = true, ...dialogOptions } = options;
+        let browserWindow: BrowserWindow;
+        if (attachToWindow) {
+            const windowId = (options as any).windowId;
+            browserWindow = windowId
+                ? windowHandles[windowId].window
+                : undefined;
+        }
+        const result = await dialog.showMessageBox(
+            browserWindow,
+            dialogOptions
+        );
+        return { response: result.response };
+    };
+
     return {
         closeWindow,
         createWindow,
         openDevTools,
         setDefaultWindowParameters,
+        showDialog,
     };
 }
