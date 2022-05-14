@@ -7,9 +7,9 @@ import {
     useToken,
     VStack,
 } from "@chakra-ui/react";
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { K8sObject, K8sObjectIdentifier } from "../../../common/k8s/client";
-import { applyDiff, diff } from "../../../common/util/diff";
+import { objSameRef } from "../../../common/k8s/util";
 import { YamlEditor } from "../../component/editor/YamlEditor";
 import {
     K8sObjectHeading,
@@ -345,31 +345,34 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
     const client = useK8sClient();
     const shouldEnableSave = !useContextLock();
 
-    const mergeChanges = (
-        oldValue: object,
-        newValue: object,
-        editorValue: object
-    ): object => {
-        const myDiff = diff(oldValue, editorValue);
-        return applyDiff(
-            JSON.parse(JSON.stringify(newValue)),
-            myDiff
-        ) as object;
-    };
+    const [editorObject, setEditorObject] = useState(object);
+    useEffect(() => {
+        if (!objSameRef(object, editorObject)) {
+            // Only change the editor object if it is different. Updates to the object at hand should not overwrite what's in the editor.
+            setEditorObject(object);
+        }
+    }, [object, setEditorObject]);
 
     const onChange = useCallback(
         (newValue: object) => {
             return (async () => {
-                await client.apply(newValue as K8sObject);
+                try {
+                    const newObject = await client.apply(newValue as K8sObject);
+                    setEditorObject(newObject);
+                } catch (e) {
+                    if (e.isConflictError) {
+                        // TODO: merge our conflicts.
+                    }
+                    console.error(e);
+                }
             })();
         },
-        [client]
+        [client, setEditorObject]
     );
 
     return (
         <YamlEditor
-            value={object}
-            mergeChanges={mergeChanges}
+            value={editorObject}
             onChange={onChange}
             shouldEnableSave={shouldEnableSave}
         />

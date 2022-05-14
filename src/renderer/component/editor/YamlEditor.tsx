@@ -52,20 +52,13 @@ import EditorWorker from "url:monaco-editor/esm/vs/editor/editor.worker.js";
 export type YamlEditorProps = {
     value?: object;
     onChange?: (newValue: object) => undefined | Promise<void>;
-    mergeChanges?: (
-        oldValue: object,
-        newValue: object,
-        editorValue: object
-    ) => object | null | undefined;
     shouldEnableSave?: boolean;
 };
 
 export const YamlEditor: React.FC<YamlEditorProps> = (props) => {
-    const { value, onChange, mergeChanges, shouldEnableSave = true } = props;
+    const { value, onChange, shouldEnableSave = true } = props;
 
     const [isSaving, setIsSaving] = useState(false);
-
-    const prevValueRef = useRef<object>();
 
     const containerRef = useRef<HTMLDivElement>();
     const editorRef = useRef<editor.IEditor>();
@@ -73,28 +66,13 @@ export const YamlEditor: React.FC<YamlEditorProps> = (props) => {
     const onSaveRef = useRef<() => void>();
 
     const theme = useColorModeValue("charm", "charm-dark");
-    const [shouldDisplayMergeButton, setShouldDisplayMergeButton] =
-        useState(false);
-
-    const inputModelValueRef = useRef<string>();
-    const hasModifications = useCallback(() => {
-        if (!inputModelValueRef.current) {
-            return false;
-        }
-        const model = editorRef.current?.getModel();
-        if (model && "getValue" in model) {
-            const modelValue = model.getValue();
-            return modelValue !== inputModelValueRef.current;
-        }
-        return false;
-    }, [editorRef, inputModelValueRef]);
 
     useEffect(() => {
         if (!containerRef.current) {
             return;
         }
         const myEditor = editor.create(containerRef.current, {
-            value: inputModelValueRef.current ?? "",
+            value: "",
             language: "yaml",
             theme,
             automaticLayout: true,
@@ -114,86 +92,18 @@ export const YamlEditor: React.FC<YamlEditorProps> = (props) => {
         return () => {
             myEditor.dispose();
         };
-    }, [containerRef, editorRef, inputModelValueRef, onSaveRef]);
+    }, [containerRef, editorRef, onSaveRef]);
 
     useEffect(() => {
         editor.setTheme(theme);
     }, [theme]);
 
     useEffect(() => {
-        editorRef.current?.updateOptions({
-            readOnly: shouldDisplayMergeButton,
-        });
-    }, [editorRef, shouldDisplayMergeButton]);
-
-    useEffect(() => {
-        const model = editorRef.current?.getModel();
-        if (model && "setValue" in model) {
-            if (hasModifications()) {
-                setShouldDisplayMergeButton(true);
-            } else {
-                model.setValue(toYaml(value));
-                inputModelValueRef.current = model.getValue();
-            }
-        }
-    }, [
-        editorRef,
-        inputModelValueRef,
-        hasModifications,
-        prevValueRef,
-        setShouldDisplayMergeButton,
-        value,
-    ]);
-
-    const onValueUpdateIgnore = useCallback(() => {
-        setShouldDisplayMergeButton(false);
-    }, [setShouldDisplayMergeButton]);
-
-    const onValueUpdateReload = useCallback(() => {
         const model = editorRef.current?.getModel();
         if (model && "setValue" in model) {
             model.setValue(toYaml(value));
-            inputModelValueRef.current = model.getValue();
         }
-        setShouldDisplayMergeButton(false);
-    }, [
-        editorRef,
-        inputModelValueRef,
-        prevValueRef,
-        setShouldDisplayMergeButton,
-        value,
-    ]);
-
-    const onValueUpdateMerge = useCallback(() => {
-        const model = editorRef.current?.getModel();
-        if (model && "setValue" in model) {
-            try {
-                const oldValue = parseYaml(inputModelValueRef.current);
-                const editorValue = parseYaml(model.getValue());
-                const mergedValue = mergeChanges?.(
-                    oldValue as object,
-                    value,
-                    editorValue as object
-                );
-                if (mergedValue) {
-                    // Merge!
-                    model.setValue(toYaml(mergedValue));
-                    inputModelValueRef.current = toYaml(value);
-                }
-            } catch (e) {
-                // Cannot merge.
-                console.error("Cannot merge", e);
-            }
-        }
-        setShouldDisplayMergeButton(false);
-    }, [
-        editorRef,
-        inputModelValueRef,
-        mergeChanges,
-        prevValueRef,
-        setShouldDisplayMergeButton,
-        value,
-    ]);
+    }, [editorRef, value]);
 
     const onSave = useCallback(() => {
         const model = editorRef.current?.getModel();
@@ -214,9 +124,8 @@ export const YamlEditor: React.FC<YamlEditorProps> = (props) => {
                     setIsSaving(false);
                 })();
             }
-            inputModelValueRef.current = modelValue;
         }
-    }, [editorRef, inputModelValueRef, onChange, setIsSaving]);
+    }, [editorRef, onChange, setIsSaving]);
     onSaveRef.current = onSave;
 
     const normalToolbar = (
@@ -234,35 +143,6 @@ export const YamlEditor: React.FC<YamlEditorProps> = (props) => {
         </>
     );
 
-    const upstreamChangesToolbar = (
-        <>
-            <Box flex="1 0 0">
-                <Text>The object changed in the cluster.</Text>
-            </Box>
-            <Button
-                variant="outline"
-                colorScheme="primary"
-                onClick={onValueUpdateIgnore}
-            >
-                Ignore
-            </Button>
-            <Button
-                variant="outline"
-                colorScheme="primary"
-                onClick={onValueUpdateReload}
-            >
-                Reload
-            </Button>
-            <Button
-                variant="solid"
-                colorScheme="primary"
-                onClick={onValueUpdateMerge}
-            >
-                Merge
-            </Button>
-        </>
-    );
-
     return (
         <VStack
             flex="1 0 0"
@@ -271,15 +151,9 @@ export const YamlEditor: React.FC<YamlEditorProps> = (props) => {
             position="relative"
         >
             <HStack flex="0 0 auto" px={4} pt={3} pb={2} boxShadow="inner">
-                {shouldDisplayMergeButton
-                    ? upstreamChangesToolbar
-                    : normalToolbar}
+                {normalToolbar}
             </HStack>
-            <Box
-                flex="1 0 0"
-                ref={containerRef}
-                opacity={shouldDisplayMergeButton ? 0.5 : 1}
-            ></Box>
+            <Box flex="1 0 0" ref={containerRef}></Box>
         </VStack>
     );
 };
