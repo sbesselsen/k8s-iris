@@ -12,9 +12,10 @@ import {
     K8sObjectListWatch,
     K8sObjectListWatcher,
     K8sObjectListWatcherMessage,
+    K8sApplyOptions,
+    K8sPatchOptions,
     K8sRemoveOptions,
     K8sRemoveStatus,
-    K8sResourceTypeInfo,
 } from "../../common/k8s/client";
 import {
     fetchApiList,
@@ -141,12 +142,15 @@ export function createClient(
         return null;
     };
 
-    const apply = async (spec: K8sObject): Promise<K8sObject> => {
+    const apply = async (
+        spec: K8sObject,
+        options?: K8sApplyOptions
+    ): Promise<K8sObject> => {
         if (opts.readonly) {
             throw new Error("Running in readonly mode");
         }
         if (await exists(spec)) {
-            return patch(spec);
+            return patch(spec, options);
         }
         const { body } = await objectApi.create(
             spec,
@@ -157,16 +161,55 @@ export function createClient(
         return onlyFullObject(body);
     };
 
-    const patch = async (spec: K8sObject): Promise<K8sObject> => {
+    const patch = async (
+        spec: K8sObject,
+        options?: K8sPatchOptions
+    ): Promise<K8sObject> => {
+        console.log("Patch", spec);
         if (opts.readonly) {
             throw new Error("Running in readonly mode");
         }
-        const { body } = await objectApi.patch(
-            spec,
-            undefined,
-            undefined,
-            "k8s-charm"
-        );
+        const {
+            forcePatch = false,
+            serverSideApply = true,
+            onConflict = () => ({ force: false }),
+        } = options ?? {};
+        const headers: Record<string, string> = {};
+        if (serverSideApply) {
+            headers["Content-type"] = "application/apply-patch+yaml";
+        }
+        let body: k8s.KubernetesObject;
+        try {
+            const specClone = JSON.parse(JSON.stringify(spec)) as K8sObject;
+            delete (specClone.metadata as any).managedFields;
+            const result = await objectApi.patch(
+                specClone,
+                undefined,
+                undefined,
+                "k8s-charm",
+                forcePatch,
+                {
+                    headers,
+                }
+            );
+            body = result.body;
+        } catch (e) {
+            if ("statusCode" in e && e.statusCode === 409) {
+                // Conflict! See if the caller wants to force the patch.
+                if (!forcePatch) {
+                    const resolution = await onConflict({
+                        message: (e as any).body.message ?? "Patch conflict",
+                    });
+                    if (resolution.force) {
+                        return await patch(spec, {
+                            ...options,
+                            forcePatch: true,
+                        });
+                    }
+                }
+            }
+            throw e;
+        }
         return onlyFullObject(body);
     };
 

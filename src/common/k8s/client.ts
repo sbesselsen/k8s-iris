@@ -34,6 +34,22 @@ export type K8sObjectListQuery = K8sResourceTypeIdentifier & {
     namespaces?: string[];
 };
 
+export type K8sPatchOptions = {
+    serverSideApply?: boolean;
+    forcePatch?: boolean;
+    onConflict?: (
+        details: K8sPatchConflictDetails
+    ) => Promise<K8sPatchConflictResolution>;
+};
+
+export type K8sPatchConflictDetails = {
+    message: string;
+};
+
+export type K8sPatchConflictResolution = { force: boolean };
+
+export type K8sApplyOptions = K8sPatchOptions;
+
 export type K8sRemoveOptions = {
     waitForCompletion?: boolean;
 };
@@ -68,8 +84,8 @@ export type K8sContext = {
 
 export type K8sClient = {
     read(spec: K8sObject): Promise<K8sObject | null>;
-    apply(spec: K8sObject): Promise<K8sObject>;
-    patch(spec: K8sObject): Promise<K8sObject>;
+    apply(spec: K8sObject, options?: K8sApplyOptions): Promise<K8sObject>;
+    patch(spec: K8sObject, options?: K8sPatchOptions): Promise<K8sObject>;
     replace(spec: K8sObject): Promise<K8sObject>;
     remove(
         spec: K8sObject,
