@@ -1,26 +1,48 @@
 import { deepEqual } from "./deep-equal";
 
-type Diff = Array<Operation>;
+export type Diff = DiffValue | DiffArray | DiffObject | DiffDelete | null;
 
-type Operation = Replace | Insert | Delete | Descend;
+export type DiffValue = { diff: "value"; value: unknown };
+export type DiffArray = {
+    diff: "array";
+    diffs: Array<
+        DiffArrayItemDelete | DiffArrayItemInsert | DiffArrayItemDescend
+    >;
+};
+export type DiffArrayItemDelete = {
+    diff: "delete";
+    index: number;
+};
+export type DiffArrayItemInsert = {
+    diff: "insert";
+    index: number;
+    value: unknown;
+};
+export type DiffArrayItemDescend = {
+    diff: "descend";
+    index: number;
+    subDiff: Diff;
+};
+export type DiffArrayUpdate = { index: number; update: Diff };
+export type DiffObject = { diff: "object"; diffs: Record<string, Diff> };
+export type DiffDelete = { diff: "delete" };
 
-type Replace = { type: "replace"; value: unknown };
-type Insert = { type: "insert"; value: unknown; atIndex: number };
-type Delete = { type: "delete"; key: string | number };
-type Descend = { type: "descend"; key: string | number; diff: Diff };
+function clone<T>(a: T): T {
+    return JSON.parse(JSON.stringify(a));
+}
 
 export function diff(a: unknown, b: unknown): Diff {
     if (a === b) {
-        return [];
+        return null;
     }
     if (typeof a !== "object") {
         if (a !== b) {
-            return [{ type: "replace", value: b }];
+            return { diff: "value", value: clone(b) };
         }
-        return [];
+        return null;
     }
     if (typeof b !== "object") {
-        return [{ type: "replace", value: b }];
+        return { diff: "value", value: clone(b) };
     }
     // A and B are both references to different objects.
     if (Array.isArray(a)) {
@@ -28,12 +50,12 @@ export function diff(a: unknown, b: unknown): Diff {
             // Diff between two arrays.
             return arrayDiff(a, b);
         }
-        return [{ type: "replace", value: b }];
+        return { diff: "value", value: clone(b) };
     }
     return objectDiff(a, b);
 }
 
-function arrayDiff(a: unknown[], b: unknown[]): Diff {
+function arrayDiff(a: unknown[], b: unknown[]): DiffArray {
     const keysA = detectKeys(a);
     if (keysA.size > 0) {
         const keysB = detectKeys(b);
@@ -47,7 +69,7 @@ function arrayDiff(a: unknown[], b: unknown[]): Diff {
     return linearDiff(a, b, (itemA, itemB) => deepEqual(itemA, itemB));
 }
 
-function keyedArrayDiff(key: string, a: unknown[], b: unknown[]): Diff {
+function keyedArrayDiff(key: string, a: unknown[], b: unknown[]): DiffArray {
     return linearDiff(
         a,
         b,
@@ -59,7 +81,7 @@ function linearDiff(
     a: unknown[],
     b: unknown[],
     isEqualRef: (itemA: unknown, itemB: unknown) => boolean
-): Diff {
+): DiffArray {
     type Entry = {
         indexA: number;
         indexB: number;
@@ -173,29 +195,31 @@ function linearDiff(
         return cache[cacheKey];
     };
     let entry: Entry = partialLinearDiff(0, 0);
-    const output: Diff = [];
+    const diffs: Array<
+        DiffArrayItemDelete | DiffArrayItemInsert | DiffArrayItemDescend
+    > = [];
     let currentIndex = 0;
     while (entry) {
         const { action, indexA, indexB, nextEntry } = entry;
         switch (action) {
             case "delete":
-                output.push({ type: "delete", key: currentIndex });
+                diffs.push({ diff: "delete", index: currentIndex });
                 break;
             case "insert":
-                output.push({
-                    type: "insert",
+                diffs.push({
+                    diff: "insert",
+                    index: currentIndex,
                     value: b[indexB],
-                    atIndex: currentIndex,
                 });
                 currentIndex++;
                 break;
             case "merge":
                 const subDiff = diff(a[indexA], b[indexB]);
-                if (subDiff.length > 0) {
-                    output.push({
-                        type: "descend",
-                        key: currentIndex,
-                        diff: subDiff,
+                if (subDiff !== null) {
+                    diffs.push({
+                        diff: "descend",
+                        index: currentIndex,
+                        subDiff: subDiff,
                     });
                 }
                 currentIndex++;
@@ -203,7 +227,7 @@ function linearDiff(
         }
         entry = nextEntry;
     }
-    return output;
+    return { diff: "array", diffs };
 }
 
 function detectKeys(a: unknown[]): Set<string> {
@@ -239,51 +263,121 @@ function isSuitableKey(key: string, a: unknown[]): boolean {
 }
 
 function objectDiff(a: object, b: object): Diff {
-    const output: Diff = [];
+    const diffs: Record<string, Diff> = {};
     const keysA = new Set(Object.keys(a));
     const keysB = new Set(Object.keys(b));
+    let hasDiff = false;
     for (const key of keysB) {
-        let subDiff: Diff;
         if (keysA.has(key)) {
             // Both objects have this key.
-            subDiff = diff(a[key], b[key]);
+            const d = diff(a[key], b[key]);
+            if (d) {
+                hasDiff = true;
+                diffs[key] = d;
+            }
         } else {
-            subDiff = [{ type: "replace", value: b[key] }];
-        }
-        if (subDiff.length > 0) {
-            output.push({ type: "descend", key, diff: subDiff });
+            hasDiff = true;
+            const value = b[key];
+            if (typeof value === "object" && !Array.isArray(value)) {
+                diffs[key] = objectDiff({}, value);
+            } else {
+                diffs[key] = { diff: "value", value };
+            }
         }
     }
     for (const key of keysA) {
         if (!keysB.has(key)) {
-            output.push({ type: "delete", key });
+            hasDiff = true;
+            diffs[key] = { diff: "delete" };
         }
     }
-    return output;
+    return hasDiff ? { diff: "object", diffs } : null;
 }
 
-export function applyDiff(a: unknown, diff: Diff): unknown {
-    const isArray = Array.isArray(a);
-    for (const item of diff) {
-        switch (item.type) {
+export function cloneAndApply(a: unknown, diff: Diff): unknown {
+    return apply(clone(a), diff);
+}
+
+export function apply(a: unknown, diff: Diff): unknown {
+    if (diff === null) {
+        return a;
+    }
+    switch (diff.diff) {
+        case "array":
+            return Array.isArray(a) ? arrayApply(a, diff.diffs) : [];
+        case "delete":
+            return undefined;
+        case "object":
+            return objectApply(a, diff.diffs);
+            break;
+        case "value":
+            return diff.value;
+    }
+}
+
+function arrayApply(
+    a: unknown[],
+    diffs: Array<
+        DiffArrayItemDelete | DiffArrayItemInsert | DiffArrayItemDescend
+    >
+): unknown {
+    for (const diff of diffs) {
+        switch (diff.diff) {
             case "delete":
-                if (isArray) {
-                    a.splice(item.key as number, 1);
-                } else {
-                    delete a[item.key];
-                }
+                a.splice(diff.index, 1);
                 break;
             case "insert":
-                if (isArray) {
-                    a.splice(item.atIndex, 0, item.value);
-                }
+                a.splice(diff.index, 0, diff.value);
                 break;
-            case "replace":
-                return item.value;
             case "descend":
-                a[item.key] = applyDiff(a[item.key], item.diff);
+                a[diff.index] = apply(a[diff.index], diff.subDiff);
                 break;
         }
     }
     return a;
 }
+
+function objectApply(a: unknown, diffs: Record<string, Diff>): unknown {
+    if (!a) {
+        a = {};
+    }
+    for (const key of Object.keys(diffs)) {
+        const diff = diffs[key];
+        if (diff === null) {
+            continue;
+        }
+        switch (diff.diff) {
+            case "array":
+                a[key] = arrayApply(a[key], diff.diffs);
+                break;
+            case "delete":
+                delete a[key];
+                break;
+            case "object":
+                a[key] = objectApply(a[key], diff.diffs);
+                break;
+            case "value":
+                a[key] = diff.value;
+                break;
+        }
+    }
+    return a;
+}
+
+// export type MergeConflict = {
+//     path: string[];
+//     leftOperation: Operation;
+//     rightOperation: Operation;
+// };
+
+// export function mergeDiffs(
+//     a: Diff,
+//     b: Diff
+// ):
+//     | { success: true; diff: Diff }
+//     | { success: false; conflicts: MergeConflict[] } {
+
+//     // Replace | Insert | Delete | Descend
+
+//     return { success: true, diff: [] };
+// }
