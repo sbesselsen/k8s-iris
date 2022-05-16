@@ -157,37 +157,49 @@ function linearDiff(
                             nextEntry: deleteEntry,
                         };
                     } else {
-                        const insertEntry = partialLinearDiff(
+                        const nextEntries: Entry[] = [];
+                        const insertNextEntry = partialLinearDiff(
                             indexA,
                             indexB + 1
                         );
-                        const deleteEntry = partialLinearDiff(
+                        if (insertNextEntry) {
+                            nextEntries.push({
+                                indexA,
+                                indexB,
+                                cost: insertNextEntry.cost + 1,
+                                action: "insert",
+                                nextEntry: insertNextEntry,
+                            });
+                        }
+                        const deleteNextEntry = partialLinearDiff(
                             indexA + 1,
                             indexB
                         );
-                        if (
-                            insertEntry &&
-                            (!deleteEntry ||
-                                deleteEntry.cost > insertEntry.cost)
-                        ) {
-                            cache[cacheKey] = {
+                        if (deleteNextEntry) {
+                            nextEntries.push({
                                 indexA,
                                 indexB,
-                                cost: insertEntry.cost + 1,
-                                action: "insert",
-                                nextEntry: insertEntry,
-                            };
-                        } else if (deleteEntry) {
-                            cache[cacheKey] = {
-                                indexA,
-                                indexB,
-                                cost: deleteEntry.cost + 1,
+                                cost: deleteNextEntry.cost + 1,
                                 action: "delete",
-                                nextEntry: deleteEntry,
-                            };
-                        } else {
-                            cache[cacheKey] = null;
+                                nextEntry: deleteNextEntry,
+                            });
                         }
+                        const replaceNextEntry = partialLinearDiff(
+                            indexA + 1,
+                            indexB + 1
+                        );
+                        if (replaceNextEntry) {
+                            nextEntries.push({
+                                indexA,
+                                indexB,
+                                cost: replaceNextEntry.cost + 1,
+                                action: "merge",
+                                nextEntry: replaceNextEntry,
+                            });
+                        }
+                        cache[cacheKey] =
+                            nextEntries.sort((x, y) => x.cost - y.cost)[0] ??
+                            null;
                     }
                 }
             }
