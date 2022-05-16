@@ -227,7 +227,7 @@ function linearDiff(
         }
         entry = nextEntry;
     }
-    return { diff: "array", diffs };
+    return diffs.length > 0 ? { diff: "array", diffs } : null;
 }
 
 function detectKeys(a: unknown[]): Set<string> {
@@ -364,20 +364,263 @@ function objectApply(a: unknown, diffs: Record<string, Diff>): unknown {
     return a;
 }
 
-// export type MergeConflict = {
-//     path: string[];
-//     leftOperation: Operation;
-//     rightOperation: Operation;
-// };
+export type MergeConflict = {
+    path: Array<string | number>;
+    leftDiff:
+        | Diff
+        | DiffArrayItemDelete
+        | DiffArrayItemInsert
+        | DiffArrayItemDescend;
+    rightDiff:
+        | Diff
+        | DiffArrayItemDelete
+        | DiffArrayItemInsert
+        | DiffArrayItemDescend;
+};
 
-// export function mergeDiffs(
-//     a: Diff,
-//     b: Diff
-// ):
-//     | { success: true; diff: Diff }
-//     | { success: false; conflicts: MergeConflict[] } {
+export function mergeDiffs(
+    a: Diff,
+    b: Diff
+):
+    | { success: true; diff: Diff }
+    | { success: false; conflicts: MergeConflict[] } {
+    const conflicts: MergeConflict[] = [];
+    const diff = mergeDiffsInternal(a, b, [], conflicts);
+    if (conflicts.length > 0) {
+        return { success: false, conflicts };
+    } else {
+        return { success: true, diff };
+    }
+}
 
-//     // Replace | Insert | Delete | Descend
+function mergeDiffsInternal(
+    a: Diff,
+    b: Diff,
+    path: Array<string | number>,
+    conflicts: MergeConflict[]
+): Diff {
+    if (a === null) {
+        return b;
+    }
+    if (b === null) {
+        return a;
+    }
+    // Both are non-null.
+    switch (a.diff) {
+        case "array":
+            if (b.diff === "array") {
+                return mergeArrayDiffs(a, b, path, conflicts);
+            }
+            break;
+        case "delete":
+            if (b.diff === "delete") {
+                return a;
+            } else {
+                conflicts.push({ path, leftDiff: a, rightDiff: b });
+                return null;
+            }
+        case "value":
+            if (b.diff === "value" && deepEqual(a.value, b.value)) {
+                return a;
+            } else {
+                conflicts.push({ path, leftDiff: a, rightDiff: b });
+                return null;
+            }
+        case "object":
+            if (b.diff === "object") {
+                return mergeObjectDiffs(a, b, path, conflicts);
+            } else {
+                conflicts.push({ path, leftDiff: a, rightDiff: b });
+                return null;
+            }
+    }
+}
 
-//     return { success: true, diff: [] };
-// }
+function mergeArrayDiffs(
+    a: DiffArray,
+    b: DiffArray,
+    path: Array<string | number>,
+    conflicts: MergeConflict[]
+): DiffArray {
+    const aDiffs = [...a.diffs].sort((x, y) => x.index - y.index);
+    const bDiffs = [...b.diffs].sort((x, y) => x.index - y.index);
+    const outDiffs: Array<
+        DiffArrayItemDelete | DiffArrayItemInsert | DiffArrayItemDescend
+    > = [];
+    let aOffset = 0;
+    let bOffset = 0;
+
+    const operationOffsets = { delete: -1, insert: 1 };
+
+    while (aDiffs.length > 0 || bDiffs.length > 0) {
+        if (aDiffs.length === 0) {
+            // Apply the b diff.
+            const bDiff = bDiffs.shift();
+            outDiffs.push({ ...bDiff, index: bDiff.index + bOffset });
+        } else if (bDiffs.length === 0) {
+            // Apply the a diff.
+            const aDiff = aDiffs.shift();
+            outDiffs.push({ ...aDiff, index: aDiff.index + aOffset });
+        } else {
+            // Combine.
+            const aDiff = aDiffs[0];
+            const bDiff = bDiffs[0];
+            if (aDiff.index + aOffset < bDiff.index + bOffset) {
+                // aDiff comes first. Apply it and change b delta.
+                aDiffs.shift();
+                outDiffs.push({ ...aDiff, index: aDiff.index + aOffset });
+                bOffset += operationOffsets[aDiff.diff] ?? 0;
+            } else if (bDiff.index + bOffset < aDiff.index + aOffset) {
+                // bDiff comes first.
+                bDiffs.shift();
+                outDiffs.push({ ...bDiff, index: bDiff.index + bOffset });
+                aOffset += operationOffsets[bDiff.diff] ?? 0;
+            } else {
+                // Uh oh. Both operations at the same offset.
+                switch (aDiff.diff) {
+                    case "insert":
+                        switch (bDiff.diff) {
+                            case "insert":
+                                // Both insert! Accept if they have the same value.
+                                if (deepEqual(aDiff.value, bDiff.value)) {
+                                    outDiffs.push({
+                                        ...aDiff,
+                                        index: aDiff.index + aOffset,
+                                    });
+                                    aDiffs.shift();
+                                    bDiffs.shift();
+                                } else {
+                                    // Insert/insert conflict. We don't know which one should go first.
+                                    conflicts.push({
+                                        path: [...path, aDiff.index - bOffset],
+                                        leftDiff: aDiff,
+                                        rightDiff: bDiff,
+                                    });
+                                    return null;
+                                }
+                                break;
+                            case "delete":
+                                // Insert/delete conflict.
+                                conflicts.push({
+                                    path: [...path, aDiff.index - bOffset],
+                                    leftDiff: aDiff,
+                                    rightDiff: bDiff,
+                                });
+                                return null;
+                                break;
+                            case "descend":
+                                // Insert/descend. First insert, next descend.
+                                aDiffs.shift();
+                                outDiffs.push({
+                                    ...aDiff,
+                                    index: aDiff.index + aOffset,
+                                });
+                                bOffset += operationOffsets[aDiff.diff] ?? 0;
+                                break;
+                        }
+                        break;
+                    case "delete":
+                        switch (bDiff.diff) {
+                            case "insert":
+                                // Delete/insert conflict. We don't know which one should go first.
+                                conflicts.push({
+                                    path: [...path, aDiff.index - bOffset],
+                                    leftDiff: aDiff,
+                                    rightDiff: bDiff,
+                                });
+                                return null;
+                                break;
+                            case "delete":
+                                // Delete/delete is fine!
+                                aDiffs.shift();
+                                bDiffs.shift();
+                                outDiffs.push({
+                                    ...aDiff,
+                                    index: aDiff.index + aOffset,
+                                });
+                                break;
+                            case "descend":
+                                // Delete/descend conflict. This is a conflict because both want to change the same item.
+                                conflicts.push({
+                                    path: [...path, aDiff.index - bOffset],
+                                    leftDiff: aDiff,
+                                    rightDiff: bDiff,
+                                });
+                                return null;
+                        }
+                        break;
+                    case "descend":
+                        switch (bDiff.diff) {
+                            case "insert":
+                                // Descend/insert. Insert first, then descend.
+                                bDiffs.shift();
+                                outDiffs.push({
+                                    ...bDiff,
+                                    index: bDiff.index + bOffset,
+                                });
+                                aOffset += operationOffsets[bDiff.diff] ?? 0;
+                                break;
+                            case "delete":
+                                // Descend/delete conflict. This is a conflict because both want to change the same item.
+                                conflicts.push({
+                                    path: [...path, aDiff.index - bOffset],
+                                    leftDiff: aDiff,
+                                    rightDiff: bDiff,
+                                });
+                                return null;
+                            case "descend":
+                                // Descend/descend. Merge!
+                                aDiffs.shift();
+                                bDiffs.shift();
+                                outDiffs.push({
+                                    diff: "descend",
+                                    index: aDiff.index + aOffset,
+                                    subDiff: mergeDiffsInternal(
+                                        aDiff.subDiff,
+                                        bDiff.subDiff,
+                                        [...path, aDiff.index - bOffset],
+                                        conflicts
+                                    ),
+                                });
+                                break;
+                        }
+                        break;
+                }
+            }
+        }
+    }
+
+    return { diff: "array", diffs: outDiffs };
+}
+
+function mergeObjectDiffs(
+    a: DiffObject,
+    b: DiffObject,
+    path: Array<string | number>,
+    conflicts: MergeConflict[]
+): DiffObject {
+    const aDiffs = a.diffs;
+    const bDiffs = b.diffs;
+    const aKeys = new Set(Object.keys(aDiffs));
+    const bKeys = new Set(Object.keys(bDiffs));
+    const outDiffs: Record<string, Diff> = {};
+    for (const key of aKeys) {
+        if (!bKeys.has(key)) {
+            outDiffs[key] = aDiffs[key];
+        } else {
+            // Potential conflict.
+            outDiffs[key] = mergeDiffsInternal(
+                aDiffs[key],
+                bDiffs[key],
+                [...path, key],
+                conflicts
+            );
+        }
+    }
+    for (const key of bKeys) {
+        if (!aKeys.has(key)) {
+            outDiffs[key] = bDiffs[key];
+        }
+    }
+    return { diff: "object", diffs: outDiffs };
+}
