@@ -32,5 +32,5 @@ function deepEqualArrays(a: any[], b: any[]): boolean {
 }
 
 function shallowEqualArrays(a: any[], b: any[]): boolean {
-    return a.every((val, i) => val === b[i]);
+    return a.length === b.length && a.every((val, i) => val === b[i]);
 }
