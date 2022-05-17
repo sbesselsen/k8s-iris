@@ -7,10 +7,18 @@ import {
     useToken,
     VStack,
 } from "@chakra-ui/react";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
+import * as monaco from "monaco-editor";
 import { K8sObject, K8sObjectIdentifier } from "../../../common/k8s/client";
 import { objSameRef } from "../../../common/k8s/util";
-import { YamlEditor } from "../../component/editor/YamlEditor";
+import { cloneAndApply, diff, mergeDiffs } from "../../../common/util/diff";
+import { MonacoCodeEditor } from "../../component/editor/MonacoCodeEditor";
 import {
     K8sObjectHeading,
     K8sObjectViewer,
@@ -23,6 +31,7 @@ import { useAppParam } from "../../context/param";
 import { useIpcCall } from "../../hook/ipc";
 import { useK8sClient } from "../../k8s/client";
 import { useK8sListWatch } from "../../k8s/list-watch";
+import { toYaml } from "../../../common/util/yaml";
 
 export type ResourceEditorProps = {
     editorResource: K8sObjectIdentifier;
@@ -353,28 +362,71 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
         }
     }, [object, setEditorObject]);
 
-    const onChange = useCallback(
-        (newValue: object) => {
+    // Update the object and show a smart diff.
+    const applyChanges = useCallback(
+        (newObject: K8sObject) => {
             return (async () => {
-                try {
-                    const newObject = await client.apply(newValue as K8sObject);
-                    setEditorObject(newObject);
-                } catch (e) {
-                    if (e.isConflictError) {
-                        // TODO: merge our conflicts.
+                // Load the newest version of the object.
+                const clusterObject = await client.read(object);
+                let editObject = object;
+                if (clusterObject) {
+                    const clusterDiff = diff(object, clusterObject);
+                    const editDiff = diff(object, newObject);
+                    const mergedDiff = mergeDiffs(clusterDiff, editDiff);
+                    if (mergedDiff.success) {
+                        editObject = cloneAndApply(
+                            object,
+                            mergedDiff.diff
+                        ) as K8sObject;
                     }
-                    console.error(e);
                 }
+
+                // Now show a diff between these two!
+                console.log("edit", clusterObject, editObject);
+
+                // TODO: actually show the diff!
+
+                // setEditorObject(newObject);
             })();
         },
-        [client, setEditorObject]
+        [client, object, setEditorObject]
     );
 
+    const onChange = useCallback(
+        (newValue: object) => {
+            return applyChanges(newValue as K8sObject);
+        },
+        [applyChanges]
+    );
+
+    const [value, setValue] = useState("");
+    const valueRef = useRef<string>();
+    useEffect(() => {
+        valueRef.current = value;
+    }, [value, valueRef]);
+    useEffect(() => {
+        setValue(toYaml(object));
+    }, [object, setValue]);
+
+    const configureEditor = (editor: monaco.editor.IStandaloneCodeEditor) => {
+        editor.addAction({
+            id: "apply-to-cluster",
+            label: "Apply to cluster",
+            keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
+            contextMenuGroupId: "navigation",
+            contextMenuOrder: 1.5,
+            run: function () {
+                console.log("Apply", valueRef.current);
+            },
+        });
+    };
+
     return (
-        <YamlEditor
-            value={editorObject}
-            onChange={onChange}
-            shouldEnableSave={shouldEnableSave}
+        <MonacoCodeEditor
+            options={{ language: "yaml" }}
+            value={value}
+            onChange={setValue}
+            configureEditor={configureEditor}
         />
     );
 };
