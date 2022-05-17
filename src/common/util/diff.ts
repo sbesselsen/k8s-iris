@@ -28,7 +28,7 @@ export type DiffObject = { diff: "object"; diffs: Record<string, Diff> };
 export type DiffDelete = { diff: "delete" };
 
 function clone<T>(a: T): T {
-    return JSON.parse(JSON.stringify(a));
+    return typeof a === "object" ? JSON.parse(JSON.stringify(a)) : a;
 }
 
 export function diff(a: unknown, b: unknown): Diff {
