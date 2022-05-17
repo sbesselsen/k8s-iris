@@ -54,7 +54,8 @@ export const MonacoDiffEditor: React.FC<MonacoCodeEditorProps> = (props) => {
         if (!containerRef.current) {
             return;
         }
-        const { language, ...editorOptions } = optionsConst;
+        const { language = "text/plain", ...editorOptions } =
+            optionsConst ?? {};
         const editorInstance = editor.createDiffEditor(containerRef.current, {
             theme,
             automaticLayout: true,
