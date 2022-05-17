@@ -123,12 +123,10 @@ export const MonacoCodeEditor: React.FC<MonacoCodeEditorProps> = (props) => {
     }, [editorRef, runtimeOptions]);
 
     useEffect(() => {
-        if (stateValue !== editorValueRef.current) {
-            const model = editorRef.current?.getModel();
-            if (model) {
-                model.setValue(stateValue);
-                editorValueRef.current = model.getValue();
-            }
+        if (stateValue !== editorValueRef.current && editorRef.current) {
+            const editor = editorRef.current;
+            editor.setValue(stateValue);
+            editorValueRef.current = editor.getValue();
         }
     }, [editorRef, editorValueRef, stateValue]);
 
