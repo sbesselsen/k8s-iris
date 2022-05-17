@@ -5,3 +5,15 @@ export async function sleep(ms: number): Promise<void> {
         }, ms);
     });
 }
+
+export function debounce<T extends () => void>(f: T, ms: number): T {
+    let timeout: any;
+    return ((...args) => {
+        if (timeout) {
+            clearTimeout(timeout);
+        }
+        timeout = setTimeout(() => {
+            f(...args);
+        }, ms);
+    }) as T;
+}
