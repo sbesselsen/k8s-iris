@@ -3,6 +3,13 @@ import {
     Button,
     ButtonGroup,
     HStack,
+    Modal,
+    ModalBody,
+    ModalCloseButton,
+    ModalContent,
+    ModalFooter,
+    ModalHeader,
+    ModalOverlay,
     useColorModeValue,
     useToken,
     VStack,
@@ -31,7 +38,10 @@ import { useAppParam } from "../../context/param";
 import { useIpcCall } from "../../hook/ipc";
 import { useK8sClient } from "../../k8s/client";
 import { useK8sListWatch } from "../../k8s/list-watch";
-import { toYaml } from "../../../common/util/yaml";
+import { parseYaml, toYaml } from "../../../common/util/yaml";
+import { useDialog } from "../../hook/dialog";
+import { MonacoDiffEditor } from "../../component/editor/MonacoDiffEditor";
+import { deepEqual } from "../../../common/util/deep-equal";
 
 export type ResourceEditorProps = {
     editorResource: K8sObjectIdentifier;
@@ -352,7 +362,9 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
     const { object } = props;
 
     const client = useK8sClient();
-    const shouldEnableSave = !useContextLock();
+    const isClusterLocked = useContextLock();
+
+    const showDialog = useDialog();
 
     const [editorObject, setEditorObject] = useState(object);
     useEffect(() => {
@@ -362,51 +374,51 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
         }
     }, [object, setEditorObject]);
 
-    // Update the object and show a smart diff.
-    const applyChanges = useCallback(
-        (newObject: K8sObject) => {
-            return (async () => {
-                // Load the newest version of the object.
-                const clusterObject = await client.read(object);
-                let editObject = object;
-                if (clusterObject) {
-                    const clusterDiff = diff(object, clusterObject);
-                    const editDiff = diff(object, newObject);
-                    const mergedDiff = mergeDiffs(clusterDiff, editDiff);
-                    if (mergedDiff.success) {
-                        editObject = cloneAndApply(
-                            object,
-                            mergedDiff.diff
-                        ) as K8sObject;
-                    }
-                }
-
-                // Now show a diff between these two!
-                console.log("edit", clusterObject, editObject);
-
-                // TODO: actually show the diff!
-
-                // setEditorObject(newObject);
-            })();
-        },
-        [client, object, setEditorObject]
-    );
-
-    const onChange = useCallback(
-        (newValue: object) => {
-            return applyChanges(newValue as K8sObject);
-        },
-        [applyChanges]
-    );
-
     const [value, setValue] = useState("");
-    const valueRef = useRef<string>();
     useEffect(() => {
-        valueRef.current = value;
-    }, [value, valueRef]);
+        setValue(toYaml(editorObject));
+    }, [editorObject, setValue]);
+
+    const [shouldShowDiffDialog, setShowDiffDialog] = useState(false);
+    const [diffObject, setDiffObject] = useState<K8sObject>();
+
+    const onSave = useCallback(() => {
+        let newObject: K8sObject;
+        try {
+            newObject = parseYaml(value) as K8sObject;
+        } catch (e) {
+            showDialog({
+                title: "Invalid yaml",
+                type: "error",
+                message: "The yaml you are trying to apply is invalid.",
+                detail: String(e),
+                buttons: ["OK"],
+            });
+            return;
+        }
+        if (isClusterLocked) {
+            showDialog({
+                title: "Read-only mode",
+                type: "error",
+                message: "This cluster is in read-only mode.",
+                detail: "You can save after you click 'Allow changes' next to the cluster selector.",
+                buttons: ["OK"],
+            });
+            return;
+        }
+
+        if (deepEqual(object, newObject)) {
+            // User did not make changes! We are done.
+            return;
+        }
+
+        setDiffObject(newObject);
+        setShowDiffDialog(true);
+    }, [isClusterLocked, setShowDiffDialog, setDiffObject, value]);
+    const onSaveRef = useRef<() => void>(onSave);
     useEffect(() => {
-        setValue(toYaml(object));
-    }, [object, setValue]);
+        onSaveRef.current = onSave;
+    }, [onSave, onSaveRef]);
 
     const configureEditor = (editor: monaco.editor.IStandaloneCodeEditor) => {
         editor.addAction({
@@ -415,18 +427,118 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
             keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
             contextMenuGroupId: "navigation",
             contextMenuOrder: 1.5,
-            run: function () {
-                console.log("Apply", valueRef.current);
+            run: async () => {
+                onSaveRef.current();
             },
         });
     };
 
+    const onClose = useCallback(() => {
+        setShowDiffDialog(false);
+    }, [setShowDiffDialog]);
+
     return (
-        <MonacoCodeEditor
-            options={{ language: "yaml" }}
-            value={value}
-            onChange={setValue}
-            configureEditor={configureEditor}
-        />
+        <VStack alignItems="stretch" flex="1 0 0" position="relative">
+            <ResourceDiffYamlDialog
+                isOpen={shouldShowDiffDialog}
+                onClose={onClose}
+                originalObject={object}
+                object={diffObject}
+            />
+            <MonacoCodeEditor
+                options={{
+                    language: "yaml",
+                    minimap: { enabled: false },
+                }}
+                value={value}
+                onChange={setValue}
+                configureEditor={configureEditor}
+            />
+            <Box position="absolute" right={6} bottom={3}>
+                <Button colorScheme="primary" size="lg" onClick={onSave}>
+                    Save
+                </Button>
+            </Box>
+        </VStack>
+    );
+};
+
+type ResourceDiffYamlDialogProps = {
+    isOpen?: boolean;
+    onClose?: () => void;
+    originalObject?: K8sObject | undefined;
+    object?: K8sObject | undefined;
+};
+
+const ResourceDiffYamlDialog: React.FC<ResourceDiffYamlDialogProps> = (
+    props
+) => {
+    const { isOpen = false, originalObject, object, onClose } = props;
+
+    const client = useK8sClient();
+
+    const [originalValue, setOriginalValue] = useState<string>("");
+    const [value, setValue] = useState<string>("");
+
+    useEffect(() => {
+        let canceled = false;
+        (async () => {
+            // Load the newest version of the object from the cluster.
+            let clusterObject: K8sObject;
+            setOriginalValue("");
+            setValue("");
+            try {
+                clusterObject = await client.read(originalObject);
+            } catch (e) {
+                // TODO: handle the error case... somehow?
+                return;
+            }
+            if (canceled) {
+                return;
+            }
+            const editDiff = diff(originalObject, object);
+            let editObject = object;
+            if (clusterObject) {
+                const clusterDiff = diff(object, clusterObject);
+                const mergedDiff = mergeDiffs(clusterDiff, editDiff);
+                if (mergedDiff.success) {
+                    // We can show a simplified diff of only the items on "our side" of the diff.
+                    editObject = cloneAndApply(
+                        object,
+                        mergedDiff.diff
+                    ) as K8sObject;
+                }
+            }
+            setOriginalValue(toYaml(clusterObject));
+            setValue(toYaml(editObject));
+        })();
+        return () => {
+            canceled = true;
+        };
+    }, [client, originalObject, object, setOriginalValue]);
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose}>
+            <ModalOverlay />
+            <ModalContent>
+                <ModalHeader>Modal Title</ModalHeader>
+                <ModalCloseButton />
+                <ModalBody>
+                    <MonacoDiffEditor
+                        originalValue={originalValue}
+                        value={value}
+                    />
+                </ModalBody>
+
+                <ModalFooter>
+                    <Button colorScheme="primary" mr={3}>
+                        Apply
+                    </Button>
+                    <Button colorScheme="primary" variant="ghost">
+                        Cancel
+                    </Button>
+                </ModalFooter>
+            </ModalContent>
+        </Modal>
     );
 };
