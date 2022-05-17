@@ -9,15 +9,18 @@ import {
 import { initializeMonaco } from "./monaco-shared";
 
 export type MonacoCodeEditorProps = {
+    originalValue?: string;
     defaultValue?: string;
     value?: string;
     onChange?: (newValue: string) => void;
-    options?: editor.IStandaloneEditorConstructionOptions;
-    runtimeOptions?: editor.IEditorOptions & editor.IGlobalEditorOptions;
-    configureEditor?: (editor: editor.IStandaloneCodeEditor) => void;
+    options?: editor.IStandaloneDiffEditorConstructionOptions & {
+        language?: string;
+    };
+    runtimeOptions?: editor.IDiffEditorOptions & editor.IGlobalEditorOptions;
+    configureEditor?: (editor: editor.IStandaloneDiffEditor) => void;
 };
 
-export const MonacoCodeEditor: React.FC<MonacoCodeEditorProps> = (props) => {
+export const MonacoDiffEditor: React.FC<MonacoCodeEditorProps> = (props) => {
     initializeMonaco();
 
     const {
@@ -25,6 +28,7 @@ export const MonacoCodeEditor: React.FC<MonacoCodeEditorProps> = (props) => {
         value,
         onChange,
         options,
+        originalValue,
         runtimeOptions,
         configureEditor,
     } = props;
@@ -33,7 +37,7 @@ export const MonacoCodeEditor: React.FC<MonacoCodeEditorProps> = (props) => {
     const configureEditorConst = useConst(() => configureEditor);
 
     const containerRef = useRef<HTMLDivElement>();
-    const editorRef = useRef<editor.IStandaloneCodeEditor>();
+    const editorRef = useRef<editor.IStandaloneDiffEditor>();
 
     const theme = useColorModeValue("charm", "charm-dark");
 
@@ -50,15 +54,21 @@ export const MonacoCodeEditor: React.FC<MonacoCodeEditorProps> = (props) => {
         if (!containerRef.current) {
             return;
         }
-        const editorInstance = editor.create(containerRef.current, {
-            value: stateValue ?? "",
+        const { language, ...editorOptions } = optionsConst;
+        const editorInstance = editor.createDiffEditor(containerRef.current, {
             theme,
             automaticLayout: true,
-            ...optionsConst,
+            ...editorOptions,
+        });
+        const originalModel = editor.createModel(originalValue, language);
+        const modifiedModel = editor.createModel(value, language);
+        editorInstance.setModel({
+            original: originalModel,
+            modified: modifiedModel,
         });
         editorRef.current = editorInstance;
-        editorInstance.onDidChangeModelContent(() => {
-            const value = editorInstance.getModel()?.getValue();
+        editorInstance.onDidUpdateDiff(() => {
+            const value = editorInstance.getModifiedEditor()?.getValue();
             editorValueRef.current = value;
             setStateValue(value);
         });
@@ -89,9 +99,9 @@ export const MonacoCodeEditor: React.FC<MonacoCodeEditorProps> = (props) => {
 
     useEffect(() => {
         if (stateValue !== editorValueRef.current && editorRef.current) {
-            const editor = editorRef.current;
-            editor.setValue(stateValue);
-            editorValueRef.current = editor.getValue();
+            const modifiedEditor = editorRef.current.getModifiedEditor();
+            modifiedEditor.setValue(stateValue);
+            editorValueRef.current = modifiedEditor.getValue();
         }
     }, [editorRef, editorValueRef, stateValue]);
 
