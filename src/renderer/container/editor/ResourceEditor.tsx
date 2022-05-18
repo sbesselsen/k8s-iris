@@ -24,7 +24,12 @@ import React, {
 import * as monaco from "monaco-editor";
 import { K8sObject, K8sObjectIdentifier } from "../../../common/k8s/client";
 import { objSameRef } from "../../../common/k8s/util";
-import { cloneAndApply, diff, mergeDiffs } from "../../../common/util/diff";
+import {
+    cloneAndApply,
+    diff,
+    MergeConflict,
+    mergeDiffs,
+} from "../../../common/util/diff";
 import { MonacoCodeEditor } from "../../component/editor/MonacoCodeEditor";
 import {
     K8sObjectHeading,
@@ -42,6 +47,7 @@ import { parseYaml, toYaml } from "../../../common/util/yaml";
 import { useDialog } from "../../hook/dialog";
 import { MonacoDiffEditor } from "../../component/editor/MonacoDiffEditor";
 import { deepEqual } from "../../../common/util/deep-equal";
+import { useKeyListener } from "../../hook/keyboard";
 
 export type ResourceEditorProps = {
     editorResource: K8sObjectIdentifier;
@@ -363,39 +369,91 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
 
     const client = useK8sClient();
     const isClusterLocked = useContextLock();
-
     const showDialog = useDialog();
 
     const [editorObject, setEditorObject] = useState(object);
+    const [value, setValue] = useState("");
+    const [phase, setPhase] = useState<"edit" | "review">("edit");
+    const [reviewOriginalValue, setReviewOriginalValue] = useState("");
+    const [reviewValue, setReviewValue] = useState("");
+
     useEffect(() => {
         if (!objSameRef(object, editorObject)) {
             // Only change the editor object if it is different. Updates to the object at hand should not overwrite what's in the editor.
             setEditorObject(object);
         }
     }, [object, setEditorObject]);
-
-    const [value, setValue] = useState("");
     useEffect(() => {
         setValue(toYaml(editorObject));
     }, [editorObject, setValue]);
 
-    const [shouldShowDiffDialog, setShowDiffDialog] = useState(false);
-    const [diffObject, setDiffObject] = useState<K8sObject>();
+    const updateDiffEditor = useCallback(
+        (value: string): boolean => {
+            let newObject: K8sObject;
+            try {
+                newObject = parseYaml(value) as K8sObject;
+            } catch (e) {
+                showDialog({
+                    title: "Invalid yaml",
+                    type: "error",
+                    message: "The yaml you are trying to apply is invalid.",
+                    detail: String(e),
+                    buttons: ["OK"],
+                });
+                return false;
+            }
+            console.log("newObject", toYaml(newObject));
 
-    const onSave = useCallback(() => {
-        let newObject: K8sObject;
-        try {
-            newObject = parseYaml(value) as K8sObject;
-        } catch (e) {
-            showDialog({
-                title: "Invalid yaml",
-                type: "error",
-                message: "The yaml you are trying to apply is invalid.",
-                detail: String(e),
-                buttons: ["OK"],
-            });
-            return;
-        }
+            let clusterObject = object;
+            console.log("clusterObject", toYaml(clusterObject));
+            const editDiff = diff(editorObject, newObject);
+            console.log("editDiff", toYaml(editDiff));
+            if (!editDiff) {
+                return false;
+            }
+            const clusterDiff = diff(editorObject, clusterObject);
+            console.log("clusterDiff", toYaml(clusterDiff));
+            // Create a merged diff, where in case of conflicts, we choose the side of the edit we just made.
+            // The user is going to review it anyway!
+            const mergedDiff = mergeDiffs(
+                clusterDiff,
+                editDiff,
+                (conflict: MergeConflict) => {
+                    return conflict.rightDiff;
+                }
+            );
+            console.log("mergedDiff", toYaml(mergedDiff));
+            if (mergedDiff.diff) {
+                // We can show a simplified diff of only the items on "our side" of the diff, at least as far as possible.
+                newObject = cloneAndApply(
+                    editorObject,
+                    mergedDiff.diff
+                ) as K8sObject;
+            }
+
+            // Re-create the cluster object as (editorObject + diff(editorObject, clusterObject)) to make sure all object keys are in the same order. Nicer diff!
+            clusterObject = cloneAndApply(
+                editorObject,
+                clusterDiff
+            ) as K8sObject;
+
+            setEditorObject(clusterObject);
+            setReviewOriginalValue(toYaml(clusterObject));
+            setReviewValue(toYaml(newObject));
+
+            return true;
+        },
+        [
+            editorObject,
+            object,
+            setEditorObject,
+            setReviewOriginalValue,
+            setReviewValue,
+            showDialog,
+        ]
+    );
+
+    const onReview = useCallback(() => {
         if (isClusterLocked) {
             showDialog({
                 title: "Read-only mode",
@@ -407,138 +465,137 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
             return;
         }
 
-        if (deepEqual(object, newObject)) {
-            // User did not make changes! We are done.
+        if (!updateDiffEditor(value)) {
             return;
         }
 
-        setDiffObject(newObject);
-        setShowDiffDialog(true);
-    }, [isClusterLocked, setShowDiffDialog, setDiffObject, value]);
+        setPhase("review");
+    }, [isClusterLocked, showDialog, updateDiffEditor, setPhase, value]);
+
+    const onReviewRef = useRef<() => void>(onReview);
+    useEffect(() => {
+        onReviewRef.current = onReview;
+    }, [onReview, onReviewRef]);
+
+    const cancelReview = useCallback(() => {
+        if (phase === "review") {
+            setValue(reviewValue);
+            setPhase("edit");
+        }
+    }, [phase, reviewValue, setPhase, setValue]);
+
+    const onBackToEditor = useCallback(() => {
+        cancelReview();
+    }, [cancelReview]);
+
+    const onSave = useCallback(() => {
+        // TODO
+        // Check again if anything happened to object that might conflict with our local changes.
+        // If so, show a dialog and updateDiffEditor(reviewValue).
+        // If not, actually save. Use a JSON patch if possible. We will see if it is.
+    }, [reviewValue]);
     const onSaveRef = useRef<() => void>(onSave);
     useEffect(() => {
         onSaveRef.current = onSave;
     }, [onSave, onSaveRef]);
 
-    const configureEditor = (editor: monaco.editor.IStandaloneCodeEditor) => {
-        editor.addAction({
-            id: "apply-to-cluster",
-            label: "Apply to cluster",
-            keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
-            contextMenuGroupId: "navigation",
-            contextMenuOrder: 1.5,
-            run: async () => {
-                onSaveRef.current();
-            },
-        });
-    };
-
-    const onClose = useCallback(() => {
-        setShowDiffDialog(false);
-    }, [setShowDiffDialog]);
-
-    return (
-        <VStack alignItems="stretch" flex="1 0 0" position="relative">
-            <ResourceDiffYamlDialog
-                isOpen={shouldShowDiffDialog}
-                onClose={onClose}
-                originalObject={object}
-                object={diffObject}
-            />
-            <MonacoCodeEditor
-                options={{
-                    language: "yaml",
-                    minimap: { enabled: false },
-                }}
-                value={value}
-                onChange={setValue}
-                configureEditor={configureEditor}
-            />
-            <Box position="absolute" right={6} bottom={3}>
-                <Button colorScheme="primary" size="lg" onClick={onSave}>
-                    Save
-                </Button>
-            </Box>
-        </VStack>
-    );
-};
-
-type ResourceDiffYamlDialogProps = {
-    isOpen?: boolean;
-    onClose?: () => void;
-    originalObject?: K8sObject | undefined;
-    object?: K8sObject | undefined;
-};
-
-const ResourceDiffYamlDialog: React.FC<ResourceDiffYamlDialogProps> = (
-    props
-) => {
-    const { isOpen = false, originalObject, object, onClose } = props;
-
-    const client = useK8sClient();
-
-    const [originalValue, setOriginalValue] = useState<string>("");
-    const [value, setValue] = useState<string>("");
-
-    useEffect(() => {
-        let canceled = false;
-        (async () => {
-            // Load the newest version of the object from the cluster.
-            let clusterObject: K8sObject;
-            setOriginalValue("");
-            setValue("");
-            try {
-                clusterObject = await client.read(originalObject);
-            } catch (e) {
-                // TODO: handle the error case... somehow?
-                return;
-            }
-            if (canceled) {
-                return;
-            }
-            const editDiff = diff(originalObject, object);
-            let editObject = object;
-            if (clusterObject) {
-                const clusterDiff = diff(object, clusterObject);
-                const mergedDiff = mergeDiffs(clusterDiff, editDiff);
-                if (mergedDiff.success) {
-                    // We can show a simplified diff of only the items on "our side" of the diff.
-                    editObject = cloneAndApply(
-                        object,
-                        mergedDiff.diff
-                    ) as K8sObject;
+    useKeyListener(
+        useCallback(
+            (eventType, key) => {
+                if (eventType === "keydown" && key === "Escape") {
+                    if (phase === "review") {
+                        cancelReview();
+                    }
                 }
-            }
-            setOriginalValue(toYaml(clusterObject));
-            setValue(toYaml(editObject));
-        })();
-        return () => {
-            canceled = true;
-        };
-    }, [client, originalObject, object, setOriginalValue]);
+            },
+            [phase, cancelReview]
+        )
+    );
+
+    const configureEditor = useCallback(
+        (editor: monaco.editor.IStandaloneCodeEditor) => {
+            editor.addAction({
+                id: "review-changes",
+                label: "Review changes",
+                keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
+                contextMenuGroupId: "navigation",
+                contextMenuOrder: 1.5,
+                run: async () => {
+                    onReviewRef.current();
+                },
+            });
+        },
+        [onReviewRef]
+    );
+    const configureDiffEditor = useCallback(
+        (editor: monaco.editor.IStandaloneDiffEditor) => {
+            editor.addAction({
+                id: "save",
+                label: "Save to cluster",
+                keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
+                contextMenuGroupId: "navigation",
+                contextMenuOrder: 1.5,
+                run: async () => {
+                    onSaveRef.current();
+                },
+            });
+        },
+        [onReviewRef]
+    );
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose}>
-            <ModalOverlay />
-            <ModalContent>
-                <ModalHeader>Modal Title</ModalHeader>
-                <ModalCloseButton />
-                <ModalBody>
-                    <MonacoDiffEditor
-                        originalValue={originalValue}
-                        value={value}
-                    />
-                </ModalBody>
-
-                <ModalFooter>
-                    <Button colorScheme="primary" mr={3}>
-                        Apply
-                    </Button>
-                    <Button colorScheme="primary" variant="ghost">
-                        Cancel
-                    </Button>
-                </ModalFooter>
-            </ModalContent>
-        </Modal>
+        <VStack
+            alignItems="stretch"
+            flex="1 0 0"
+            position="relative"
+            spacing={0}
+        >
+            {phase === "edit" && (
+                <MonacoCodeEditor
+                    options={{
+                        language: "yaml",
+                        minimap: { enabled: false }, // I hate that little freak
+                    }}
+                    value={value}
+                    onChange={setValue}
+                    configureEditor={configureEditor}
+                />
+            )}
+            {phase === "review" && (
+                <MonacoDiffEditor
+                    options={{
+                        language: "yaml",
+                        minimap: { enabled: false },
+                    }}
+                    originalValue={reviewOriginalValue}
+                    value={reviewValue}
+                    onChange={setReviewValue}
+                    configureEditor={configureDiffEditor}
+                />
+            )}
+            <HStack flex="0 0 auto" justifyContent="end" px={4} py={2}>
+                {phase === "edit" && (
+                    <>
+                        <Button colorScheme="primary" onClick={onReview}>
+                            Save
+                        </Button>
+                    </>
+                )}
+                {phase === "review" && (
+                    <>
+                        <Button
+                            colorScheme="primary"
+                            variant="ghost"
+                            onClick={onBackToEditor}
+                        >
+                            Back to editor
+                        </Button>
+                        <Button colorScheme="primary" onClick={onSave}>
+                            Save
+                        </Button>
+                    </>
+                )}
+            </HStack>
+        </VStack>
     );
 };
