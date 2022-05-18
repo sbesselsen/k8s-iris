@@ -390,25 +390,44 @@ export type MergeConflict = {
         | DiffArrayItemDescend;
 };
 
+export type MergeConflictResolver = (
+    conflict: MergeConflict
+) => MergeConflict["leftDiff"];
+
 export function mergeDiffs(
     a: Diff,
-    b: Diff
-):
-    | { success: true; diff: Diff }
-    | { success: false; conflicts: MergeConflict[] } {
+    b: Diff,
+    resolveConflict?: MergeConflictResolver
+): { diff: Diff; conflicts: MergeConflict[] } {
     const conflicts: MergeConflict[] = [];
-    const diff = mergeDiffsInternal(a, b, [], conflicts);
-    if (conflicts.length > 0) {
-        return { success: false, conflicts };
-    } else {
-        return { success: true, diff };
+    const diff = mergeDiffsInternal(
+        a,
+        b,
+        [],
+        resolveConflict ?? (() => null),
+        conflicts
+    );
+    return { diff, conflicts };
+}
+
+function handleConflict(
+    conflict: MergeConflict,
+    resolver: MergeConflictResolver,
+    conflicts: MergeConflict[]
+): MergeConflict["leftDiff"] {
+    const resolution = resolver(conflict);
+    if (resolution) {
+        return resolution;
     }
+    conflicts.push(conflict);
+    return null;
 }
 
 function mergeDiffsInternal(
     a: Diff,
     b: Diff,
     path: Array<string | number>,
+    resolveConflict: MergeConflictResolver,
     conflicts: MergeConflict[]
 ): Diff {
     if (a === null) {
@@ -421,29 +440,38 @@ function mergeDiffsInternal(
     switch (a.diff) {
         case "array":
             if (b.diff === "array") {
-                return mergeArrayDiffs(a, b, path, conflicts);
+                return mergeArrayDiffs(a, b, path, resolveConflict, conflicts);
             }
             break;
         case "delete":
             if (b.diff === "delete") {
                 return a;
             } else {
-                conflicts.push({ path, leftDiff: a, rightDiff: b });
-                return null;
+                return handleConflict(
+                    { path, leftDiff: a, rightDiff: b },
+                    resolveConflict,
+                    conflicts
+                ) as Diff;
             }
         case "value":
             if (b.diff === "value" && deepEqual(a.value, b.value)) {
                 return a;
             } else {
-                conflicts.push({ path, leftDiff: a, rightDiff: b });
-                return null;
+                return handleConflict(
+                    { path, leftDiff: a, rightDiff: b },
+                    resolveConflict,
+                    conflicts
+                ) as Diff;
             }
         case "object":
             if (b.diff === "object") {
-                return mergeObjectDiffs(a, b, path, conflicts);
+                return mergeObjectDiffs(a, b, path, resolveConflict, conflicts);
             } else {
-                conflicts.push({ path, leftDiff: a, rightDiff: b });
-                return null;
+                return handleConflict(
+                    { path, leftDiff: a, rightDiff: b },
+                    resolveConflict,
+                    conflicts
+                ) as Diff;
             }
     }
 }
@@ -452,6 +480,7 @@ function mergeArrayDiffs(
     a: DiffArray,
     b: DiffArray,
     path: Array<string | number>,
+    resolveConflict: MergeConflictResolver,
     conflicts: MergeConflict[]
 ): DiffArray {
     const aDiffs = [...a.diffs].sort((x, y) => x.index - y.index);
@@ -591,6 +620,7 @@ function mergeArrayDiffs(
                                         aDiff.subDiff,
                                         bDiff.subDiff,
                                         [...path, aDiff.index - bOffset],
+                                        resolveConflict,
                                         conflicts
                                     ),
                                 });
@@ -609,6 +639,7 @@ function mergeObjectDiffs(
     a: DiffObject,
     b: DiffObject,
     path: Array<string | number>,
+    resolveConflict: MergeConflictResolver,
     conflicts: MergeConflict[]
 ): DiffObject {
     const aDiffs = a.diffs;
@@ -625,6 +656,7 @@ function mergeObjectDiffs(
                 aDiffs[key],
                 bDiffs[key],
                 [...path, key],
+                resolveConflict,
                 conflicts
             );
         }
