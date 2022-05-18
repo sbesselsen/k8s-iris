@@ -93,6 +93,10 @@ export const MonacoDiffEditor: React.FC<MonacoCodeEditorProps> = (props) => {
     }, [theme]);
 
     useEffect(() => {
+        editorRef.current?.getOriginalEditor().setValue(originalValue);
+    }, [editorRef, originalValue]);
+
+    useEffect(() => {
         if (runtimeOptions) {
             editorRef.current?.updateOptions(runtimeOptions);
         }
@@ -106,5 +110,5 @@ export const MonacoDiffEditor: React.FC<MonacoCodeEditorProps> = (props) => {
         }
     }, [editorRef, editorValueRef, stateValue]);
 
-    return <Box flex="1 0 0" ref={containerRef}></Box>;
+    return <Box flex="1 0 0" overflow="hidden" ref={containerRef}></Box>;
 };

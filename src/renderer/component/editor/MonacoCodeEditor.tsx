@@ -95,5 +95,5 @@ export const MonacoCodeEditor: React.FC<MonacoCodeEditorProps> = (props) => {
         }
     }, [editorRef, editorValueRef, stateValue]);
 
-    return <Box flex="1 0 0" ref={containerRef}></Box>;
+    return <Box flex="1 0 0" overflow="hidden" ref={containerRef}></Box>;
 };
