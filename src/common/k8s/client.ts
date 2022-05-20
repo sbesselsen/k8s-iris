@@ -45,7 +45,7 @@ export type K8sPatchConflictDetails = {
 
 export type K8sPatchConflictResolution = { force: boolean };
 
-export type K8sApplyOptions = K8sPatchOptions;
+export type K8sApplyOptions = {};
 
 export type K8sRemoveOptions = {
     waitForCompletion?: boolean;
