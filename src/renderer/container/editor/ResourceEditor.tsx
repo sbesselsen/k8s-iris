@@ -8,7 +8,7 @@ import {
     useToken,
     VStack,
 } from "@chakra-ui/react";
-import { AiFillCaretRight } from "react-icons/ai";
+import { AiFillCaretRight, AiOutlineReload } from "react-icons/ai";
 import React, {
     useCallback,
     useEffect,
@@ -386,6 +386,11 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
         setValue(newValue);
     }, [editorObject, setOriginalValue, setValue]);
 
+    const hasUpstreamChanges = useMemo(
+        () => !deepEqual(editorObject, object),
+        [editorObject, object]
+    );
+
     const updateDiffEditor = useCallback(
         (value: string): boolean => {
             let newObject: K8sObject;
@@ -520,6 +525,43 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
         onApplyRef.current = onApply;
     }, [onApply, onApplyRef]);
 
+    const onClickUpdate = useCallback(() => {
+        let newObject: K8sObject;
+        try {
+            newObject = parseYaml(value) as K8sObject;
+        } catch (e) {
+            // Cannot parse the editor yaml.
+            return;
+        }
+
+        let clusterObject = object;
+        const editDiff = diff(editorObject, newObject);
+        if (!editDiff) {
+            setEditorObject(object);
+            return;
+        }
+        const clusterDiff = diff(editorObject, clusterObject);
+        // Create a merged diff, where in case of conflicts, we choose the side of the edit we just made.
+        // Don't want to lose changes!
+        const mergedDiff = mergeDiffs(
+            clusterDiff,
+            editDiff,
+            (conflict: MergeConflict) => {
+                return conflict.rightDiff;
+            }
+        );
+        if (mergedDiff.diff) {
+            // We can show a simplified diff of only the items on "our side" of the diff, at least as far as possible.
+            newObject = cloneAndApply(
+                editorObject,
+                mergedDiff.diff
+            ) as K8sObject;
+        }
+
+        setEditorObject(object);
+        // TODO: but keep our present value... this one will be hard to do.
+    }, [editorObject, object, setEditorObject]);
+
     useKeyListener(
         useCallback(
             (eventType, key) => {
@@ -599,6 +641,16 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
             <HStack flex="0 0 auto" justifyContent="end" px={4} py={2}>
                 {phase === "edit" && (
                     <>
+                        {hasUpstreamChanges && (
+                            <Button
+                                colorScheme="yellow"
+                                variant="outline"
+                                onClick={onClickUpdate}
+                                leftIcon={<Icon as={AiOutlineReload} />}
+                            >
+                                Update
+                            </Button>
+                        )}
                         <Button
                             colorScheme="primary"
                             onClick={onReview}
