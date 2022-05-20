@@ -18,6 +18,7 @@ export type MonacoCodeEditorProps = {
     };
     runtimeOptions?: editor.IDiffEditorOptions & editor.IGlobalEditorOptions;
     configureEditor?: (editor: editor.IStandaloneDiffEditor) => void;
+    focusOnInit?: boolean;
 };
 
 export const MonacoDiffEditor: React.FC<MonacoCodeEditorProps> = (props) => {
@@ -31,6 +32,7 @@ export const MonacoDiffEditor: React.FC<MonacoCodeEditorProps> = (props) => {
         originalValue,
         runtimeOptions,
         configureEditor,
+        focusOnInit,
     } = props;
 
     const optionsConst = useConst(options);
@@ -73,6 +75,9 @@ export const MonacoDiffEditor: React.FC<MonacoCodeEditorProps> = (props) => {
             editorValueRef.current = value;
             setStateValue(value);
         });
+        if (focusOnInit) {
+            editorInstance.getModifiedEditor().focus();
+        }
         if (runtimeOptions && !isNew) {
             editorInstance.updateOptions(runtimeOptions);
         }

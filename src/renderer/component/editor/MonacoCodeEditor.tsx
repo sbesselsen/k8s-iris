@@ -15,6 +15,7 @@ export type MonacoCodeEditorProps = {
     options?: editor.IStandaloneEditorConstructionOptions;
     runtimeOptions?: editor.IEditorOptions & editor.IGlobalEditorOptions;
     configureEditor?: (editor: editor.IStandaloneCodeEditor) => void;
+    focusOnInit?: boolean;
 };
 
 export const MonacoCodeEditor: React.FC<MonacoCodeEditorProps> = (props) => {
@@ -27,6 +28,7 @@ export const MonacoCodeEditor: React.FC<MonacoCodeEditorProps> = (props) => {
         options,
         runtimeOptions,
         configureEditor,
+        focusOnInit,
     } = props;
 
     const optionsConst = useConst(options);
@@ -62,6 +64,9 @@ export const MonacoCodeEditor: React.FC<MonacoCodeEditorProps> = (props) => {
             editorValueRef.current = value;
             setStateValue(value);
         });
+        if (focusOnInit) {
+            editorInstance.focus();
+        }
         if (runtimeOptions && !isNew) {
             editorInstance.updateOptions(runtimeOptions);
         }
