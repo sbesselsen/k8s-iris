@@ -370,8 +370,6 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
     const [originalValue, setOriginalValue] = useState("");
     const [value, setValue] = useState("");
     const [phase, setPhase] = useState<"edit" | "review">("edit");
-    const [reviewOriginalValue, setReviewOriginalValue] = useState("");
-    const [reviewValue, setReviewValue] = useState("");
     const [isApplyInProgress, setApplyInProgress] = useState(false);
 
     const updateValueFromObject = useCallback(
@@ -411,66 +409,59 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
         [editorObject, object]
     );
 
-    const updateDiffEditor = useCallback(
-        (value: string): boolean => {
-            let newObject: K8sObject;
-            try {
-                newObject = parseYaml(value) as K8sObject;
-            } catch (e) {
-                showDialog({
-                    title: "Invalid yaml",
-                    type: "error",
-                    message: "The yaml you are trying to apply is invalid.",
-                    detail: String(e),
-                    buttons: ["OK"],
-                });
-                return false;
-            }
+    const mergeClusterUpdates = useCallback(():
+        | { merged: true }
+        | {
+              merged: false;
+              reason: "no_diff" | "invalid_yaml";
+              error?: any;
+          } => {
+        let newObject: K8sObject;
+        try {
+            newObject = parseYaml(value) as K8sObject;
+        } catch (e) {
+            return { merged: false, reason: "invalid_yaml", error: e };
+        }
 
-            let clusterObject = object;
-            const editDiff = diff(editorObject, newObject);
-            if (!editDiff) {
-                return false;
+        let clusterObject = object;
+        const editDiff = diff(editorObject, newObject);
+        if (!editDiff) {
+            return { merged: false, reason: "no_diff" };
+        }
+        const clusterDiff = diff(editorObject, clusterObject);
+        // Create a merged diff, where in case of conflicts, we choose the side of the edit we just made.
+        // The user is going to review it anyway!
+        const mergedDiff = mergeDiffs(
+            clusterDiff,
+            editDiff,
+            (conflict: MergeConflict) => {
+                return conflict.rightDiff;
             }
-            const clusterDiff = diff(editorObject, clusterObject);
-            // Create a merged diff, where in case of conflicts, we choose the side of the edit we just made.
-            // The user is going to review it anyway!
-            const mergedDiff = mergeDiffs(
-                clusterDiff,
-                editDiff,
-                (conflict: MergeConflict) => {
-                    return conflict.rightDiff;
-                }
-            );
-            if (mergedDiff.diff) {
-                // We can show a simplified diff of only the items on "our side" of the diff, at least as far as possible.
-                newObject = cloneAndApply(
-                    editorObject,
-                    mergedDiff.diff
-                ) as K8sObject;
-            }
-
-            // Re-create the cluster object as (editorObject + diff(editorObject, clusterObject)) to make sure all object keys are in the same order. Nicer diff!
-            clusterObject = cloneAndApply(
+        );
+        if (mergedDiff.diff) {
+            // We can show a simplified diff of only the items on "our side" of the diff, at least as far as possible.
+            newObject = cloneAndApply(
                 editorObject,
-                clusterDiff
+                mergedDiff.diff
             ) as K8sObject;
+        }
 
-            setEditorObject(clusterObject);
-            setReviewOriginalValue(toYaml(clusterObject));
-            setReviewValue(toYaml(newObject));
+        // Re-create the cluster object as (editorObject + diff(editorObject, clusterObject)) to make sure all object keys are in the same order. Nicer diff!
+        clusterObject = cloneAndApply(editorObject, clusterDiff) as K8sObject;
 
-            return true;
-        },
-        [
-            editorObject,
-            object,
-            setEditorObject,
-            setReviewOriginalValue,
-            setReviewValue,
-            showDialog,
-        ]
-    );
+        setEditorObject(clusterObject, false);
+        setOriginalValue(toYaml(clusterObject));
+        setValue(toYaml(newObject));
+
+        return { merged: true };
+    }, [
+        editorObject,
+        object,
+        setEditorObject,
+        setOriginalValue,
+        setValue,
+        value,
+    ]);
 
     const onReview = useCallback(() => {
         if (isClusterLocked) {
@@ -484,12 +475,23 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
             return;
         }
 
-        if (!updateDiffEditor(value)) {
+        const result = mergeClusterUpdates();
+        if (result.merged === false) {
+            // Typescript does not discriminate type with !result.merged
+            if (result.reason === "invalid_yaml") {
+                showDialog({
+                    title: "Invalid yaml",
+                    type: "error",
+                    message: "The yaml you are trying to apply is invalid.",
+                    detail: result.error ? String(result.error) : null,
+                    buttons: ["OK"],
+                });
+            }
             return;
         }
 
         setPhase("review");
-    }, [isClusterLocked, showDialog, updateDiffEditor, setPhase, value]);
+    }, [isClusterLocked, showDialog, mergeClusterUpdates, setPhase]);
 
     const onReviewRef = useRef<() => void>(onReview);
     useEffect(() => {
@@ -498,10 +500,9 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
 
     const cancelReview = useCallback(() => {
         if (phase === "review") {
-            setValue(reviewValue);
             setPhase("edit");
         }
-    }, [phase, reviewValue, setPhase, setValue]);
+    }, [phase, setPhase]);
 
     const onBackToEditor = useCallback(() => {
         cancelReview();
@@ -510,7 +511,7 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
     const onApply = useCallback(() => {
         let newObject: K8sObject;
         try {
-            newObject = parseYaml(reviewValue) as K8sObject;
+            newObject = parseYaml(value) as K8sObject;
         } catch (e) {
             showDialog({
                 title: "Invalid yaml",
@@ -539,52 +540,33 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
             }
             setApplyInProgress(false);
         })();
-    }, [client, reviewValue, setApplyInProgress, setEditorObject, setPhase]);
+    }, [client, value, setApplyInProgress, setEditorObject, setPhase]);
     const onApplyRef = useRef<() => void>(onApply);
     useEffect(() => {
         onApplyRef.current = onApply;
     }, [onApply, onApplyRef]);
 
     const onClickUpdate = useCallback(() => {
-        let newObject: K8sObject;
-        try {
-            newObject = parseYaml(value) as K8sObject;
-        } catch (e) {
-            // Cannot parse the editor yaml.
-            return;
-        }
-
-        let clusterObject = object;
-        const editDiff = diff(editorObject, newObject);
-        if (!editDiff) {
-            setEditorObject(object);
-            return;
-        }
-        const clusterDiff = diff(editorObject, clusterObject);
-        // Create a merged diff, where in case of conflicts, we choose the side of the edit we just made.
-        // Don't want to lose changes!
-        const mergedDiff = mergeDiffs(
-            clusterDiff,
-            editDiff,
-            (conflict: MergeConflict) => {
-                return conflict.rightDiff;
+        const result = mergeClusterUpdates();
+        if (result.merged === false) {
+            switch (result.reason) {
+                case "no_diff":
+                    // No local edits, so we can just overwrite the value.
+                    setEditorObject(object);
+                    break;
+                case "invalid_yaml":
+                    showDialog({
+                        title: "Invalid yaml",
+                        type: "error",
+                        message:
+                            "Cannot update your editor because your yaml is currently invalid.",
+                        detail: result.error ? String(result.error) : null,
+                        buttons: ["OK"],
+                    });
+                    break;
             }
-        );
-        if (mergedDiff.diff) {
-            // We can show a simplified diff of only the items on "our side" of the diff, at least as far as possible.
-            newObject = cloneAndApply(
-                editorObject,
-                mergedDiff.diff
-            ) as K8sObject;
         }
-
-        // Re-create the cluster object as (editorObject + diff(editorObject, clusterObject)) to make sure all object keys are in the same order. Nicer diff!
-        clusterObject = cloneAndApply(editorObject, clusterDiff) as K8sObject;
-
-        setEditorObject(clusterObject, false);
-        setOriginalValue(toYaml(clusterObject));
-        setValue(toYaml(newObject));
-    }, [editorObject, object, setEditorObject, setOriginalValue, setValue]);
+    }, [object, mergeClusterUpdates, setEditorObject, showDialog]);
 
     useKeyListener(
         useCallback(
@@ -655,26 +637,26 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
                         language: "yaml",
                         minimap: { enabled: false },
                     }}
-                    originalValue={reviewOriginalValue}
-                    value={reviewValue}
-                    onChange={setReviewValue}
+                    originalValue={originalValue}
+                    value={value}
+                    onChange={setValue}
                     configureEditor={configureDiffEditor}
                     focusOnInit={true}
                 />
             )}
             <HStack flex="0 0 auto" justifyContent="end" px={4} py={2}>
+                {hasUpstreamChanges && (
+                    <Button
+                        colorScheme="yellow"
+                        variant="outline"
+                        onClick={onClickUpdate}
+                        leftIcon={<Icon as={AiOutlineReload} />}
+                    >
+                        Update
+                    </Button>
+                )}
                 {phase === "edit" && (
                     <>
-                        {hasUpstreamChanges && (
-                            <Button
-                                colorScheme="yellow"
-                                variant="outline"
-                                onClick={onClickUpdate}
-                                leftIcon={<Icon as={AiOutlineReload} />}
-                            >
-                                Update
-                            </Button>
-                        )}
                         <Button
                             colorScheme="primary"
                             onClick={onReview}
