@@ -1,4 +1,5 @@
 import * as k8s from "@kubernetes/client-node";
+import { app } from "electron";
 import { K8sClient, K8sContext } from "../../common/k8s/client";
 
 import { createClient, K8sBackendClient } from "./client";
@@ -41,7 +42,9 @@ export function createClientManager(
             const clientConfig = new k8s.KubeConfig();
             clientConfig.loadFromString(kc.exportConfig());
             clientConfig.setCurrentContext(context);
-            clients[context] = createClient(clientConfig);
+            clients[context] = createClient(clientConfig, {
+                getTempDirPath: () => app.getPath("temp"),
+            });
         }
         return clients[context];
     };

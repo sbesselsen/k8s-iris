@@ -1,6 +1,10 @@
 import * as k8s from "@kubernetes/client-node";
-import { KubernetesObject } from "@kubernetes/client-node";
+import { KubeConfig, KubernetesObject } from "@kubernetes/client-node";
 import * as request from "request";
+import { exec } from "child_process";
+import * as crypto from "crypto";
+import * as fs from "fs";
+import * as path from "path";
 
 import { sleep } from "../../common/util/async";
 
@@ -31,6 +35,7 @@ import {
 import { deepEqual } from "../../common/util/deep-equal";
 import { kubeRequestOpts } from "./util";
 import { CharmPatchedExecAuth } from "./authenticator/exec";
+import { toYaml } from "../../common/util/yaml";
 
 const defaultRemoveOptions: K8sRemoveOptions = {
     waitForCompletion: true,
@@ -53,10 +58,12 @@ export type K8sBackendClient = K8sClient & {
 
 export type K8sClientOptions = {
     readonly?: boolean;
+    getTempDirPath?: () => string;
 };
 
 const defaultClientOptions = {
     readonly: false,
+    getTempDirPath: () => "/tmp",
 };
 
 // Patch KubeConfig class with an ExecAuth class that works asynchronously.
@@ -89,14 +96,6 @@ export function createClient(
             l();
         });
         retryConnectionsListeners = [];
-    };
-
-    const exists = async (spec: K8sObject): Promise<boolean> => {
-        try {
-            await objectApi.read(spec);
-            return true;
-        } catch (e) {}
-        return false;
     };
 
     const listableResourcesCache: Record<
@@ -142,6 +141,34 @@ export function createClient(
         return null;
     };
 
+    // Run a function with a temporary kubeconfig file for the right context.
+    async function withTempKubeConfig<T>(
+        kubeConfig: KubeConfig,
+        f: (tempKubeConfigPath: string) => Promise<T>
+    ): Promise<T> {
+        const tempPath = path.join(
+            opts.getTempDirPath(),
+            `kc-${crypto.randomBytes(16).toString("hex")}.yml`
+        );
+
+        await fs.promises.writeFile(
+            tempPath,
+            toYaml(JSON.parse(kubeConfig.exportConfig())),
+            {
+                encoding: "utf-8",
+            }
+        );
+
+        try {
+            const result = await f(tempPath);
+            await fs.promises.unlink(tempPath);
+            return result;
+        } catch (e) {
+            await fs.promises.unlink(tempPath);
+            throw e;
+        }
+    }
+
     const apply = async (
         spec: K8sObject,
         options?: K8sApplyOptions
@@ -149,16 +176,27 @@ export function createClient(
         if (opts.readonly) {
             throw new Error("Running in readonly mode");
         }
-        if (await exists(spec)) {
-            return await patch(spec, options);
-        }
-        const { body } = await objectApi.create(
-            spec,
-            undefined,
-            undefined,
-            "k8s-charm"
+
+        return withTempKubeConfig(
+            kubeConfig,
+            (kubeConfigPath) =>
+                new Promise((resolve, reject) => {
+                    const process = exec(
+                        `kubectl apply --kubeconfig=${kubeConfigPath} -f -`,
+                        (err, stdout, stderr) => {
+                            if (err) {
+                                reject(stderr);
+                            } else {
+                                resolve(read(spec));
+                            }
+                        }
+                    );
+                    const specClone: any = JSON.parse(JSON.stringify(spec));
+                    delete specClone.metadata.managedFields;
+                    process.stdin.write(toYaml(specClone));
+                    process.stdin.end();
+                })
         );
-        return onlyFullObject(body);
     };
 
     const patch = async (
