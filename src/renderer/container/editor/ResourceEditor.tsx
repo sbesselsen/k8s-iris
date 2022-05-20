@@ -3,17 +3,12 @@ import {
     Button,
     ButtonGroup,
     HStack,
-    Modal,
-    ModalBody,
-    ModalCloseButton,
-    ModalContent,
-    ModalFooter,
-    ModalHeader,
-    ModalOverlay,
+    Icon,
     useColorModeValue,
     useToken,
     VStack,
 } from "@chakra-ui/react";
+import { AiFillCaretRight } from "react-icons/ai";
 import React, {
     useCallback,
     useEffect,
@@ -372,10 +367,12 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
     const showDialog = useDialog();
 
     const [editorObject, setEditorObject] = useState(object);
+    const [originalValue, setOriginalValue] = useState("");
     const [value, setValue] = useState("");
     const [phase, setPhase] = useState<"edit" | "review">("edit");
     const [reviewOriginalValue, setReviewOriginalValue] = useState("");
     const [reviewValue, setReviewValue] = useState("");
+    const [isApplyInProgress, setApplyInProgress] = useState(false);
 
     useEffect(() => {
         if (!objSameRef(object, editorObject)) {
@@ -384,8 +381,10 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
         }
     }, [object, setEditorObject]);
     useEffect(() => {
-        setValue(toYaml(editorObject));
-    }, [editorObject, setValue]);
+        const newValue = toYaml(editorObject);
+        setOriginalValue(newValue);
+        setValue(newValue);
+    }, [editorObject, setOriginalValue, setValue]);
 
     const updateDiffEditor = useCallback(
         (value: string): boolean => {
@@ -402,17 +401,13 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
                 });
                 return false;
             }
-            console.log("newObject", toYaml(newObject));
 
             let clusterObject = object;
-            console.log("clusterObject", toYaml(clusterObject));
             const editDiff = diff(editorObject, newObject);
-            console.log("editDiff", toYaml(editDiff));
             if (!editDiff) {
                 return false;
             }
             const clusterDiff = diff(editorObject, clusterObject);
-            console.log("clusterDiff", toYaml(clusterDiff));
             // Create a merged diff, where in case of conflicts, we choose the side of the edit we just made.
             // The user is going to review it anyway!
             const mergedDiff = mergeDiffs(
@@ -422,7 +417,6 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
                     return conflict.rightDiff;
                 }
             );
-            console.log("mergedDiff", toYaml(mergedDiff));
             if (mergedDiff.diff) {
                 // We can show a simplified diff of only the items on "our side" of the diff, at least as far as possible.
                 newObject = cloneAndApply(
@@ -488,16 +482,43 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
         cancelReview();
     }, [cancelReview]);
 
-    const onSave = useCallback(() => {
-        // TODO
-        // Check again if anything happened to object that might conflict with our local changes.
-        // If so, show a dialog and updateDiffEditor(reviewValue).
-        // If not, actually save. Use a JSON patch if possible. We will see if it is.
-    }, [reviewValue]);
-    const onSaveRef = useRef<() => void>(onSave);
+    const onApply = useCallback(() => {
+        let newObject: K8sObject;
+        try {
+            newObject = parseYaml(reviewValue) as K8sObject;
+        } catch (e) {
+            showDialog({
+                title: "Invalid yaml",
+                type: "error",
+                message: "The yaml you are trying to apply is invalid.",
+                detail: String(e),
+                buttons: ["OK"],
+            });
+            return;
+        }
+        setApplyInProgress(true);
+        (async () => {
+            try {
+                const response = await client.apply(newObject);
+                setEditorObject(response);
+                setPhase("edit");
+            } catch (e) {
+                showDialog({
+                    title: "Error applying",
+                    type: "error",
+                    message:
+                        "Kubernetes reported an error while applying your changes.",
+                    detail: String(e),
+                    buttons: ["OK"],
+                });
+            }
+            setApplyInProgress(false);
+        })();
+    }, [client, reviewValue, setApplyInProgress, setEditorObject, setPhase]);
+    const onApplyRef = useRef<() => void>(onApply);
     useEffect(() => {
-        onSaveRef.current = onSave;
-    }, [onSave, onSaveRef]);
+        onApplyRef.current = onApply;
+    }, [onApply, onApplyRef]);
 
     useKeyListener(
         useCallback(
@@ -536,7 +557,7 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
                 contextMenuGroupId: "navigation",
                 contextMenuOrder: 1.5,
                 run: async () => {
-                    onSaveRef.current();
+                    onApplyRef.current();
                 },
             });
         },
@@ -559,6 +580,7 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
                     value={value}
                     onChange={setValue}
                     configureEditor={configureEditor}
+                    focusOnInit={true}
                 />
             )}
             {phase === "review" && (
@@ -571,13 +593,19 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
                     value={reviewValue}
                     onChange={setReviewValue}
                     configureEditor={configureDiffEditor}
+                    focusOnInit={true}
                 />
             )}
             <HStack flex="0 0 auto" justifyContent="end" px={4} py={2}>
                 {phase === "edit" && (
                     <>
-                        <Button colorScheme="primary" onClick={onReview}>
-                            Save
+                        <Button
+                            colorScheme="primary"
+                            onClick={onReview}
+                            rightIcon={<Icon as={AiFillCaretRight} />}
+                            isDisabled={originalValue === value}
+                        >
+                            Review changes
                         </Button>
                     </>
                 )}
@@ -590,8 +618,13 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
                         >
                             Back to editor
                         </Button>
-                        <Button colorScheme="primary" onClick={onSave}>
-                            Save
+                        <Button
+                            colorScheme="primary"
+                            onClick={onApply}
+                            isLoading={isApplyInProgress}
+                            loadingText="Applying"
+                        >
+                            Apply
                         </Button>
                     </>
                 )}
