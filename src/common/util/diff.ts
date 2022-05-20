@@ -44,6 +44,9 @@ export function diff(a: unknown, b: unknown): Diff {
     if (typeof b !== "object") {
         return { diff: "value", value: clone(b) };
     }
+    if (!a || !b) {
+        return { diff: "value", value: clone(b) };
+    }
     // A and B are both references to different objects.
     if (Array.isArray(a)) {
         if (Array.isArray(b)) {

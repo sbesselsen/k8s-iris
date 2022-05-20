@@ -345,21 +345,10 @@ const ShowDetailsToggle: React.FC<{
 };
 
 type ResourceYamlEditorProps = {
-    object: K8sObject | undefined;
+    object?: K8sObject | undefined;
 };
 
 const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (props) => {
-    const { object } = props;
-    return object ? <InnerResourceYamlEditor {...props} /> : null;
-};
-
-type InnerResourceYamlEditorProps = {
-    object: K8sObject;
-};
-
-const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
-    props
-) => {
     const { object } = props;
 
     const client = useK8sClient();
@@ -373,7 +362,7 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
     const [isApplyInProgress, setApplyInProgress] = useState(false);
 
     const updateValueFromObject = useCallback(
-        (object: K8sObject) => {
+        (object: K8sObject | undefined) => {
             const newValue = toYaml(object);
             setOriginalValue(newValue);
             setValue(newValue);
@@ -393,7 +382,7 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
     );
 
     useEffect(() => {
-        // Update values etc from the edit
+        // Update values etc from the editorObject on load.
         updateValueFromObject(editorObject);
     }, []);
 

@@ -8,6 +8,9 @@ export function objSameRef(
     if (!obj1) {
         return !obj2;
     }
+    if (!obj2) {
+        return false;
+    }
     if (checkKind) {
         if (obj1.apiVersion !== obj2.apiVersion || obj1.kind !== obj2.kind) {
             return false;
