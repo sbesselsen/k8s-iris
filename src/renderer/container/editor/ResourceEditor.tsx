@@ -366,7 +366,7 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
     const isClusterLocked = useContextLock();
     const showDialog = useDialog();
 
-    const [editorObject, setEditorObject] = useState(object);
+    const [editorObject, setEditorObjectState] = useState(object);
     const [originalValue, setOriginalValue] = useState("");
     const [value, setValue] = useState("");
     const [phase, setPhase] = useState<"edit" | "review">("edit");
@@ -374,17 +374,37 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
     const [reviewValue, setReviewValue] = useState("");
     const [isApplyInProgress, setApplyInProgress] = useState(false);
 
+    const updateValueFromObject = useCallback(
+        (object: K8sObject) => {
+            const newValue = toYaml(object);
+            setOriginalValue(newValue);
+            setValue(newValue);
+        },
+        [setOriginalValue, setValue]
+    );
+
+    const setEditorObject = useCallback(
+        (object: K8sObject, updateValue = true) => {
+            setEditorObjectState(object);
+
+            if (updateValue) {
+                updateValueFromObject(object);
+            }
+        },
+        [setEditorObjectState, updateValueFromObject]
+    );
+
+    useEffect(() => {
+        // Update values etc from the edit
+        updateValueFromObject(editorObject);
+    }, []);
+
     useEffect(() => {
         if (!objSameRef(object, editorObject)) {
             // Only change the editor object if it is different. Updates to the object at hand should not overwrite what's in the editor.
             setEditorObject(object);
         }
     }, [object, setEditorObject]);
-    useEffect(() => {
-        const newValue = toYaml(editorObject);
-        setOriginalValue(newValue);
-        setValue(newValue);
-    }, [editorObject, setOriginalValue, setValue]);
 
     const hasUpstreamChanges = useMemo(
         () => !deepEqual(editorObject, object),
@@ -558,9 +578,13 @@ const InnerResourceYamlEditor: React.FC<InnerResourceYamlEditorProps> = (
             ) as K8sObject;
         }
 
-        setEditorObject(object);
-        // TODO: but keep our present value... this one will be hard to do.
-    }, [editorObject, object, setEditorObject]);
+        // Re-create the cluster object as (editorObject + diff(editorObject, clusterObject)) to make sure all object keys are in the same order. Nicer diff!
+        clusterObject = cloneAndApply(editorObject, clusterDiff) as K8sObject;
+
+        setEditorObject(clusterObject, false);
+        setOriginalValue(toYaml(clusterObject));
+        setValue(toYaml(newObject));
+    }, [editorObject, object, setEditorObject, setOriginalValue, setValue]);
 
     useKeyListener(
         useCallback(
