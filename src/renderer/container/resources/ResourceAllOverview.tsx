@@ -56,37 +56,37 @@ import { formatDeveloperDateTime } from "../../util/date";
 import { ResourceEditorLink } from "./ResourceEditorLink";
 
 export const ResourceAllOverview: React.FC = () => {
-    const [selectedResource, setSelectedResource] = useAppParam<
+    const [selectedResourceType, setSelectedResourceType] = useAppParam<
         K8sResourceTypeIdentifier | undefined
     >("resourceType", undefined);
 
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
     const metaKeyRef = useModifierKeyRef("Meta");
 
-    const onSelectResource = useCallback(
-        (resource: K8sResourceTypeIdentifier | undefined) => {
+    const onSelectResourceType = useCallback(
+        (type: K8sResourceTypeIdentifier | undefined) => {
             if (metaKeyRef.current) {
                 createWindow({
-                    route: setSelectedResource.asRoute(resource),
+                    route: setSelectedResourceType.asRoute(type),
                 });
             } else {
-                setSelectedResource(resource);
+                setSelectedResourceType(type);
             }
         },
-        [createWindow, metaKeyRef, setSelectedResource]
+        [createWindow, metaKeyRef, setSelectedResourceType]
     );
 
     return (
         <VStack flex="1 0 0" spacing={0} alignItems="stretch">
             <Box px={2} py={2} flex="0 0 auto">
                 <ResourceTypeSelector
-                    value={selectedResource}
-                    onChange={onSelectResource}
+                    value={selectedResourceType}
+                    onChange={onSelectResourceType}
                 />
             </Box>
             <ScrollBox px={4} py={2} flex="1 0 0">
-                {selectedResource && (
-                    <ResourceList resourceType={selectedResource} />
+                {selectedResourceType && (
+                    <ResourceList resourceType={selectedResourceType} />
                 )}
             </ScrollBox>
         </VStack>
@@ -125,6 +125,17 @@ const ResourceTypeSelector: React.FC<ResourceTypeSelectorProps> = (props) => {
     const metaKeyPressedRef = useModifierKeyRef("Meta");
     const [searchValue, setSearchValue] = useState("");
     const { isOpen, onOpen, onClose: onDisclosureClose } = useDisclosure();
+
+    const selectValue = useCallback(
+        (type: K8sResourceTypeIdentifier | undefined) => {
+            if (metaKeyPressedRef.current) {
+                onChange(type, true);
+            } else {
+                setStateValue(type);
+            }
+        },
+        [metaKeyPressedRef, onChange, setStateValue]
+    );
 
     const onClose = useCallback(() => {
         setSearchValue("");
@@ -238,17 +249,17 @@ const ResourceTypeSelector: React.FC<ResourceTypeSelectorProps> = (props) => {
     const onClickVersionedTypes = useMemo(
         () =>
             versionedTypes?.map((type) => () => {
-                setStateValue(type);
+                selectValue(type);
             }),
-        [setStateValue, versionedTypes]
+        [selectValue, versionedTypes]
     );
 
     const onSelectType = useCallback(
         (type: ProcessedResourceType) => {
-            setStateValue(type.types[type.types.length - 1]);
+            selectValue(type.types[type.types.length - 1]);
             onClose();
         },
-        [onClose, setStateValue]
+        [onClose, selectValue]
     );
 
     const onClickHandlers = useMemo(
