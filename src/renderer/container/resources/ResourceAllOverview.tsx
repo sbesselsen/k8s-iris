@@ -1,3 +1,4 @@
+import { ChevronDownIcon } from "@chakra-ui/icons";
 import {
     Accordion,
     AccordionButton,
@@ -9,26 +10,41 @@ import {
     ButtonGroup,
     Heading,
     HStack,
+    Menu,
+    MenuButton,
+    MenuGroup,
+    MenuItem,
+    MenuList,
     Table,
     Tbody,
     Td,
+    Text,
     Th,
     Thead,
     Tr,
     useBreakpointValue,
+    useControllableState,
+    useDisclosure,
     useToken,
     VStack,
 } from "@chakra-ui/react";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+    ChangeEvent,
+    useCallback,
+    useEffect,
+    useMemo,
+    useState,
+} from "react";
 import {
     K8sObject,
     K8sResourceTypeIdentifier,
     K8sResourceTypeInfo,
 } from "../../../common/k8s/client";
-import { resourceMatch } from "../../../common/util/search";
+import { resourceMatch, searchMatch } from "../../../common/util/search";
 import { k8sSmartCompare } from "../../../common/util/sort";
 import { ScrollBox } from "../../component/main/ScrollBox";
 import { Selectable } from "../../component/main/Selectable";
+import { MenuInput } from "../../component/MenuInput";
 import { useK8sNamespaces } from "../../context/k8s-namespaces";
 import { useAppParam } from "../../context/param";
 import { useAppSearch } from "../../context/search";
@@ -61,28 +77,33 @@ export const ResourceAllOverview: React.FC = () => {
     );
 
     return (
-        <HStack flex="1 0 0" overflow="hidden" spacing={0} alignItems="stretch">
-            <ScrollBox px={2} py={2} flex="0 0 250px">
-                <ResourceTypeMenu
-                    selectedResource={selectedResource}
-                    onSelectResource={onSelectResource}
+        <VStack flex="1 0 0" spacing={0} alignItems="stretch">
+            <Box px={2} py={2} flex="0 0 auto">
+                <ResourceTypeSelector
+                    value={selectedResource}
+                    onChange={onSelectResource}
                 />
-            </ScrollBox>
+            </Box>
             <ScrollBox px={4} py={2} flex="1 0 0">
                 {selectedResource && (
                     <ResourceList resourceType={selectedResource} />
                 )}
             </ScrollBox>
-        </HStack>
+        </VStack>
     );
 };
 
-type ResourceTypeMenuProps = {
-    selectedResource?: K8sResourceTypeIdentifier | undefined;
-    onSelectResource?: (
-        resource: K8sResourceTypeIdentifier | undefined
+type ResourceTypeSelectorProps = {
+    value?: K8sResourceTypeIdentifier | undefined;
+    onChange?: (
+        value: K8sResourceTypeIdentifier | undefined,
+        requestNewWindow: boolean
     ) => void;
 };
+
+function apiGroup(apiVersion: string): string {
+    return apiVersion.indexOf("/") > -1 ? apiVersion.split("/", 2)[0] : "";
+}
 
 const sortOptions = {
     sensitivity: "base",
@@ -90,246 +111,268 @@ const sortOptions = {
     ignorePunctuation: true,
 };
 
-const ResourceTypeMenu: React.FC<ResourceTypeMenuProps> = (props) => {
-    const { selectedResource, onSelectResource } = props;
-    const [_isLoadingResources, resources, _resourcesError] =
+const ResourceTypeSelector: React.FC<ResourceTypeSelectorProps> = (props) => {
+    const { value, onChange } = props;
+
+    const [stateValue, setStateValue] = useControllableState({
+        value,
+        onChange: onChange as any,
+    });
+
+    const [_isLoadingResourceTypes, resourceTypes, _resourceTypesError] =
         useK8sApiResourceTypes();
 
-    const groupedResources = useMemo(() => {
-        if (!resources) {
-            return [];
-        }
-        const groups: Record<
-            string,
-            Record<string, K8sResourceTypeInfo[]>
-        > = {};
-        for (const resource of resources) {
-            if (resource.isSubResource) {
+    const metaKeyPressedRef = useModifierKeyRef("Meta");
+    const [searchValue, setSearchValue] = useState("");
+    const { isOpen, onOpen, onClose: onDisclosureClose } = useDisclosure();
+
+    const onClose = useCallback(() => {
+        setSearchValue("");
+        onDisclosureClose();
+    }, [onDisclosureClose, setSearchValue]);
+
+    const onChangeSearchInput = useCallback(
+        (e: ChangeEvent<HTMLInputElement>) => {
+            setSearchValue(e.target.value);
+        },
+        [setSearchValue]
+    );
+
+    type ProcessedResourceType = {
+        kind: string;
+        group: string;
+        types: K8sResourceTypeInfo[];
+    };
+    const processedResourceTypes: ProcessedResourceType[] = useMemo(() => {
+        const resourcesByKey: Record<string, ProcessedResourceType> = {};
+        const output: ProcessedResourceType[] = [];
+        for (const resourceType of resourceTypes ?? []) {
+            if (resourceType.isSubResource) {
                 // Only show top-level resources.
                 continue;
             }
 
             // TODO: support polling for resource types that are not watchable
             if (
-                !resource.verbs?.find((verb) => verb === "list") ||
-                !resource.verbs?.find((verb) => verb === "watch")
+                !resourceType.verbs?.find((verb) => verb === "list") ||
+                !resourceType.verbs?.find((verb) => verb === "watch")
             ) {
                 // Only show listable and watchable verbs.
                 continue;
             }
-            let [group, version] = resource.apiVersion.split("/", 2);
-            if (!version) {
-                // Handle "v1" for core.
-                version = group;
-                group = "";
+            const group = apiGroup(resourceType.apiVersion);
+            const groupingKey = `${group}/${resourceType.kind}`;
+            if (resourcesByKey[groupingKey]) {
+                resourcesByKey[groupingKey].types.push(resourceType);
+            } else {
+                const processedResourceType = {
+                    kind: resourceType.kind,
+                    group,
+                    types: [resourceType],
+                };
+                resourcesByKey[groupingKey] = processedResourceType;
+                output.push(processedResourceType);
             }
-            if (!groups[group]) {
-                groups[group] = {};
-            }
-            if (!groups[group][version]) {
-                groups[group][version] = [];
-            }
-            groups[group][version].push(resource);
         }
-        return Object.entries(groups)
-            .sort(([group1], [group2]) =>
-                group1.localeCompare(group2, undefined, sortOptions)
+        for (const record of output) {
+            record.types.sort((t1, t2) =>
+                (t1.apiVersion + "ZZZ").localeCompare(
+                    t2.apiVersion + "ZZZ",
+                    undefined,
+                    sortOptions
+                )
+            );
+        }
+        return output;
+    }, [resourceTypes]);
+
+    const filteredResourceTypes: ProcessedResourceType[] = useMemo(() => {
+        if (!searchValue) {
+            return processedResourceTypes;
+        }
+        return processedResourceTypes.filter((type) =>
+            searchMatch(
+                searchValue,
+                [
+                    type.kind,
+                    type.group,
+                    type.types.map((t) => t.apiVersion).join(" "),
+                ].join(" ")
             )
-            .map(([groupName, versions]) => ({
-                groupName,
-                versions: Object.entries(versions)
-                    .sort(([version1], [version2]) =>
-                        (version1 + "ZZZ").localeCompare(
-                            version2 + "ZZZ",
-                            undefined,
-                            sortOptions
-                        )
-                    )
-                    .map(([versionName, resources]) => ({
-                        versionName,
-                        resources,
-                    })),
-            }));
-    }, [resources]);
+        );
+    }, [processedResourceTypes, searchValue]);
 
-    const [expandedResourceGroup, setExpandedResourceGroup] = useAppParam<
-        string | undefined
-    >("group", undefined);
-    const expandedIndex = useMemo(
-        () =>
-            groupedResources.findIndex(
-                (res) => res.groupName === expandedResourceGroup
-            ),
-        [expandedResourceGroup, groupedResources]
-    );
-    const onChangeExpandedIndex = useCallback(
-        (index: number) => {
-            setExpandedResourceGroup(groupedResources[index]?.groupName, true);
-        },
-        [setExpandedResourceGroup, groupedResources]
-    );
-
-    const [reduceMotion, setReduceMotion] = useState(true);
-    useEffect(() => {
-        setReduceMotion(false);
-    }, [setReduceMotion]);
-
-    return (
-        <Accordion
-            index={expandedIndex}
-            onChange={onChangeExpandedIndex}
-            reduceMotion={reduceMotion}
-            allowToggle
-        >
-            {groupedResources?.map((group) => (
-                <ResourceGroupMenu
-                    key={group.groupName}
-                    selectedResource={selectedResource}
-                    onSelectResource={onSelectResource}
-                    groupName={group.groupName}
-                    versions={group.versions}
-                />
-            ))}
-        </Accordion>
-    );
-};
-
-type ResourceGroupMenuProps = {
-    groupName: string;
-    versions: Array<{
-        versionName: string;
-        resources: K8sResourceTypeIdentifier[];
-    }>;
-    onSelectResource?: (
-        resource: K8sResourceTypeIdentifier | undefined
-    ) => void;
-    selectedResource?: K8sResourceTypeIdentifier | undefined;
-};
-
-function latestStableVersion(versions: Array<{ versionName: string }>): string {
-    let latestStable: string | undefined;
-    for (const version of versions) {
-        if (version.versionName.match(/^v[0-9]+$/)) {
-            latestStable = version.versionName;
+    const groupedResourceTypes: Array<{
+        title: string;
+        types: ProcessedResourceType[];
+    }> = useMemo(() => {
+        const groupsByKey: Record<string, ProcessedResourceType[]> = {};
+        const output: Array<{ title: string; types: ProcessedResourceType[] }> =
+            [];
+        for (const type of filteredResourceTypes) {
+            const title = type.group || "core";
+            if (groupsByKey[title]) {
+                groupsByKey[title].push(type);
+            } else {
+                const record = { title, types: [type] };
+                groupsByKey[title] = record.types;
+                output.push(record);
+            }
         }
-    }
-    return latestStable ?? versions[versions.length - 1].versionName;
-}
+        return output;
+    }, [filteredResourceTypes]);
 
-const ResourceGroupMenu: React.FC<ResourceGroupMenuProps> = (props) => {
-    const { groupName, onSelectResource, selectedResource, versions } = props;
+    const versionedTypes = useMemo(
+        () =>
+            stateValue
+                ? processedResourceTypes.find((pt) =>
+                      pt.types.some(
+                          (t) =>
+                              t.apiVersion === stateValue.apiVersion &&
+                              t.kind === stateValue.kind
+                      )
+                  )?.types
+                : null,
+        [processedResourceTypes, stateValue]
+    );
+    const onClickVersionedTypes = useMemo(
+        () =>
+            versionedTypes?.map((type) => () => {
+                setStateValue(type);
+            }),
+        [setStateValue, versionedTypes]
+    );
+
+    const onSelectType = useCallback(
+        (type: ProcessedResourceType) => {
+            setStateValue(type.types[type.types.length - 1]);
+            onClose();
+        },
+        [onClose, setStateValue]
+    );
+
+    const onClickHandlers = useMemo(
+        () =>
+            Object.fromEntries(
+                processedResourceTypes.map((type) => [
+                    `${type.group}/${type.kind}`,
+                    () => {
+                        onSelectType(type);
+                    },
+                ])
+            ),
+        [processedResourceTypes]
+    );
+
+    const onPressSearchEnter = useCallback(() => {
+        if (filteredResourceTypes.length === 1) {
+            onSelectType(filteredResourceTypes[0]);
+        }
+    }, [filteredResourceTypes, onSelectType]);
 
     const focusBoxShadow = useToken("shadows", "outline");
-
-    // TODO: version picker
-    const [paramSelectedVersion, setSelectedVersion] = useAppParam<
-        string | null
-    >("version", null);
-    const selectedVersion =
-        versions.find((version) => version.versionName === paramSelectedVersion)
-            ?.versionName ?? latestStableVersion(versions);
-
-    const resources = versions.find(
-        (version) => version.versionName === selectedVersion
-    ).resources;
-
-    const onClickResourceHandlers = useMemo(
-        () =>
-            resources.map((resource) => {
-                return () => {
-                    onSelectResource?.(resource);
-                };
-            }),
-        [onSelectResource, resources]
-    );
-
-    const onClickVersionHandlers = useMemo(
-        () =>
-            versions.map((version) => {
-                return () => {
-                    setSelectedVersion(version.versionName, true);
-                };
-            }),
-        [setSelectedVersion, versions]
-    );
-
     const focusShadow = useToken("shadows", "outline");
 
     return (
-        <AccordionItem border="none">
-            <AccordionButton
-                ps={2}
-                textAlign="left"
-                _focus={{}}
-                _focusVisible={{
-                    boxShadow: focusBoxShadow,
-                }}
+        <HStack spacing={1}>
+            <Menu
+                isOpen={isOpen}
+                onOpen={onOpen}
+                onClose={onClose}
+                matchWidth={true}
+                gutter={1}
             >
-                <Heading
-                    textColor={"primary.500"}
-                    fontWeight="semibold"
-                    fontSize="xs"
-                    textTransform="uppercase"
+                <MenuButton
+                    as={Button}
+                    rightIcon={<ChevronDownIcon />}
+                    size="sm"
+                    _active={{
+                        bg: "",
+                    }}
+                    _focus={{}}
+                    _focusVisible={{
+                        boxShadow: focusBoxShadow,
+                    }}
                 >
-                    {groupName || "Core"}
-                </Heading>
-            </AccordionButton>
-            <AccordionPanel ps={2} py={0}>
-                {versions.length > 1 && (
-                    <ButtonGroup variant="outline" size="xs" isAttached mb={1}>
-                        {versions.map((version, index) => (
-                            <Button
-                                key={version.versionName}
-                                mr="-1px"
-                                isActive={
-                                    version.versionName === selectedVersion
-                                }
-                                onClick={onClickVersionHandlers[index]}
-                                _focus={{}}
-                                _focusVisible={{
-                                    boxShadow: focusShadow,
-                                }}
-                            >
-                                {version.versionName}
-                            </Button>
-                        ))}
-                    </ButtonGroup>
-                )}
-                <VStack alignItems="stretch" spacing={0} pt={0} pb={2}>
-                    {resources.map((resource, index) => (
+                    {stateValue ? (
+                        <>
+                            {apiGroup(stateValue.apiVersion) || "core"}:{" "}
+                            {stateValue.kind}
+                        </>
+                    ) : (
+                        ""
+                    )}
+                </MenuButton>
+                <MenuList
+                    zIndex={18}
+                    maxHeight="calc(100vh - 300px)"
+                    overflowY="scroll"
+                >
+                    <MenuInput
+                        placeholder="Search"
+                        value={searchValue}
+                        onChange={onChangeSearchInput}
+                        onPressEnter={onPressSearchEnter}
+                        size="sm"
+                        borderRadius="md"
+                        mb={2}
+                        autoCapitalize="off"
+                        autoCorrect="off"
+                        autoComplete="off"
+                        spellCheck="false"
+                    />
+                    {groupedResourceTypes.map((group) => (
+                        <MenuGroup
+                            title={group.title}
+                            pt={0}
+                            mb={0}
+                            color="gray.500"
+                            fontWeight="semibold"
+                            fontSize="xs"
+                            textTransform="uppercase"
+                            key={group.title}
+                        >
+                            {group.types.map((type) => (
+                                <MenuItem
+                                    fontSize="sm"
+                                    px={8}
+                                    py={1}
+                                    key={type.kind}
+                                    onClick={
+                                        onClickHandlers[
+                                            `${type.group}/${type.kind}`
+                                        ]
+                                    }
+                                >
+                                    {type.kind}
+                                </MenuItem>
+                            ))}
+                        </MenuGroup>
+                    ))}
+                </MenuList>
+            </Menu>
+
+            {versionedTypes && versionedTypes.length > 1 && (
+                <ButtonGroup variant="outline" size="sm" isAttached mb={1}>
+                    {versionedTypes.map((type, index) => (
                         <Button
-                            key={resource.kind}
-                            fontSize="sm"
-                            variant="link"
-                            textAlign="left"
-                            fontWeight="normal"
-                            display="block"
-                            py={0.5}
-                            borderRadius={0}
+                            key={type.apiVersion}
+                            mr="-1px"
+                            isActive={
+                                stateValue?.apiVersion === type.apiVersion
+                            }
+                            onClick={onClickVersionedTypes[index]}
                             _focus={{}}
                             _focusVisible={{
-                                boxShadow: focusBoxShadow,
+                                boxShadow: focusShadow,
                             }}
-                            _active={{
-                                fontWeight: "bold",
-                            }}
-                            _hover={{
-                                textDecoration: "none",
-                            }}
-                            onClick={onClickResourceHandlers[index]}
-                            isActive={
-                                resource.apiVersion ===
-                                    selectedResource?.apiVersion &&
-                                resource.kind === selectedResource?.kind
-                            }
-                            isTruncated
                         >
-                            {resource.kind}
+                            {type.apiVersion.replace(/^.*\//, "")}
                         </Button>
                     ))}
-                </VStack>
-            </AccordionPanel>
-        </AccordionItem>
+                </ButtonGroup>
+            )}
+        </HStack>
     );
 };
 
@@ -397,7 +440,7 @@ const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
 
     const showNamespace = useBreakpointValue({
         base: false,
-        lg:
+        md:
             resourceTypeInfo.namespaced &&
             (namespaces.mode === "all" || namespaces.selected.length > 1),
     });
