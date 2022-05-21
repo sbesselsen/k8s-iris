@@ -213,6 +213,10 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
                         _placeholder={{
                             textColor: popupSearchPlaceholderColor,
                         }}
+                        autoCapitalize="off"
+                        autoCorrect="off"
+                        autoComplete="off"
+                        spellCheck="false"
                     />
                     {isLoadingWithDelay && (
                         <Box p={4}>
