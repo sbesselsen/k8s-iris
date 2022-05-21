@@ -206,7 +206,7 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
                     type: "error",
                     message:
                         "Kubernetes reported an error while applying your changes.",
-                    detail: String(e),
+                    detail: e?.message ?? String(e),
                     buttons: ["OK"],
                 });
             }
