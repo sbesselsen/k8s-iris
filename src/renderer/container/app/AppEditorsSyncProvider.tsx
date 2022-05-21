@@ -1,28 +1,44 @@
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect } from "react";
 import { AppEditor } from "../../../common/route/app-route";
 import { useAppEditorsStore } from "../../context/editors";
-import { useAppRoute, useAppRouteSetter } from "../../context/route";
+import {
+    useAppRouteGetter,
+    useAppRouteHistoryStore,
+    useAppRouteSetter,
+} from "../../context/route";
 
 export const AppEditorsSyncProvider: React.FC<{}> = (props) => {
     const { children } = props;
 
     const appEditorsStore = useAppEditorsStore();
-    const appRoute = useAppRoute();
+    const getAppRoute = useAppRouteGetter();
     const setAppRoute = useAppRouteSetter();
+    const historyStore = useAppRouteHistoryStore();
 
-    const activeEditor = appRoute.activeEditor;
-    useEffect(() => {
-        if (!activeEditor) {
-            return;
-        }
-        appEditorsStore.set((editors) => {
-            if (!editors.find((editor) => editor.id === activeEditor.id)) {
-                console.log("Editor was opened", activeEditor.id);
-                return [...editors, activeEditor];
+    const openEditorFromActiveEditor = useCallback(
+        (activeEditor: AppEditor | null) => {
+            if (!activeEditor) {
+                return;
             }
-            return editors;
+            appEditorsStore.set((editors) => {
+                if (!editors.find((editor) => editor.id === activeEditor.id)) {
+                    console.log("Editor was opened", activeEditor.id);
+                    return [...editors, activeEditor];
+                }
+                return editors;
+            });
+        },
+        [appEditorsStore]
+    );
+
+    useEffect(() => {
+        openEditorFromActiveEditor(getAppRoute().activeEditor);
+        historyStore.subscribe((history) => {
+            openEditorFromActiveEditor(
+                history.values[history.currentIndex]?.activeEditor ?? null
+            );
         });
-    }, [activeEditor, appEditorsStore]);
+    }, [getAppRoute, historyStore]);
 
     useEffect(() => {
         let oldValue = appEditorsStore.get();
