@@ -47,16 +47,10 @@ export function initializeMonaco() {
             //     return TSWorker;
             // }
             if (label === "editorWorkerService") {
-                return new Worker(
-                    new URL(
-                        "~/node_modules/monaco-editor/esm/vs/editor/editor.worker.js",
-                        import.meta.url
-                    ),
-                    {
-                        name: label,
-                        type: "module",
-                    }
-                );
+                return new Worker(new URL("worker/editor", import.meta.url), {
+                    name: label,
+                    type: "module",
+                });
             }
         },
     };
