@@ -39,6 +39,8 @@ export function createWindowManager(): WindowManager {
         return () => `win-${counter++}`;
     })();
 
+    const distDir = path.join(__dirname, "..", "..", "..", "dist");
+
     const createWindow = async (
         params: Partial<WindowParameters> = {}
     ): Promise<string> => {
@@ -56,7 +58,7 @@ export function createWindowManager(): WindowManager {
             show: false,
             webPreferences: {
                 backgroundThrottling: false,
-                preload: path.join(__dirname, "..", "preload", "index.js"),
+                preload: path.join(distDir, "preload", "index.js"),
             },
         };
 
@@ -106,7 +108,7 @@ export function createWindowManager(): WindowManager {
         if (isDev()) {
             win.loadURL("http://localhost:1234/#" + windowHash);
         } else {
-            win.loadFile(path.join(__dirname, "..", "renderer", "index.html"), {
+            win.loadFile(path.join(distDir, "renderer", "index.html"), {
                 hash: windowHash,
             });
         }
