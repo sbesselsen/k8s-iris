@@ -71,7 +71,7 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
                     });
                     onDisclosureClose();
                 } else {
-                    setAppRoute((route) => ({ ...route, context }));
+                    setAppRoute(() => ({ ...emptyAppRoute, context }));
                     onClose();
                 }
             },

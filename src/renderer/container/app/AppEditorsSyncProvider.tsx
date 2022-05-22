@@ -33,12 +33,24 @@ export const AppEditorsSyncProvider: React.FC<{}> = (props) => {
 
     useEffect(() => {
         openEditorFromActiveEditor(getAppRoute().activeEditor);
+
+        let context = getAppRoute().context;
+
         historyStore.subscribe((history) => {
-            openEditorFromActiveEditor(
-                history.values[history.currentIndex]?.activeEditor ?? null
-            );
+            const newRoute = history.values[history.currentIndex];
+
+            if (newRoute.context !== context) {
+                // If the context changes, close all editors except the potential active editor in the new route.
+                context = newRoute.context;
+                appEditorsStore.set(
+                    newRoute.activeEditor ? [newRoute.activeEditor] : []
+                );
+            } else {
+                // If the active editor changes, update the editors state.
+                openEditorFromActiveEditor(newRoute.activeEditor ?? null);
+            }
         });
-    }, [getAppRoute, historyStore]);
+    }, [appEditorsStore, getAppRoute, historyStore]);
 
     useEffect(() => {
         let oldValue = appEditorsStore.get();
