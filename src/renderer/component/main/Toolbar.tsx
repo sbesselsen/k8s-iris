@@ -10,12 +10,12 @@ export const Toolbar: React.FC<{}> = (props) => {
     return (
         <HStack
             spacing={1}
-            borderRadius="md"
+            borderRadius="lg"
             boxShadow="md"
             border="1px solid"
             borderColor={borderColor}
             bg={bgColor}
-            p={2}
+            p={1}
         >
             {children}
         </HStack>

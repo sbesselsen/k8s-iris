@@ -50,7 +50,7 @@ export const ScrollBox = forwardRef<ScrollBoxProps, "div">((props, ref) => {
                     left={0}
                     right={0}
                     px={6}
-                    pb={4}
+                    pb={3}
                     justifyContent="center"
                     ref={bottomToolbarRef}
                 >

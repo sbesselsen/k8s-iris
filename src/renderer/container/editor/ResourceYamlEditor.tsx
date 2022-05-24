@@ -34,12 +34,18 @@ export type ResourceYamlEditorProps = {
     object?: K8sObject | undefined;
     onBackPressed?: () => void;
     onAfterApply?: () => void;
+    shouldShowBackButton?: boolean;
 };
 
 export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
     props
 ) => {
-    const { object, onBackPressed, onAfterApply } = props;
+    const {
+        object,
+        onBackPressed,
+        onAfterApply,
+        shouldShowBackButton = false,
+    } = props;
 
     const client = useK8sClient();
     const isClusterLocked = useContextLock();
@@ -341,13 +347,13 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
                 left={0}
                 right={0}
                 px={6}
-                pb={4}
+                pb={3}
                 justifyContent="center"
             >
                 <Toolbar>
                     {phase === "edit" && (
                         <>
-                            {onBackPressed && (
+                            {shouldShowBackButton && onBackPressed && (
                                 <Button
                                     colorScheme="primary"
                                     variant="ghost"

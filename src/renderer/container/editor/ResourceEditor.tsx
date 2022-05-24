@@ -251,6 +251,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
                     object={object}
                     onBackPressed={onCancelEdit}
                     onAfterApply={onCancelEdit}
+                    shouldShowBackButton={true}
                 />
             </VStack>
         );
