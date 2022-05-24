@@ -392,14 +392,14 @@ export const SidebarEditorsMenu: React.FC<SidebarEditorsMenuProps> = (
                 textTransform="uppercase"
                 px={4}
             >
-                Editors
+                Resources
             </Heading>
 
             <VStack
                 flex="0 0 auto"
                 overflow="hidden scroll"
                 sx={{ scrollbarGutter: "stable" }}
-                maxHeight="200px"
+                maxHeight="210px"
                 spacing={0}
                 px={2}
                 py={1}

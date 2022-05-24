@@ -173,7 +173,7 @@ export const RootAppUI: React.FunctionComponent = () => {
             {
                 id: "resources",
                 iconType: BsBox,
-                title: "Resources",
+                title: "Browse",
             },
         ],
         []
