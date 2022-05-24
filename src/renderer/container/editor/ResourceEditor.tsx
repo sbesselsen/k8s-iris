@@ -126,7 +126,7 @@ const detailSelectors: string[] = [
 export const ResourceEditor: React.FC<ResourceEditorProps> = (props) => {
     const { editorResource } = props;
 
-    const [_isLoadingObjects, objects, _objectsError] = useK8sListWatch(
+    const [isLoadingObjects, objects, _objectsError] = useK8sListWatch(
         {
             apiVersion: editorResource.apiVersion,
             kind: editorResource.kind,
@@ -148,7 +148,7 @@ export const ResourceEditor: React.FC<ResourceEditorProps> = (props) => {
 
     return (
         <VStack spacing={0} alignItems="stretch" w="100%" h="100%">
-            <ResourceViewer object={object} />
+            {!isLoadingObjects && <ResourceViewer object={object} />}
         </VStack>
     );
 };
@@ -241,7 +241,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
     }, [appEditorStore, client, object, setIsDeleting]);
 
     if (!kind || !apiVersion || !metadata) {
-        return null;
+        return <Box p={4}>This resource is not available.</Box>;
     }
 
     if (mode === "edit") {
