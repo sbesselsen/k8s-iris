@@ -1,13 +1,16 @@
+import { ChevronDownIcon, DeleteIcon, EditIcon } from "@chakra-ui/icons";
 import {
     Box,
     Button,
-    ButtonGroup,
     HStack,
-    useColorModeValue,
-    useToken,
+    IconButton,
+    Menu,
+    MenuButton,
+    MenuItem,
+    MenuList,
     VStack,
 } from "@chakra-ui/react";
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { K8sObject, K8sObjectIdentifier } from "../../../common/k8s/client";
 import {
     K8sObjectHeading,
@@ -16,6 +19,7 @@ import {
 } from "../../component/k8s/K8sObjectViewer";
 import { ContentTabs } from "../../component/main/ContentTabs";
 import { ScrollBox } from "../../component/main/ScrollBox";
+import { Toolbar } from "../../component/main/Toolbar";
 import { useAppParam } from "../../context/param";
 import { useIpcCall } from "../../hook/ipc";
 import { useK8sListWatch } from "../../k8s/list-watch";
@@ -136,42 +140,10 @@ export const ResourceEditor: React.FC<ResourceEditorProps> = (props) => {
         [objects]
     );
 
-    const [activeTab, setActiveTab] = useAppParam("tab", "view");
-
-    const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
-
-    const onChangeTabSelection = useCallback(
-        (id: string, requestNewWindow: boolean = false) => {
-            if (requestNewWindow) {
-                createWindow({
-                    route: setActiveTab.asRoute(id),
-                });
-            } else {
-                setActiveTab(id);
-            }
-        },
-        [createWindow, setActiveTab]
-    );
-
-    const tabs = [
-        {
-            id: "view",
-            title: "View",
-            content: <ResourceViewer object={object} />,
-        },
-        {
-            id: "edit",
-            title: "Edit",
-            content: <ResourceYamlEditor object={object} />,
-        },
-    ];
     return (
-        <ContentTabs
-            tabs={tabs}
-            selected={activeTab}
-            onChangeSelection={onChangeTabSelection}
-            isLazy
-        />
+        <VStack spacing={0} alignItems="stretch" w="100%" h="100%">
+            <ResourceViewer object={object} />
+        </VStack>
     );
 };
 
@@ -218,26 +190,64 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
         [setExpandedItems]
     );
 
+    const [mode, setMode] = useState<"view" | "edit">("view");
+
+    const onCancelEdit = useCallback(() => {
+        setMode("view");
+    }, [setMode]);
+    const onClickEdit = useCallback(() => {
+        setMode("edit");
+    }, [setMode]);
+
     if (!kind || !apiVersion || !metadata) {
         return null;
     }
 
+    if (mode === "edit") {
+        return (
+            <ResourceYamlEditor
+                object={object}
+                onCancel={onCancelEdit}
+                onAfterApply={onCancelEdit}
+                cancelText="View"
+            />
+        );
+    }
     return (
-        <ScrollBox px={4} py={2}>
+        <ScrollBox
+            px={4}
+            py={2}
+            bottomToolbar={
+                <Toolbar>
+                    <Button
+                        colorScheme="primary"
+                        leftIcon={<EditIcon />}
+                        onClick={onClickEdit}
+                    >
+                        Edit
+                    </Button>
+                    <IconButton
+                        colorScheme="primary"
+                        icon={<DeleteIcon />}
+                        aria-label="Delete"
+                        title="Delete"
+                    />
+                    <Box flex="1 0 0"></Box>
+                    <ShowDetailsToggle
+                        value={showDetails}
+                        onChange={onChangeShowDetails}
+                    />
+                </Toolbar>
+            }
+        >
             <VStack spacing={4} alignItems="stretch">
-                <HStack alignItems="baseline">
+                <HStack alignItems="baseline" pt={2}>
                     <K8sObjectHeading
                         kind={kind}
                         apiVersion={apiVersion}
                         metadata={metadata}
                         flex="1 0 0"
                     />
-                    <Box>
-                        <ShowDetailsToggle
-                            value={showDetails}
-                            onChange={onChangeShowDetails}
-                        />
-                    </Box>
                 </HStack>
                 {object && (
                     <K8sObjectViewer
@@ -270,53 +280,23 @@ const ShowDetailsToggle: React.FC<{
         onChange(true);
     }, [onChange]);
 
-    const itemTextColor = useColorModeValue("primary.900", "white");
-
-    const borderColor = "primary.500";
-    const hoverColor = useColorModeValue("primary.50", "primary.900");
-    const focusShadow = useToken("shadows", "outline");
-
     return (
-        <ButtonGroup variant="outline" size="xs" isAttached>
-            <Button
-                mr="-1px"
-                borderColor={borderColor}
-                textColor={itemTextColor}
-                isActive={!value}
-                _active={{
-                    bg: borderColor,
-                    textColor: "white",
-                }}
-                _hover={{
-                    bg: hoverColor,
-                }}
-                _focus={{}}
-                _focusVisible={{
-                    boxShadow: focusShadow,
-                }}
-                onClick={onClickSimple}
+        <Menu>
+            <MenuButton
+                colorScheme="primary"
+                as={Button}
+                aria-label="View mode"
+                title="View mode"
+                fontWeight="normal"
+                variant="ghost"
+                rightIcon={<ChevronDownIcon />}
             >
-                Simple
-            </Button>
-            <Button
-                borderColor={borderColor}
-                textColor={itemTextColor}
-                isActive={value}
-                _active={{
-                    bg: borderColor,
-                    textColor: "white",
-                }}
-                _hover={{
-                    bg: hoverColor,
-                }}
-                _focus={{}}
-                _focusVisible={{
-                    boxShadow: focusShadow,
-                }}
-                onClick={onClickDetailed}
-            >
-                Detailed
-            </Button>
-        </ButtonGroup>
+                {value ? "Detailed view" : "Simple view"}
+            </MenuButton>
+            <MenuList>
+                <MenuItem onClick={onClickSimple}>Simple view</MenuItem>
+                <MenuItem onClick={onClickDetailed}>Detailed view</MenuItem>
+            </MenuList>
+        </Menu>
     );
 };

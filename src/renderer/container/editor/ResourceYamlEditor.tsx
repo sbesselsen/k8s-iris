@@ -24,15 +24,19 @@ import { useDialog } from "../../hook/dialog";
 import { MonacoDiffEditor } from "../../component/editor/MonacoDiffEditor";
 import { deepEqual } from "../../../common/util/deep-equal";
 import { useKeyListener } from "../../hook/keyboard";
+import { Toolbar } from "../../component/main/Toolbar";
 
 export type ResourceYamlEditorProps = {
     object?: K8sObject | undefined;
+    onCancel?: () => void;
+    onAfterApply?: () => void;
+    cancelText?: string;
 };
 
 export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
     props
 ) => {
-    const { object } = props;
+    const { object, onCancel, onAfterApply, cancelText } = props;
 
     const client = useK8sClient();
     const isClusterLocked = useContextLock();
@@ -200,6 +204,7 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
                 const response = await client.apply(newObject);
                 setEditorObject(response);
                 setPhase("edit");
+                onAfterApply?.();
             } catch (e) {
                 showDialog({
                     title: "Error applying",
@@ -212,7 +217,14 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
             }
             setApplyInProgress(false);
         })();
-    }, [client, value, setApplyInProgress, setEditorObject, setPhase]);
+    }, [
+        client,
+        value,
+        onAfterApply,
+        setApplyInProgress,
+        setEditorObject,
+        setPhase,
+    ]);
     const onApplyRef = useRef<() => void>(onApply);
     useEffect(() => {
         onApplyRef.current = onApply;
@@ -316,48 +328,67 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
                     focusOnInit={true}
                 />
             )}
-            <HStack flex="0 0 auto" justifyContent="end" px={4} py={2}>
-                {hasUpstreamChanges && (
-                    <Button
-                        colorScheme="yellow"
-                        variant="outline"
-                        onClick={onClickUpdate}
-                        leftIcon={<Icon as={AiOutlineReload} />}
-                    >
-                        Update
-                    </Button>
-                )}
-                {phase === "edit" && (
-                    <>
+            <HStack
+                position="absolute"
+                bottom={0}
+                left={0}
+                right={0}
+                px={6}
+                pb={4}
+                justifyContent="center"
+            >
+                <Toolbar>
+                    {hasUpstreamChanges && (
                         <Button
-                            colorScheme="primary"
-                            onClick={onReview}
-                            rightIcon={<Icon as={AiFillCaretRight} />}
-                            isDisabled={originalValue === value}
+                            colorScheme="yellow"
+                            variant="outline"
+                            onClick={onClickUpdate}
+                            leftIcon={<Icon as={AiOutlineReload} />}
                         >
-                            Review changes
+                            Update
                         </Button>
-                    </>
-                )}
-                {phase === "review" && (
-                    <>
-                        <Button
-                            colorScheme="primary"
-                            variant="ghost"
-                            onClick={onBackToEditor}
-                        >
-                            Back to editor
-                        </Button>
-                        <Button
-                            colorScheme="primary"
-                            onClick={onApply}
-                            isLoading={isApplyInProgress}
-                            loadingText="Applying"
-                        >
-                            Apply
-                        </Button>
-                    </>
-                )}
+                    )}
+                    {phase === "edit" && (
+                        <>
+                            {onCancel && (
+                                <Button
+                                    colorScheme="primary"
+                                    variant="ghost"
+                                    onClick={onCancel}
+                                >
+                                    {cancelText ?? "Cancel"}
+                                </Button>
+                            )}
+                            <Button
+                                colorScheme="primary"
+                                onClick={onReview}
+                                rightIcon={<Icon as={AiFillCaretRight} />}
+                                isDisabled={originalValue === value}
+                            >
+                                Review changes
+                            </Button>
+                        </>
+                    )}
+                    {phase === "review" && (
+                        <>
+                            <Button
+                                colorScheme="primary"
+                                variant="ghost"
+                                onClick={onBackToEditor}
+                            >
+                                Back to editor
+                            </Button>
+                            <Button
+                                colorScheme="primary"
+                                onClick={onApply}
+                                isLoading={isApplyInProgress}
+                                loadingText="Applying"
+                            >
+                                Apply
+                            </Button>
+                        </>
+                    )}
+                </Toolbar>
             </HStack>
         </VStack>
     );
