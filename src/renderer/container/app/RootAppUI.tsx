@@ -35,6 +35,7 @@ import { useKeyListener, useModifierKeyRef } from "../../hook/keyboard";
 import { ClusterError } from "./ClusterError";
 import { useIpcCall } from "../../hook/ipc";
 import {
+    AppEditor,
     AppNamespacesSelection,
     AppRoute,
 } from "../../../common/route/app-route";
@@ -62,16 +63,28 @@ export const RootAppUI: React.FunctionComponent = () => {
 
     const [_loadingContextsInfo, contextsInfo] = useK8sContextsInfo();
 
+    const editors = useAppEditors();
+    const editorsStore = useAppEditorsStore();
+
+    const getAppRoute = useAppRouteGetter();
+    const setAppRoute = useAppRouteSetter();
+
+    const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
+
     const searchStore = useAppSearchStore();
     const searchValue = useAppSearch();
     const searchBoxRef = useRef<HTMLInputElement>();
     const contextSelectMenuRef = useRef<HTMLButtonElement>();
 
+    const createNewEditor = useCallback(() => {
+        console.log("new");
+    }, [editorsStore]);
+
     const metaKeyRef = useModifierKeyRef("Meta");
     const shiftKeyRef = useModifierKeyRef("Shift");
     useKeyListener(
         useCallback(
-            (eventType, key) => {
+            (eventType, key, e) => {
                 if (
                     eventType === "keydown" &&
                     metaKeyRef.current &&
@@ -87,18 +100,65 @@ export const RootAppUI: React.FunctionComponent = () => {
                 ) {
                     contextSelectMenuRef.current.click();
                 }
+                if (
+                    eventType === "keydown" &&
+                    metaKeyRef.current &&
+                    key === "n"
+                ) {
+                    createNewEditor();
+                }
+                if (
+                    eventType === "keydown" &&
+                    metaKeyRef.current &&
+                    key === "w"
+                ) {
+                    const activeEditorId = getAppRoute().activeEditor?.id;
+                    if (activeEditorId) {
+                        // Close the current editor.
+                        let nextActiveEditor: AppEditor;
+                        editorsStore.set((editors) => {
+                            const removeEditorIndex = editors.findIndex(
+                                (e) => e.id === activeEditorId
+                            );
+                            if (removeEditorIndex === -1) {
+                                return editors;
+                            }
+                            const updatedEditors = editors.filter(
+                                (_, i) => i !== removeEditorIndex
+                            );
+                            nextActiveEditor =
+                                updatedEditors[
+                                    Math.min(
+                                        removeEditorIndex,
+                                        updatedEditors.length - 1
+                                    )
+                                ];
+                            setAppRoute(
+                                (route) => ({
+                                    ...route,
+                                    activeEditor: nextActiveEditor ?? null,
+                                }),
+                                true
+                            );
+                            return updatedEditors;
+                        });
+                        e.preventDefault();
+                    }
+                }
             },
-            [metaKeyRef, searchBoxRef]
+            [
+                createNewEditor,
+                metaKeyRef,
+                editorsStore,
+                getAppRoute,
+                setAppRoute,
+                searchBoxRef,
+            ]
         )
     );
 
     const namespacesSelection = useAppRoute((route) => route.namespaces);
     const [menuItem, setMenuItem] = useAppParam("menuItem", "cluster");
-
-    const getAppRoute = useAppRouteGetter();
-    const setAppRoute = useAppRouteSetter();
-
-    const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
 
     const [loadingNamespaces, namespaces, namespacesError] = useK8sListWatch(
         {
@@ -179,8 +239,6 @@ export const RootAppUI: React.FunctionComponent = () => {
         []
     );
 
-    const editors = useAppEditors();
-    const editorsStore = useAppEditorsStore();
     const selectedEditor = useAppRoute((route) => route.activeEditor)?.id;
 
     const onChangeMenuItemSelection = useCallback(
@@ -243,6 +301,10 @@ export const RootAppUI: React.FunctionComponent = () => {
         [editorsStore]
     );
 
+    const onPressCreate = useCallback(() => {
+        createNewEditor();
+    }, [createNewEditor]);
+
     useEffect(() => {
         document.body.classList.toggle("app-ui-mounted", isReady);
     }, [isReady]);
@@ -282,14 +344,13 @@ export const RootAppUI: React.FunctionComponent = () => {
                             selection={selectedEditor ? undefined : menuItem}
                             onChangeSelection={onChangeMenuItemSelection}
                         />
-                        {editors.length > 0 && (
-                            <SidebarEditorsMenu
-                                items={editors}
-                                selection={selectedEditor}
-                                onChangeSelection={onChangeSelectedEditor}
-                                onCloseEditor={onCloseEditor}
-                            />
-                        )}
+                        <SidebarEditorsMenu
+                            items={editors}
+                            selection={selectedEditor}
+                            onChangeSelection={onChangeSelectedEditor}
+                            onCloseEditor={onCloseEditor}
+                            onPressCreate={onPressCreate}
+                        />
                         <SidebarNamespacesMenu
                             selection={namespacesSelection}
                             onChangeSelection={onChangeNamespacesSelection}

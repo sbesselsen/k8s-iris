@@ -1,4 +1,4 @@
-import { CloseIcon } from "@chakra-ui/icons";
+import { AddIcon, CloseIcon } from "@chakra-ui/icons";
 import {
     Box,
     Button,
@@ -12,6 +12,7 @@ import {
     HStack,
     VStack,
     useToken,
+    ButtonProps,
 } from "@chakra-ui/react";
 import React, {
     ElementType,
@@ -352,12 +353,19 @@ export type SidebarEditorsMenuProps = {
     selection?: string | undefined;
     onChangeSelection?: (selection: string, requestNewWindow?: boolean) => void;
     onCloseEditor?: (id: string) => void;
+    onPressCreate?: () => void;
 };
 
 export const SidebarEditorsMenu: React.FC<SidebarEditorsMenuProps> = (
     props
 ) => {
-    const { items, selection, onChangeSelection, onCloseEditor } = props;
+    const {
+        items,
+        selection,
+        onChangeSelection,
+        onCloseEditor,
+        onPressCreate,
+    } = props;
 
     const opacity = useWindowFocusValue(1.0, 0.5);
 
@@ -413,6 +421,12 @@ export const SidebarEditorsMenu: React.FC<SidebarEditorsMenuProps> = (
                         item={item}
                     />
                 ))}
+                <SidebarEditorsCustomMenuButton
+                    onClick={onPressCreate}
+                    leftIcon={<AddIcon w={2} h={2} />}
+                >
+                    Create new
+                </SidebarEditorsCustomMenuButton>
             </VStack>
         </VStack>
     );
@@ -431,15 +445,8 @@ const SidebarEditorsMenuButton: React.FC<SidebarEditorsMenuButtonProps> = (
     const { item, isSelected = false, onClose, onSelect } = props;
 
     const iconSize = 2;
-
-    const itemTextColor = useColorModeValue("primary.900", "white");
     const iconColor = "primary.500";
     const selectedTextColor = "white";
-    const hoverBackgroundColor = useColorModeValue("primary.50", "primary.700");
-    const selectedBackgroundColor = useColorModeValue(
-        "primary.500",
-        "primary.500"
-    );
 
     const onClickCloseCallback = useCallback(
         (e: MouseEvent) => {
@@ -480,26 +487,33 @@ const SidebarEditorsMenuButton: React.FC<SidebarEditorsMenuButtonProps> = (
         [onClose]
     );
 
+    return (
+        <SidebarEditorsCustomMenuButton
+            rightIcon={icon}
+            onClick={onSelect}
+            onKeyDown={onKeyDown}
+            onMouseDown={onMouseDown}
+            isActive={isSelected}
+        >
+            {item.name}
+        </SidebarEditorsCustomMenuButton>
+    );
+};
+
+const SidebarEditorsCustomMenuButton: React.FC<ButtonProps> = (props) => {
+    const { children, ...buttonProps } = props;
+
+    const itemTextColor = useColorModeValue("primary.900", "white");
+    const selectedTextColor = "white";
+    const hoverBackgroundColor = useColorModeValue("primary.50", "primary.700");
+    const selectedBackgroundColor = useColorModeValue(
+        "primary.500",
+        "primary.500"
+    );
+
     const focusShadow = useToken("shadows", "outline");
 
     return (
-        // <AppTooltip
-        //     openDelay={1000}
-        //     label={
-        //         <Box>
-        //             <Box>
-        //                 <strong>Kind: </strong>
-        //                 {item.kind}
-        //             </Box>
-        //             {item.namespace && (
-        //                 <Box>
-        //                     <strong>Namespace: </strong>
-        //                     {item.namespace}
-        //                 </Box>
-        //             )}
-        //         </Box>
-        //     }
-        // >
         <Button
             flex="0 0 auto"
             bg="transparent"
@@ -507,7 +521,6 @@ const SidebarEditorsMenuButton: React.FC<SidebarEditorsMenuButtonProps> = (
             px={2}
             pe={1}
             py={0}
-            rightIcon={icon}
             w="100%"
             h={8}
             fontSize="sm"
@@ -515,9 +528,6 @@ const SidebarEditorsMenuButton: React.FC<SidebarEditorsMenuButtonProps> = (
             justifyContent="start"
             fontWeight="normal"
             transition="none"
-            onClick={onSelect}
-            onKeyDown={onKeyDown}
-            onMouseDown={onMouseDown}
             _hover={{
                 bg: hoverBackgroundColor,
             }}
@@ -529,12 +539,11 @@ const SidebarEditorsMenuButton: React.FC<SidebarEditorsMenuButtonProps> = (
             _focusVisible={{
                 boxShadow: focusShadow,
             }}
-            isActive={isSelected}
+            {...buttonProps}
         >
             <Box flex="1 0 0" textAlign="left" isTruncated>
-                {item.name}
+                {children}
             </Box>
         </Button>
-        // </AppTooltip>
     );
 };

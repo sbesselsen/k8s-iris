@@ -2,9 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 let currentValues: Record<string, boolean> = {};
 let modifierKeyListeners: Record<string, Array<(value: boolean) => void>> = {};
-let keyListeners: Array<(eventType: string, key: string) => void> = [];
+let keyListeners: Array<
+    (eventType: string, key: string, e: KeyboardEvent) => void
+> = [];
 
-function globalModifierKeyListener(e: KeyboardEvent | MouseEvent) {
+function globalModifierKeyListener(e: KeyboardEvent) {
     for (const [key, ls] of Object.entries(modifierKeyListeners)) {
         const newValue = e.getModifierState(key);
         if (newValue !== currentValues[key]) {
@@ -16,7 +18,7 @@ function globalModifierKeyListener(e: KeyboardEvent | MouseEvent) {
 
 function globalKeyListener(eventType: string): (e: KeyboardEvent) => void {
     return (e: KeyboardEvent) => {
-        keyListeners.forEach((kl) => kl(eventType, e.key));
+        keyListeners.forEach((kl) => kl(eventType, e.key, e));
     };
 }
 
@@ -78,7 +80,7 @@ export function useModifierKey(key: string): boolean {
 }
 
 export function useKeyListener(
-    listener: (eventType: string, key: string) => void
+    listener: (eventType: string, key: string, e: KeyboardEvent) => void
 ): void {
     useEffect(() => {
         keyListeners.push(listener);
