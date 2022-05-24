@@ -1,5 +1,9 @@
 import { Button, HStack, Icon, VStack } from "@chakra-ui/react";
-import { AiFillCaretRight, AiOutlineReload } from "react-icons/ai";
+import {
+    AiFillCaretLeft,
+    AiFillCaretRight,
+    AiOutlineReload,
+} from "react-icons/ai";
 import React, {
     useCallback,
     useEffect,
@@ -28,15 +32,14 @@ import { Toolbar } from "../../component/main/Toolbar";
 
 export type ResourceYamlEditorProps = {
     object?: K8sObject | undefined;
-    onCancel?: () => void;
+    onBackPressed?: () => void;
     onAfterApply?: () => void;
-    cancelText?: string;
 };
 
 export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
     props
 ) => {
-    const { object, onCancel, onAfterApply, cancelText } = props;
+    const { object, onBackPressed, onAfterApply } = props;
 
     const client = useK8sClient();
     const isClusterLocked = useContextLock();
@@ -308,6 +311,8 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
                     options={{
                         language: "yaml",
                         minimap: { enabled: false }, // I hate that little freak
+                        links: false, // and don't even get me started on clickable links
+                        padding: { top: 5 },
                     }}
                     value={value}
                     onChange={setValue}
@@ -320,6 +325,8 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
                     options={{
                         language: "yaml",
                         minimap: { enabled: false },
+                        links: false,
+                        padding: { top: 5 },
                     }}
                     originalValue={originalValue}
                     value={value}
@@ -338,25 +345,26 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
                 justifyContent="center"
             >
                 <Toolbar>
-                    {hasUpstreamChanges && (
-                        <Button
-                            colorScheme="yellow"
-                            variant="outline"
-                            onClick={onClickUpdate}
-                            leftIcon={<Icon as={AiOutlineReload} />}
-                        >
-                            Update
-                        </Button>
-                    )}
                     {phase === "edit" && (
                         <>
-                            {onCancel && (
+                            {onBackPressed && (
                                 <Button
                                     colorScheme="primary"
                                     variant="ghost"
-                                    onClick={onCancel}
+                                    onClick={onBackPressed}
+                                    leftIcon={<Icon as={AiFillCaretLeft} />}
                                 >
-                                    {cancelText ?? "Cancel"}
+                                    Back
+                                </Button>
+                            )}
+                            {hasUpstreamChanges && (
+                                <Button
+                                    colorScheme="yellow"
+                                    variant="outline"
+                                    onClick={onClickUpdate}
+                                    leftIcon={<Icon as={AiOutlineReload} />}
+                                >
+                                    Update
                                 </Button>
                             )}
                             <Button
@@ -375,9 +383,20 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
                                 colorScheme="primary"
                                 variant="ghost"
                                 onClick={onBackToEditor}
+                                leftIcon={<Icon as={AiFillCaretLeft} />}
                             >
-                                Back to editor
+                                Back
                             </Button>
+                            {hasUpstreamChanges && (
+                                <Button
+                                    colorScheme="yellow"
+                                    variant="outline"
+                                    onClick={onClickUpdate}
+                                    leftIcon={<Icon as={AiOutlineReload} />}
+                                >
+                                    Update
+                                </Button>
+                            )}
                             <Button
                                 colorScheme="primary"
                                 onClick={onApply}

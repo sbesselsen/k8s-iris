@@ -10,18 +10,18 @@ import {
     MenuList,
     VStack,
 } from "@chakra-ui/react";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo } from "react";
 import { K8sObject, K8sObjectIdentifier } from "../../../common/k8s/client";
 import {
     K8sObjectHeading,
     K8sObjectViewer,
     K8sResourceDisplayRule,
 } from "../../component/k8s/K8sObjectViewer";
-import { ContentTabs } from "../../component/main/ContentTabs";
 import { ScrollBox } from "../../component/main/ScrollBox";
 import { Toolbar } from "../../component/main/Toolbar";
 import { useAppParam } from "../../context/param";
 import { useIpcCall } from "../../hook/ipc";
+import { useModifierKeyRef } from "../../hook/keyboard";
 import { useK8sListWatch } from "../../k8s/list-watch";
 import { ResourceYamlEditor } from "./ResourceYamlEditor";
 
@@ -170,7 +170,11 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
     const apiVersion = object?.apiVersion;
     const metadata = object?.metadata;
 
+    const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
+    const metaKeyPressedRef = useModifierKeyRef("Meta");
+
     const [showDetails, setShowDetails] = useAppParam("showDetails", false);
+    const [mode, setMode] = useAppParam<"view" | "edit">("editorMode", "view");
     const onChangeShowDetails = useCallback(
         (value: boolean) => {
             setShowDetails(value, true);
@@ -190,14 +194,18 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
         [setExpandedItems]
     );
 
-    const [mode, setMode] = useState<"view" | "edit">("view");
-
     const onCancelEdit = useCallback(() => {
         setMode("view");
     }, [setMode]);
     const onClickEdit = useCallback(() => {
-        setMode("edit");
-    }, [setMode]);
+        if (metaKeyPressedRef.current) {
+            createWindow({
+                route: setMode.asRoute("edit"),
+            });
+        } else {
+            setMode("edit");
+        }
+    }, [createWindow, metaKeyPressedRef, setMode]);
 
     if (!kind || !apiVersion || !metadata) {
         return null;
@@ -205,12 +213,13 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
 
     if (mode === "edit") {
         return (
-            <ResourceYamlEditor
-                object={object}
-                onCancel={onCancelEdit}
-                onAfterApply={onCancelEdit}
-                cancelText="View"
-            />
+            <VStack spacing={0} flex="1 0 0" alignItems="stretch">
+                <ResourceYamlEditor
+                    object={object}
+                    onBackPressed={onCancelEdit}
+                    onAfterApply={onCancelEdit}
+                />
+            </VStack>
         );
     }
     return (
