@@ -1,10 +1,13 @@
+import { AddIcon } from "@chakra-ui/icons";
 import {
     Badge,
     Box,
+    Button,
     HStack,
     Table,
     Tbody,
     Td,
+    Tfoot,
     Th,
     Thead,
     Tr,
@@ -21,8 +24,10 @@ import { resourceMatch } from "../../../common/util/search";
 import { k8sSmartCompare } from "../../../common/util/sort";
 import { ScrollBox } from "../../component/main/ScrollBox";
 import { Selectable } from "../../component/main/Selectable";
+import { newResourceEditor } from "../../context/editors";
 import { useK8sNamespaces } from "../../context/k8s-namespaces";
 import { useAppParam } from "../../context/param";
+import { useAppRouteGetter, useAppRouteSetter } from "../../context/route";
 import { useAppSearch } from "../../context/search";
 import { useIpcCall } from "../../hook/ipc";
 import { useModifierKeyRef } from "../../hook/keyboard";
@@ -39,6 +44,8 @@ export const ResourceAllOverview: React.FC = () => {
 
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
     const metaKeyRef = useModifierKeyRef("Meta");
+    const getAppRoute = useAppRouteGetter();
+    const setAppRoute = useAppRouteSetter();
 
     const onSelectResourceType = useCallback(
         (type: K8sResourceTypeIdentifier | undefined) => {
@@ -53,18 +60,52 @@ export const ResourceAllOverview: React.FC = () => {
         [createWindow, metaKeyRef, setSelectedResourceType]
     );
 
+    const onClickAddNew = useCallback(() => {
+        const editor = newResourceEditor(selectedResourceType);
+        if (metaKeyRef.current) {
+            createWindow({
+                route: {
+                    ...getAppRoute(),
+                    activeEditor: editor,
+                },
+            });
+        } else {
+            setAppRoute((route) => ({
+                ...route,
+                activeEditor: editor,
+            }));
+        }
+    }, [
+        createWindow,
+        getAppRoute,
+        setAppRoute,
+        metaKeyRef,
+        selectedResourceType,
+    ]);
+
     return (
         <VStack flex="1 0 0" spacing={0} alignItems="stretch">
-            <Box px={2} py={2} flex="0 0 auto">
+            <HStack px={2} py={2} flex="0 0 auto">
                 <ResourceTypeSelector
                     value={selectedResourceType}
                     onChange={onSelectResourceType}
                     emptyValueContent="Select a resource type..."
                 />
-            </Box>
+            </HStack>
             <ScrollBox px={4} py={2} flex="1 0 0">
                 {selectedResourceType && (
-                    <ResourceList resourceType={selectedResourceType} />
+                    <VStack alignItems="stretch">
+                        <ResourceList resourceType={selectedResourceType} />
+                        <Box>
+                            <Button
+                                size="sm"
+                                onClick={onClickAddNew}
+                                leftIcon={<AddIcon w={2} h={2} />}
+                            >
+                                Add new
+                            </Button>
+                        </Box>
+                    </VStack>
                 )}
             </ScrollBox>
         </VStack>

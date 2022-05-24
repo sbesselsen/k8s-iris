@@ -8,10 +8,15 @@ import {
     MenuButton,
     MenuItem,
     MenuList,
+    useConst,
     VStack,
 } from "@chakra-ui/react";
 import React, { useCallback, useMemo, useState } from "react";
-import { K8sObject, K8sObjectIdentifier } from "../../../common/k8s/client";
+import {
+    K8sObject,
+    K8sObjectIdentifier,
+    K8sResourceTypeIdentifier,
+} from "../../../common/k8s/client";
 import {
     K8sObjectHeading,
     K8sObjectViewer,
@@ -20,15 +25,20 @@ import {
 import { ScrollBox } from "../../component/main/ScrollBox";
 import { Toolbar } from "../../component/main/Toolbar";
 import {
+    appEditorForK8sObject,
     isAppEditorForK8sObject,
     useAppEditorsStore,
 } from "../../context/editors";
+import { useK8sNamespaces } from "../../context/k8s-namespaces";
 import { useAppParam } from "../../context/param";
+import { useAppRouteSetter } from "../../context/route";
 import { useDialog } from "../../hook/dialog";
 import { useIpcCall } from "../../hook/ipc";
 import { useModifierKeyRef } from "../../hook/keyboard";
+import { useK8sApiResourceTypes } from "../../k8s/api-resources";
 import { useK8sClient } from "../../k8s/client";
 import { useK8sListWatch } from "../../k8s/list-watch";
+import { ResourceTypeSelector } from "../resources/ResourceTypeSelector";
 import { ResourceYamlEditor } from "./ResourceYamlEditor";
 
 export type ResourceEditorProps = {
@@ -344,5 +354,96 @@ const ShowDetailsToggle: React.FC<{
                 <MenuItem onClick={onClickDetailed}>Detailed view</MenuItem>
             </MenuList>
         </Menu>
+    );
+};
+
+export type NewResourceEditorProps = {
+    editorId: string;
+    resourceType?: K8sResourceTypeIdentifier;
+};
+
+export const NewResourceEditor: React.FC<NewResourceEditorProps> = (props) => {
+    const { editorId, resourceType } = props;
+
+    const [selectedResourceType, setSelectedResourceType] = useState<
+        K8sResourceTypeIdentifier | undefined
+    >(resourceType);
+
+    const namespaces = useK8sNamespaces();
+    const namespacesConst = useConst(namespaces);
+
+    const [_isLoadingResourceTypes, resourceTypes, _resourceTypesError] =
+        useK8sApiResourceTypes();
+    const resourceTypeInfo = useMemo(
+        () =>
+            selectedResourceType
+                ? resourceTypes?.find(
+                      (t) =>
+                          t.apiVersion === selectedResourceType.apiVersion &&
+                          t.kind === selectedResourceType.kind &&
+                          !t.isSubResource
+                  )
+                : null,
+        [resourceTypes, selectedResourceType]
+    );
+
+    const editorsStore = useAppEditorsStore();
+    const setAppRoute = useAppRouteSetter();
+
+    const object: K8sObject = useMemo(
+        () =>
+            selectedResourceType
+                ? {
+                      apiVersion: selectedResourceType.apiVersion,
+                      kind: selectedResourceType.kind,
+                      metadata: {
+                          name: "",
+                          ...(resourceTypeInfo?.namespaced
+                              ? {
+                                    namespace:
+                                        namespacesConst.mode === "selected" &&
+                                        namespacesConst.selected.length === 1
+                                            ? namespacesConst.selected[0]
+                                            : "",
+                                }
+                              : {}),
+                      },
+                  }
+                : null,
+        [namespacesConst, selectedResourceType]
+    );
+
+    const onAfterApply = useCallback(
+        (object: K8sObject) => {
+            setAppRoute((route) => ({
+                ...route,
+                activeEditor: appEditorForK8sObject(object),
+            }));
+            editorsStore.set((editors) =>
+                editors.filter((e) => e.id !== editorId)
+            );
+        },
+        [editorId, editorsStore, setAppRoute]
+    );
+
+    return (
+        <VStack w="100%" h="100%" spacing={0} alignItems="stretch">
+            <Box px={2} py={2} flex="0 0 auto">
+                <ResourceTypeSelector
+                    value={selectedResourceType}
+                    onChange={setSelectedResourceType}
+                    emptyValueContent="Select a resource type..."
+                />
+            </Box>
+            <VStack overflow="hidden" flex="1 0 0" alignItems="stretch">
+                {object && (
+                    <ResourceYamlEditor
+                        object={object}
+                        onAfterApply={onAfterApply}
+                        shouldShowBackButton={false}
+                    />
+                )}
+            </VStack>
+        </VStack>
     );
 };

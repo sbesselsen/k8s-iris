@@ -43,7 +43,11 @@ import { AppToolbar } from "./AppToolbar";
 import { ParamNamespace, useAppParam } from "../../context/param";
 import { k8sSmartCompare } from "../../../common/util/sort";
 import { ContextUnlockButton } from "../k8s-context/ContextUnlockButton";
-import { useAppEditors, useAppEditorsStore } from "../../context/editors";
+import {
+    newResourceEditor,
+    useAppEditors,
+    useAppEditorsStore,
+} from "../../context/editors";
 
 const ClusterOverview = React.lazy(async () => ({
     default: (await import("../cluster/ClusterOverview")).ClusterOverview,
@@ -53,6 +57,9 @@ const ResourcesOverview = React.lazy(async () => ({
 }));
 const ResourceEditor = React.lazy(async () => ({
     default: (await import("../editor/ResourceEditor")).ResourceEditor,
+}));
+const NewResourceEditor = React.lazy(async () => ({
+    default: (await import("../editor/ResourceEditor")).NewResourceEditor,
 }));
 
 export const RootAppUI: React.FunctionComponent = () => {
@@ -75,10 +82,6 @@ export const RootAppUI: React.FunctionComponent = () => {
     const searchValue = useAppSearch();
     const searchBoxRef = useRef<HTMLInputElement>();
     const contextSelectMenuRef = useRef<HTMLButtonElement>();
-
-    const createNewEditor = useCallback(() => {
-        console.log("new");
-    }, [editorsStore]);
 
     const metaKeyRef = useModifierKeyRef("Meta");
     const shiftKeyRef = useModifierKeyRef("Shift");
@@ -105,7 +108,10 @@ export const RootAppUI: React.FunctionComponent = () => {
                     metaKeyRef.current &&
                     key === "n"
                 ) {
-                    createNewEditor();
+                    setAppRoute((route) => ({
+                        ...route,
+                        activeEditor: newResourceEditor(),
+                    }));
                 }
                 if (
                     eventType === "keydown" &&
@@ -146,14 +152,7 @@ export const RootAppUI: React.FunctionComponent = () => {
                     }
                 }
             },
-            [
-                createNewEditor,
-                metaKeyRef,
-                editorsStore,
-                getAppRoute,
-                setAppRoute,
-                searchBoxRef,
-            ]
+            [metaKeyRef, editorsStore, getAppRoute, setAppRoute, searchBoxRef]
         )
     );
 
@@ -302,8 +301,21 @@ export const RootAppUI: React.FunctionComponent = () => {
     );
 
     const onPressCreate = useCallback(() => {
-        createNewEditor();
-    }, [createNewEditor]);
+        const editor = newResourceEditor();
+        if (metaKeyRef.current) {
+            createWindow({
+                route: {
+                    ...getAppRoute(),
+                    activeEditor: editor,
+                },
+            });
+        } else {
+            setAppRoute((route) => ({
+                ...route,
+                activeEditor: editor,
+            }));
+        }
+    }, [createWindow, getAppRoute, setAppRoute, metaKeyRef]);
 
     useEffect(() => {
         document.body.classList.toggle("app-ui-mounted", isReady);
@@ -409,7 +421,22 @@ const AppContent: React.FC<AppContentProps> = (props) => {
             )}
             {editorDef && (
                 <ParamNamespace name="editor">
-                    <ResourceEditor editorResource={editorDef} />
+                    {editorDef.type === "resource" && (
+                        <ResourceEditor editorResource={editorDef} />
+                    )}
+                    {editorDef.type === "new-resource" && (
+                        <NewResourceEditor
+                            editorId={editorDef.id}
+                            resourceType={
+                                editorDef.apiVersion && editorDef.kind
+                                    ? {
+                                          apiVersion: editorDef.apiVersion,
+                                          kind: editorDef.kind,
+                                      }
+                                    : null
+                            }
+                        />
+                    )}
                 </ParamNamespace>
             )}
         </Suspense>

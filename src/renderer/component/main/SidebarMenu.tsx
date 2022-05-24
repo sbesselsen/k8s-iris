@@ -421,13 +421,15 @@ export const SidebarEditorsMenu: React.FC<SidebarEditorsMenuProps> = (
                         item={item}
                     />
                 ))}
+            </VStack>
+            <Box px={2}>
                 <SidebarEditorsCustomMenuButton
                     onClick={onPressCreate}
                     leftIcon={<AddIcon w={2} h={2} />}
                 >
                     Create new
                 </SidebarEditorsCustomMenuButton>
-            </VStack>
+            </Box>
         </VStack>
     );
 };

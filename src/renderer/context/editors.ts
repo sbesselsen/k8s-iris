@@ -1,5 +1,10 @@
-import { K8sObject, K8sObjectIdentifier } from "../../common/k8s/client";
+import {
+    K8sObject,
+    K8sObjectIdentifier,
+    K8sResourceTypeIdentifier,
+} from "../../common/k8s/client";
 import { AppEditor } from "../../common/route/app-route";
+import { useK8sApiResourceTypes } from "../k8s/api-resources";
 import { create } from "../util/state";
 
 export const { useStore: useAppEditorsStore, useStoreValue: useAppEditors } =
@@ -57,4 +62,17 @@ export function isAppEditorForK8sObject(
         editor.name === resource.metadata.name &&
         editor.namespace === resource.metadata.namespace
     );
+}
+
+let newResourceIndex = 1;
+export function newResourceEditor(
+    resourceType?: K8sResourceTypeIdentifier
+): AppEditor {
+    const index = newResourceIndex++;
+    return {
+        id: `new:${index}`,
+        type: "new-resource",
+        name: `New (${index})`,
+        ...resourceType,
+    };
 }

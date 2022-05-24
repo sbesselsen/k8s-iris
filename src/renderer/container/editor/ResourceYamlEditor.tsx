@@ -33,7 +33,7 @@ import { Toolbar } from "../../component/main/Toolbar";
 export type ResourceYamlEditorProps = {
     object?: K8sObject | undefined;
     onBackPressed?: () => void;
-    onAfterApply?: () => void;
+    onAfterApply?: (object: K8sObject) => void;
     shouldShowBackButton?: boolean;
 };
 
@@ -213,7 +213,7 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
                 const response = await client.apply(newObject);
                 setEditorObject(response);
                 setPhase("edit");
-                onAfterApply?.();
+                onAfterApply?.(response);
             } catch (e) {
                 showDialog({
                     title: "Error applying",
