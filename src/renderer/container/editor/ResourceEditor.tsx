@@ -229,7 +229,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
             });
             if (result.response === 0) {
                 setIsDeleting(true);
-                await client.remove(object);
+                await client.remove(object, { waitForCompletion: false });
 
                 // Close the editor.
                 // TODO: some kind of bus for updates to objects, so we can do this in a central place?

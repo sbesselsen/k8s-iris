@@ -186,16 +186,25 @@ const ResourceRow: React.FC<ResourceRowProps> = (props) => {
     const isNew =
         new Date().getTime() - creationDate.getTime() < 2 * 3600 * 1000;
 
+    const isDeleting = Boolean((resource as any).metadata.deletionTimestamp);
+
     return (
         <Tr>
             <Td ps={0} verticalAlign="baseline">
                 <HStack p={0}>
-                    <Selectable display="block" isTruncated>
+                    <Selectable
+                        display="block"
+                        textColor={isDeleting ? "gray.500" : ""}
+                        isTruncated
+                    >
                         <ResourceEditorLink editorResource={resource}>
                             {resource.metadata.name}
                         </ResourceEditorLink>
                     </Selectable>
-                    {isNew && <Badge colorScheme="primary">new</Badge>}
+                    {isNew && !isDeleting && (
+                        <Badge colorScheme="primary">new</Badge>
+                    )}
+                    {isDeleting && <Badge colorScheme="gray">deleting</Badge>}
                 </HStack>
             </Td>
             {showNamespace && (
