@@ -10,7 +10,7 @@ import {
     MenuList,
     VStack,
 } from "@chakra-ui/react";
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { K8sObject, K8sObjectIdentifier } from "../../../common/k8s/client";
 import {
     K8sObjectHeading,
@@ -19,9 +19,15 @@ import {
 } from "../../component/k8s/K8sObjectViewer";
 import { ScrollBox } from "../../component/main/ScrollBox";
 import { Toolbar } from "../../component/main/Toolbar";
+import {
+    isAppEditorForK8sObject,
+    useAppEditorsStore,
+} from "../../context/editors";
 import { useAppParam } from "../../context/param";
+import { useDialog } from "../../hook/dialog";
 import { useIpcCall } from "../../hook/ipc";
 import { useModifierKeyRef } from "../../hook/keyboard";
+import { useK8sClient } from "../../k8s/client";
 import { useK8sListWatch } from "../../k8s/list-watch";
 import { ResourceYamlEditor } from "./ResourceYamlEditor";
 
@@ -172,9 +178,14 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
 
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
     const metaKeyPressedRef = useModifierKeyRef("Meta");
+    const client = useK8sClient();
+    const showDialog = useDialog();
+
+    const appEditorStore = useAppEditorsStore();
 
     const [showDetails, setShowDetails] = useAppParam("showDetails", false);
     const [mode, setMode] = useAppParam<"view" | "edit">("editorMode", "view");
+    const [isDeleting, setIsDeleting] = useState(false);
     const onChangeShowDetails = useCallback(
         (value: boolean) => {
             setShowDetails(value, true);
@@ -206,6 +217,28 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
             setMode("edit");
         }
     }, [createWindow, metaKeyPressedRef, setMode]);
+    const onClickDelete = useCallback(() => {
+        (async () => {
+            const result = await showDialog({
+                title: "Confirm deletion",
+                message: "Are you sure?",
+                detail: `Are you sure you want to delete ${object.kind.toLocaleLowerCase()} ${
+                    object.metadata.name
+                }?`,
+                buttons: ["Yes", "No"],
+            });
+            if (result.response === 0) {
+                setIsDeleting(true);
+                await client.remove(object);
+
+                // Close the editor.
+                // TODO: some kind of bus for updates to objects, so we can do this in a central place?
+                appEditorStore.set((editors) =>
+                    editors.filter((e) => !isAppEditorForK8sObject(e, object))
+                );
+            }
+        })();
+    }, [appEditorStore, client, object, setIsDeleting]);
 
     if (!kind || !apiVersion || !metadata) {
         return null;
@@ -232,6 +265,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
                         colorScheme="primary"
                         leftIcon={<EditIcon />}
                         onClick={onClickEdit}
+                        isDisabled={isDeleting}
                     >
                         Edit
                     </Button>
@@ -240,6 +274,8 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
                         icon={<DeleteIcon />}
                         aria-label="Delete"
                         title="Delete"
+                        onClick={onClickDelete}
+                        isLoading={isDeleting}
                     />
                     <Box flex="1 0 0"></Box>
                     <ShowDetailsToggle

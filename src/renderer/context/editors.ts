@@ -32,3 +32,29 @@ export function appEditorForK8sObject(resource: K8sObject): AppEditor {
         namespace: resource.metadata.namespace,
     };
 }
+
+export function isAppEditorForK8sObjectIdentifier(
+    editor: AppEditor,
+    resource: K8sObjectIdentifier
+): boolean {
+    return (
+        editor.type === "resource" &&
+        editor.apiVersion === resource.apiVersion &&
+        editor.kind === resource.kind &&
+        editor.name === resource.name &&
+        editor.namespace === resource.namespace
+    );
+}
+
+export function isAppEditorForK8sObject(
+    editor: AppEditor,
+    resource: K8sObject
+): boolean {
+    return (
+        editor.type === "resource" &&
+        editor.apiVersion === resource.apiVersion &&
+        editor.kind === resource.kind &&
+        editor.name === resource.metadata.name &&
+        editor.namespace === resource.metadata.namespace
+    );
+}

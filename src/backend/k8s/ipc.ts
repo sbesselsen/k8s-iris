@@ -5,6 +5,7 @@ import {
     K8sObject,
     K8sObjectListQuery,
     K8sPatchOptions,
+    K8sRemoveOptions,
 } from "../../common/k8s/client";
 import { K8sPartialObjectListWatcher } from "../../common/ipc-types";
 
@@ -38,6 +39,18 @@ export const wireK8sClientIpc = (clientManager: K8sClientManager): void => {
             spec: K8sObject;
             options: K8sPatchOptions;
         }) => clientManager.clientForContext(context).patch(spec, options)
+    );
+    ipcHandle(
+        "k8s:client:remove",
+        async ({
+            context,
+            spec,
+            options,
+        }: {
+            context: string;
+            spec: K8sObject;
+            options: K8sRemoveOptions;
+        }) => clientManager.clientForContext(context).remove(spec, options)
     );
     ipcHandle(
         "k8s:client:replace",
