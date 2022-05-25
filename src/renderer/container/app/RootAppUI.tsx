@@ -86,13 +86,10 @@ export const RootAppUI: React.FunctionComponent = () => {
 
     const [_loadingContextsInfo, contextsInfo] = useK8sContextsInfo();
 
-    const editors = useAppEditors();
-    const editorsStore = useAppEditorsStore();
-
     const getAppRoute = useAppRouteGetter();
     const setAppRoute = useAppRouteSetter();
 
-    const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
+    const editorsStore = useAppEditorsStore();
     const [namespacesError, setNamespacesError] = useState<Error | undefined>();
 
     const searchBoxRef = useRef<HTMLInputElement>();
@@ -191,59 +188,7 @@ export const RootAppUI: React.FunctionComponent = () => {
         }
     }, [colorThemeStore, contextualColorTheme]);
 
-    const selectedEditor = useAppRoute((route) => route.activeEditor?.id);
-
     const isReady = contextualColorTheme !== null;
-
-    const onChangeSelectedEditor = useCallback(
-        (id: string | undefined) => {
-            if (metaKeyRef.current) {
-                if (id) {
-                    // Open a window with only the specified editor.
-                    createWindow({
-                        route: {
-                            ...getAppRoute(),
-                            activeEditor: editors.find(
-                                (editor) => editor.id === id
-                            ),
-                        },
-                    });
-                }
-            } else {
-                setAppRoute((route) => ({
-                    ...route,
-                    activeEditor: editors.find((editor) => editor.id === id),
-                }));
-            }
-        },
-        [createWindow, editors, metaKeyRef, getAppRoute, setAppRoute]
-    );
-
-    const onCloseEditor = useCallback(
-        (id: string) => {
-            editorsStore.set((editors) =>
-                editors.filter((editor) => editor.id !== id)
-            );
-        },
-        [editorsStore]
-    );
-
-    const onPressCreate = useCallback(() => {
-        const editor = newResourceEditor();
-        if (metaKeyRef.current) {
-            createWindow({
-                route: {
-                    ...getAppRoute(),
-                    activeEditor: editor,
-                },
-            });
-        } else {
-            setAppRoute((route) => ({
-                ...route,
-                activeEditor: editor,
-            }));
-        }
-    }, [createWindow, getAppRoute, setAppRoute, metaKeyRef]);
 
     useEffect(() => {
         document.body.classList.toggle("app-ui-mounted", isReady);
@@ -276,13 +221,7 @@ export const RootAppUI: React.FunctionComponent = () => {
                         alignItems="stretch"
                     >
                         <AppMainMenu />
-                        <SidebarEditorsMenu
-                            items={editors}
-                            selection={selectedEditor}
-                            onChangeSelection={onChangeSelectedEditor}
-                            onCloseEditor={onCloseEditor}
-                            onPressCreate={onPressCreate}
-                        />
+                        <AppEditors />
                         <AppNamespaces
                             onErrorStateChange={setNamespacesError}
                         />
@@ -299,7 +238,7 @@ export const RootAppUI: React.FunctionComponent = () => {
                             <ClusterError error={namespacesError} />
                         </Box>
                     ) : (
-                        <AppContent editor={selectedEditor} />
+                        <AppContent />
                     )
                 }
             />
@@ -354,6 +293,78 @@ const AppMainMenu: React.FC<{}> = () => {
             items={sidebarMainMenuItems}
             selection={selectedEditor ? undefined : menuItem}
             onChangeSelection={onChangeMenuItemSelection}
+        />
+    );
+};
+
+const AppEditors: React.FC<{}> = () => {
+    const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
+    const getAppRoute = useAppRouteGetter();
+    const setAppRoute = useAppRouteSetter();
+    const metaKeyRef = useModifierKeyRef("Meta");
+
+    const editors = useAppEditors();
+    const editorsStore = useAppEditorsStore();
+
+    const selectedEditor = useAppRoute((route) => route.activeEditor?.id);
+
+    const onChangeSelectedEditor = useCallback(
+        (id: string | undefined) => {
+            if (metaKeyRef.current) {
+                if (id) {
+                    // Open a window with only the specified editor.
+                    createWindow({
+                        route: {
+                            ...getAppRoute(),
+                            activeEditor: editors.find(
+                                (editor) => editor.id === id
+                            ),
+                        },
+                    });
+                }
+            } else {
+                setAppRoute((route) => ({
+                    ...route,
+                    activeEditor: editors.find((editor) => editor.id === id),
+                }));
+            }
+        },
+        [createWindow, editors, metaKeyRef, getAppRoute, setAppRoute]
+    );
+
+    const onCloseEditor = useCallback(
+        (id: string) => {
+            editorsStore.set((editors) =>
+                editors.filter((editor) => editor.id !== id)
+            );
+        },
+        [editorsStore]
+    );
+
+    const onPressCreate = useCallback(() => {
+        const editor = newResourceEditor();
+        if (metaKeyRef.current) {
+            createWindow({
+                route: {
+                    ...getAppRoute(),
+                    activeEditor: editor,
+                },
+            });
+        } else {
+            setAppRoute((route) => ({
+                ...route,
+                activeEditor: editor,
+            }));
+        }
+    }, [createWindow, getAppRoute, setAppRoute, metaKeyRef]);
+
+    return (
+        <SidebarEditorsMenu
+            items={editors}
+            selection={selectedEditor}
+            onChangeSelection={onChangeSelectedEditor}
+            onCloseEditor={onCloseEditor}
+            onPressCreate={onPressCreate}
         />
     );
 };
@@ -436,15 +447,10 @@ const appComponents: Record<string, ReactNode> = {
     cluster: <ClusterOverview />,
 };
 
-type AppContentProps = {
-    editor: string | undefined;
-};
-
-const AppContent: React.FC<AppContentProps> = (props) => {
-    const { editor } = props;
-
-    const editorDefs = useAppEditors();
+const AppContent: React.FC<{}> = () => {
+    const editor = useAppRoute((route) => route.activeEditor)?.id;
     const menuItem = useAppRoute((route) => route.menuItem ?? defaultMenuItem);
+    const editorDefs = useAppEditors();
 
     return (
         <Suspense fallback={<Box />}>
@@ -454,40 +460,50 @@ const AppContent: React.FC<AppContentProps> = (props) => {
                 </ParamNamespace>
             )}
             {editorDefs.map((editorDef) => (
-                <ParamNamespace
-                    name={`editor:${editorDef.id}`}
+                <AppContentEditor
                     key={editorDef.id}
-                >
-                    <VStack
-                        flex="1 0 0"
-                        alignItems="stretch"
-                        w="100%"
-                        h="100%"
-                        display={editorDef.id === editor ? "flex" : "none"}
-                    >
-                        {editorDef.type === "resource" && (
-                            <ResourceEditor
-                                editorResource={editorDef}
-                                isSuspended={editorDef.id !== editor}
-                            />
-                        )}
-                        {editorDef.type === "new-resource" && (
-                            <NewResourceEditor
-                                editorId={editorDef.id}
-                                isSuspended={editorDef.id !== editor}
-                                resourceType={
-                                    editorDef.apiVersion && editorDef.kind
-                                        ? {
-                                              apiVersion: editorDef.apiVersion,
-                                              kind: editorDef.kind,
-                                          }
-                                        : null
-                                }
-                            />
-                        )}
-                    </VStack>
-                </ParamNamespace>
+                    editor={editorDef}
+                    isSelected={editorDef.id === editor}
+                />
             ))}
         </Suspense>
     );
 };
+
+const AppContentEditor: React.FC<{ editor: AppEditor; isSelected: boolean }> =
+    React.memo((props) => {
+        const { editor, isSelected } = props;
+
+        return (
+            <ParamNamespace name={`editor:${editor.id}`} key={editor.id}>
+                <VStack
+                    flex="1 0 0"
+                    alignItems="stretch"
+                    w="100%"
+                    h="100%"
+                    display={isSelected ? "flex" : "none"}
+                >
+                    {editor.type === "resource" && (
+                        <ResourceEditor
+                            editorResource={editor}
+                            isSuspended={!isSelected}
+                        />
+                    )}
+                    {editor.type === "new-resource" && (
+                        <NewResourceEditor
+                            editorId={editor.id}
+                            isSuspended={!isSelected}
+                            resourceType={
+                                editor.apiVersion && editor.kind
+                                    ? {
+                                          apiVersion: editor.apiVersion,
+                                          kind: editor.kind,
+                                      }
+                                    : null
+                            }
+                        />
+                    )}
+                </VStack>
+            </ParamNamespace>
+        );
+    });
