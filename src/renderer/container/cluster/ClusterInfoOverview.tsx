@@ -42,7 +42,7 @@ export const ClusterInfoOverview: React.FC = () => {
 
     const context = useK8sContext();
 
-    const [_loadingContexts, contextsInfo] = useK8sContextsInfo(true);
+    const [_loadingContexts, contextsInfo] = useK8sContextsInfo();
     const contextInfo = contextsInfo.find((info) => info.name === context);
 
     const title = contextInfo?.cluster ?? context;

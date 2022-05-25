@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect } from "react";
 import { CloudK8sContextInfo } from "../../common/cloud/k8s";
 import { K8sContext } from "../../common/k8s/client";
 import { create } from "../util/state";
@@ -18,27 +18,16 @@ const { useStore: useContextsStore, useStoreValue: useContexts } = create<{
     info: [],
 });
 
-export function useK8sContextsInfo(
-    refresh?: boolean
-): [boolean, K8sContextsInfo] {
+export function useK8sContextsInfo(): [boolean, K8sContextsInfo, () => void] {
     const { loading, initialized, info } = useContexts();
     const store = useContextsStore();
-
-    const didRefreshRef = useRef(false);
 
     const listContexts = useIpcCall((ipc) => ipc.k8s.listContexts);
     const augmentK8sContexts = useIpcCall(
         (ipc) => ipc.cloud.augmentK8sContexts
     );
 
-    useEffect(() => {
-        const shouldRefresh = refresh && !didRefreshRef.current;
-        if (initialized && !shouldRefresh) {
-            return;
-        }
-        didRefreshRef.current = true;
-
-        // Initialize.
+    const updateInfo = useCallback(() => {
         store.set((state) => ({
             ...state,
             loading: !initialized,
@@ -57,7 +46,13 @@ export function useK8sContextsInfo(
                 })),
             }));
         })();
-    }, [listContexts, augmentK8sContexts, initialized]);
+    }, [store, initialized, listContexts, augmentK8sContexts]);
 
-    return [loading, info];
+    useEffect(() => {
+        if (!initialized) {
+            updateInfo();
+        }
+    }, [updateInfo, initialized]);
+
+    return [loading, info, updateInfo];
 }
