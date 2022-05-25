@@ -7,6 +7,7 @@ import React, {
     useEffect,
     useMemo,
     useRef,
+    useState,
 } from "react";
 import {
     useAppRoute,
@@ -63,6 +64,8 @@ const NewResourceEditor = React.lazy(async () => ({
 }));
 
 export const RootAppUI: React.FunctionComponent = () => {
+    console.log("Render root");
+
     const colorThemeStore = useColorThemeStore();
 
     const kubeContext = useK8sContext();
@@ -77,6 +80,7 @@ export const RootAppUI: React.FunctionComponent = () => {
     const setAppRoute = useAppRouteSetter();
 
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
+    const [namespacesError, setNamespacesError] = useState<Error | undefined>();
 
     const searchBoxRef = useRef<HTMLInputElement>();
     const contextSelectMenuRef = useRef<HTMLButtonElement>();
@@ -154,44 +158,7 @@ export const RootAppUI: React.FunctionComponent = () => {
         )
     );
 
-    const namespacesSelection = useAppRoute((route) => route.namespaces);
     const [menuItem, setMenuItem] = useAppParam("menuItem", "cluster");
-
-    const [loadingNamespaces, namespaces, namespacesError] = useK8sListWatch(
-        {
-            apiVersion: "v1",
-            kind: "Namespace",
-        },
-        {},
-        []
-    );
-
-    const onChangeNamespacesSelection = useCallback(
-        (
-            namespaces: AppNamespacesSelection,
-            requestNewWindow: boolean = false
-        ) => {
-            if (requestNewWindow) {
-                createWindow({
-                    route: {
-                        ...getAppRoute(),
-                        namespaces,
-                    },
-                });
-            } else {
-                const oldRoute = getAppRoute();
-                const createHistoryItem =
-                    namespaces.mode !== oldRoute.namespaces.mode ||
-                    (namespaces.mode === "selected" &&
-                        namespaces.selected.length === 1);
-                return setAppRoute(
-                    () => ({ ...oldRoute, namespaces }),
-                    !createHistoryItem
-                );
-            }
-        },
-        [createWindow, getAppRoute, setAppRoute]
-    );
 
     const contextualColorTheme = useMemo(() => {
         const contextInfo = contextsInfo?.find(
@@ -246,14 +213,6 @@ export const RootAppUI: React.FunctionComponent = () => {
             }
         },
         [createWindow, setMenuItem]
-    );
-
-    const sortedNamespaces = useMemo(
-        () =>
-            [...(namespaces?.items ?? [])].sort((x, y) =>
-                k8sSmartCompare(x.metadata.name, y.metadata.name)
-            ),
-        [namespaces]
     );
 
     const isReady = contextualColorTheme !== null;
@@ -350,11 +309,8 @@ export const RootAppUI: React.FunctionComponent = () => {
                             onCloseEditor={onCloseEditor}
                             onPressCreate={onPressCreate}
                         />
-                        <SidebarNamespacesMenu
-                            selection={namespacesSelection}
-                            onChangeSelection={onChangeNamespacesSelection}
-                            isLoading={loadingNamespaces}
-                            namespaces={sortedNamespaces}
+                        <AppNamespaces
+                            onErrorStateChange={setNamespacesError}
                         />
                     </VStack>
                 }
@@ -409,6 +365,79 @@ const AppSearchBox = React.forwardRef<HTMLInputElement, {}>((props, ref) => {
         />
     );
 });
+
+const AppNamespaces: React.FC<{
+    onErrorStateChange: (error: Error | undefined) => void;
+}> = (props) => {
+    const { onErrorStateChange } = props;
+
+    const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
+    const getAppRoute = useAppRouteGetter();
+    const setAppRoute = useAppRouteSetter();
+    const namespacesSelection = useAppRoute((route) => route.namespaces);
+
+    const [loadingNamespaces, namespaces, namespacesError] = useK8sListWatch(
+        {
+            apiVersion: "v1",
+            kind: "Namespace",
+        },
+        {},
+        []
+    );
+
+    const sortedNamespaces = useMemo(
+        () =>
+            [...(namespaces?.items ?? [])].sort((x, y) =>
+                k8sSmartCompare(x.metadata.name, y.metadata.name)
+            ),
+        [namespaces]
+    );
+
+    // Propagate errors to parent component.
+    const prevErrorRef = useRef<any>();
+    useEffect(() => {
+        if (prevErrorRef.current !== namespacesError) {
+            onErrorStateChange(namespacesError);
+            prevErrorRef.current = namespacesError;
+        }
+    }, [namespacesError, onErrorStateChange, prevErrorRef]);
+
+    const onChangeNamespacesSelection = useCallback(
+        (
+            namespaces: AppNamespacesSelection,
+            requestNewWindow: boolean = false
+        ) => {
+            if (requestNewWindow) {
+                createWindow({
+                    route: {
+                        ...getAppRoute(),
+                        namespaces,
+                    },
+                });
+            } else {
+                const oldRoute = getAppRoute();
+                const createHistoryItem =
+                    namespaces.mode !== oldRoute.namespaces.mode ||
+                    (namespaces.mode === "selected" &&
+                        namespaces.selected.length === 1);
+                return setAppRoute(
+                    () => ({ ...oldRoute, namespaces }),
+                    !createHistoryItem
+                );
+            }
+        },
+        [createWindow, getAppRoute, setAppRoute]
+    );
+
+    return (
+        <SidebarNamespacesMenu
+            selection={namespacesSelection}
+            onChangeSelection={onChangeNamespacesSelection}
+            isLoading={loadingNamespaces}
+            namespaces={sortedNamespaces}
+        />
+    );
+};
 
 const AppContent: React.FC<AppContentProps> = (props) => {
     const { editor, menuItem } = props;
