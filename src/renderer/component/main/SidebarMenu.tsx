@@ -242,8 +242,15 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
 
     const buildMenuItem = (namespace: K8sObject) => {
         const name = namespace.metadata.name;
+        const isDeleting = !!(namespace.metadata as any).deletionTimestamp;
+
         return (
-            <HStack w="100%" spacing={0} key={name}>
+            <HStack
+                w="100%"
+                spacing={0}
+                key={name}
+                opacity={isDeleting ? 0.5 : 1}
+            >
                 <Checkbox
                     color={itemTextColor}
                     px={4}
@@ -251,12 +258,12 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                     value={name}
                     py={1}
                     borderColor={checkboxBorderColor}
-                    flexShrink="0"
+                    flexShrink={0}
                 />
                 <Box
                     fontSize="sm"
                     onClick={onClickSingleNamespace[name]}
-                    flexGrow="1"
+                    flexGrow={1}
                     textColor={itemTextColor}
                     isTruncated
                     pe={4}
