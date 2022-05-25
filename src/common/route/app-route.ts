@@ -1,6 +1,7 @@
 export type AppRoute = {
     context: string;
     namespaces: AppNamespacesSelection;
+    menuItem: string | null;
     params: Record<string, unknown>;
     activeEditor: AppEditor | null;
 };
@@ -33,6 +34,7 @@ export const emptyAppRoute: AppRoute = {
         mode: "all",
         selected: [],
     },
+    menuItem: null,
     params: {},
     activeEditor: null,
 };

@@ -38,10 +38,9 @@ import { useIpcCall } from "../../hook/ipc";
 import {
     AppEditor,
     AppNamespacesSelection,
-    AppRoute,
 } from "../../../common/route/app-route";
 import { AppToolbar } from "./AppToolbar";
-import { ParamNamespace, useAppParam } from "../../context/param";
+import { ParamNamespace } from "../../context/param";
 import { k8sSmartCompare } from "../../../common/util/sort";
 import { ContextUnlockButton } from "../k8s-context/ContextUnlockButton";
 import {
@@ -62,6 +61,20 @@ const ResourceEditor = React.lazy(async () => ({
 const NewResourceEditor = React.lazy(async () => ({
     default: (await import("../editor/ResourceEditor")).NewResourceEditor,
 }));
+
+const sidebarMainMenuItems: SidebarMainMenuItem[] = [
+    {
+        id: "cluster",
+        iconType: SiKubernetes,
+        title: "Cluster",
+    },
+    {
+        id: "resources",
+        iconType: BsBox,
+        title: "Browse",
+    },
+];
+const defaultMenuItem = "cluster";
 
 export const RootAppUI: React.FunctionComponent = () => {
     console.log("Render root");
@@ -158,8 +171,6 @@ export const RootAppUI: React.FunctionComponent = () => {
         )
     );
 
-    const [menuItem, setMenuItem] = useAppParam("menuItem", "cluster");
-
     const contextualColorTheme = useMemo(() => {
         const contextInfo = contextsInfo?.find(
             (ctx) => ctx.name === kubeContext
@@ -180,40 +191,7 @@ export const RootAppUI: React.FunctionComponent = () => {
         }
     }, [colorThemeStore, contextualColorTheme]);
 
-    const sidebarMainMenuItems: SidebarMainMenuItem[] = useMemo(
-        () => [
-            {
-                id: "cluster",
-                iconType: SiKubernetes,
-                title: "Cluster",
-            },
-            {
-                id: "resources",
-                iconType: BsBox,
-                title: "Browse",
-            },
-        ],
-        []
-    );
-
-    const selectedEditor = useAppRoute((route) => route.activeEditor)?.id;
-
-    const onChangeMenuItemSelection = useCallback(
-        (selection: string, requestNewWindow: boolean = false) => {
-            const newRoute: AppRoute = {
-                ...setMenuItem.asRoute(selection),
-                activeEditor: null,
-            };
-            if (requestNewWindow) {
-                createWindow({
-                    route: newRoute,
-                });
-            } else {
-                setAppRoute(() => newRoute);
-            }
-        },
-        [createWindow, setMenuItem]
-    );
+    const selectedEditor = useAppRoute((route) => route.activeEditor?.id);
 
     const isReady = contextualColorTheme !== null;
 
@@ -297,11 +275,7 @@ export const RootAppUI: React.FunctionComponent = () => {
                         position="relative"
                         alignItems="stretch"
                     >
-                        <SidebarMainMenu
-                            items={sidebarMainMenuItems}
-                            selection={selectedEditor ? undefined : menuItem}
-                            onChangeSelection={onChangeMenuItemSelection}
-                        />
+                        <AppMainMenu />
                         <SidebarEditorsMenu
                             items={editors}
                             selection={selectedEditor}
@@ -325,25 +299,12 @@ export const RootAppUI: React.FunctionComponent = () => {
                             <ClusterError error={namespacesError} />
                         </Box>
                     ) : (
-                        <AppContent
-                            menuItem={menuItem}
-                            editor={selectedEditor}
-                        />
+                        <AppContent editor={selectedEditor} />
                     )
                 }
             />
         </Fragment>
     );
-};
-
-const appComponents: Record<string, ReactNode> = {
-    resources: <ResourcesOverview />,
-    cluster: <ClusterOverview />,
-};
-
-type AppContentProps = {
-    menuItem: string | undefined;
-    editor: string | undefined;
 };
 
 const AppSearchBox = React.forwardRef<HTMLInputElement, {}>((props, ref) => {
@@ -365,6 +326,37 @@ const AppSearchBox = React.forwardRef<HTMLInputElement, {}>((props, ref) => {
         />
     );
 });
+
+const AppMainMenu: React.FC<{}> = () => {
+    const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
+    const getAppRoute = useAppRouteGetter();
+    const setAppRoute = useAppRouteSetter();
+
+    const menuItem = useAppRoute((route) => route.menuItem ?? defaultMenuItem);
+    const selectedEditor = useAppRoute((route) => route.activeEditor)?.id;
+
+    const onChangeMenuItemSelection = useCallback(
+        (menuItem: string, requestNewWindow: boolean = false) => {
+            const newRoute = { ...getAppRoute(), menuItem, activeEditor: null };
+            if (requestNewWindow) {
+                createWindow({
+                    route: newRoute,
+                });
+            } else {
+                setAppRoute(() => newRoute);
+            }
+        },
+        [createWindow, getAppRoute, setAppRoute]
+    );
+
+    return (
+        <SidebarMainMenu
+            items={sidebarMainMenuItems}
+            selection={selectedEditor ? undefined : menuItem}
+            onChangeSelection={onChangeMenuItemSelection}
+        />
+    );
+};
 
 const AppNamespaces: React.FC<{
     onErrorStateChange: (error: Error | undefined) => void;
@@ -439,10 +431,20 @@ const AppNamespaces: React.FC<{
     );
 };
 
+const appComponents: Record<string, ReactNode> = {
+    resources: <ResourcesOverview />,
+    cluster: <ClusterOverview />,
+};
+
+type AppContentProps = {
+    editor: string | undefined;
+};
+
 const AppContent: React.FC<AppContentProps> = (props) => {
-    const { editor, menuItem } = props;
+    const { editor } = props;
 
     const editorDefs = useAppEditors();
+    const menuItem = useAppRoute((route) => route.menuItem ?? defaultMenuItem);
 
     return (
         <Suspense fallback={<Box />}>
