@@ -1,19 +1,105 @@
-import { useEffect, useState } from "react";
-import { K8sResourceTypeInfo } from "../../common/k8s/client";
+import { useEffect } from "react";
+import {
+    K8sClient,
+    K8sObjectListWatch,
+    K8sResourceTypeInfo,
+} from "../../common/k8s/client";
 import { useK8sContext } from "../context/k8s-context";
 import { create } from "../util/state";
 import { useK8sClient } from "./client";
-import { useK8sListWatch } from "./list-watch";
 
-const { useStore: useCacheStore } = create(
-    {} as Record<string, K8sResourceTypeInfo[]>
+type ResourceTypeListenersHandle = {
+    value: {
+        isLoading: boolean;
+        error: any | undefined;
+        resourceTypes: K8sResourceTypeInfo[] | undefined;
+    };
+    client: K8sClient;
+    listenersCount: number;
+};
+
+const { useStore, useStoreValue, store } = create(
+    {} as Record<string, ResourceTypeListenersHandle>
 );
 
-const loadingValue: [boolean, undefined, undefined] = [
-    true,
-    undefined,
-    undefined,
-];
+const listWatches: Record<string, K8sObjectListWatch> = {};
+store.subscribe((handles) => {
+    for (const context of Object.keys(handles)) {
+        if (!listWatches[context]) {
+            console.log("creating listwatch", context);
+            // Create a new listwatch to keep the store value up-to-date.
+            listWatches[context] = handles[context].client.listWatch(
+                {
+                    apiVersion: "apiextensions.k8s.io/v1",
+                    kind: "CustomResourceDefinition",
+                },
+                (error, _message) => {
+                    const setErrorValue = (error: any) => {
+                        store.set((handles) => ({
+                            ...handles,
+                            [context]: {
+                                ...handles[context],
+                                value: {
+                                    isLoading: false,
+                                    error,
+                                    resourceTypes:
+                                        handles[context].value.resourceTypes,
+                                },
+                            },
+                        }));
+                    };
+                    const setResultValue = (result: K8sResourceTypeInfo[]) => {
+                        store.set((handles) => ({
+                            ...handles,
+                            [context]: {
+                                ...handles[context],
+                                value: {
+                                    isLoading: false,
+                                    error: undefined,
+                                    resourceTypes: result,
+                                },
+                            },
+                        }));
+                    };
+                    if (error) {
+                        setErrorValue(error);
+                    } else {
+                        const myListWatch = listWatches[context];
+                        // Load the resource types list.
+                        (async () => {
+                            try {
+                                const types = await handles[
+                                    context
+                                ].client.listApiResourceTypes();
+                                if (myListWatch === listWatches[context]) {
+                                    setResultValue(types);
+                                }
+                            } catch (e) {
+                                if (myListWatch === listWatches[context]) {
+                                    setErrorValue(e);
+                                }
+                            }
+                        })();
+                    }
+                }
+            );
+        }
+    }
+    for (const context of Object.keys(listWatches)) {
+        if (!handles[context]) {
+            // Remove the listwatch; it is no longer neeeded.
+            console.log("deleting listwatch", context);
+            listWatches[context].stop();
+            delete listWatches[context];
+        }
+    }
+});
+
+const emptyState = {
+    isLoading: true,
+    error: undefined,
+    resourceTypes: undefined,
+};
 
 export function useK8sApiResourceTypes(): [
     boolean,
@@ -22,39 +108,53 @@ export function useK8sApiResourceTypes(): [
 ] {
     const context = useK8sContext();
     const client = useK8sClient();
-    const cache = useCacheStore();
+    const store = useStore();
 
-    // Watch CRDs so that we automatically rerender when a new CRD gets added.
-    const [isLoadingCrds, crds, _crdsError] = useK8sListWatch(
-        {
-            apiVersion: "apiextensions.k8s.io/v1",
-            kind: "CustomResourceDefinition",
-        },
-        {},
-        []
+    // Register/deregister.
+    useEffect(() => {
+        store.set((handles) => {
+            const handle = handles[context] ?? {
+                value: {
+                    isLoading: true,
+                    error: undefined,
+                    resourceTypes: undefined,
+                },
+                client,
+                listenersCount: 0,
+            };
+            return {
+                ...handles,
+                [context]: {
+                    ...handle,
+                    listenersCount: handle.listenersCount + 1,
+                },
+            };
+        });
+        return () => {
+            store.set((handles) => {
+                const handle = handles[context];
+                if (handle.listenersCount <= 1) {
+                    // We are the last listener; remove this handle.
+                    const handlesClone = { ...handles };
+                    delete handlesClone[context];
+                    return handlesClone;
+                } else {
+                    return {
+                        ...handles,
+                        [context]: {
+                            ...handle,
+                            listenersCount: handle.listenersCount - 1,
+                        },
+                    };
+                }
+            });
+        };
+    }, [client, context]);
+
+    const { isLoading, resourceTypes, error } = useStoreValue(
+        (handles) => handles[context]?.value ?? emptyState,
+        [context]
     );
 
-    const [value, setValue] =
-        useState<[boolean, K8sResourceTypeInfo[] | undefined, any | undefined]>(
-            loadingValue
-        );
-
-    useEffect(() => {
-        (async () => {
-            try {
-                const resources = await client.listApiResourceTypes();
-                cache.set((values) => ({ ...values, [context]: resources }));
-                setValue([false, resources, undefined]);
-            } catch (e) {
-                setValue([false, undefined, e]);
-            }
-        })();
-    }, [cache, client, context, isLoadingCrds, crds, setValue]);
-
-    const cacheValues = context ? cache.get()[context] ?? null : null;
-    if (cacheValues) {
-        return [false, cacheValues, undefined];
-    }
-
-    return value;
+    return [isLoading, resourceTypes, error];
 }
