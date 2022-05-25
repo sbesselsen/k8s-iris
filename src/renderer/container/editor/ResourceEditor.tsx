@@ -43,6 +43,7 @@ import { ResourceYamlEditor } from "./ResourceYamlEditor";
 
 export type ResourceEditorProps = {
     editorResource: K8sObjectIdentifier;
+    isSuspended?: boolean;
 };
 
 const displayRules: K8sResourceDisplayRule[] = [
@@ -134,7 +135,7 @@ const detailSelectors: string[] = [
 ];
 
 export const ResourceEditor: React.FC<ResourceEditorProps> = (props) => {
-    const { editorResource } = props;
+    const { editorResource, isSuspended = false } = props;
 
     const [isLoadingObjects, objects, _objectsError] = useK8sListWatch(
         {
@@ -158,13 +159,16 @@ export const ResourceEditor: React.FC<ResourceEditorProps> = (props) => {
 
     return (
         <VStack spacing={0} alignItems="stretch" w="100%" h="100%">
-            {!isLoadingObjects && <ResourceViewer object={object} />}
+            {!isLoadingObjects && (
+                <ResourceViewer object={object} isSuspended={isSuspended} />
+            )}
         </VStack>
     );
 };
 
 type ResourceViewerProps = {
     object: K8sObject | undefined;
+    isSuspended?: boolean;
 };
 
 const detailedDisplayRules = displayRules;
@@ -180,7 +184,7 @@ const undetailedDisplayRules = [
 ];
 
 const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
-    const { object } = props;
+    const { object, isSuspended = false } = props;
 
     const kind = object?.kind;
     const apiVersion = object?.apiVersion;
@@ -262,6 +266,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
                     onBackPressed={onCancelEdit}
                     onAfterApply={onCancelEdit}
                     shouldShowBackButton={true}
+                    isSuspended={isSuspended}
                 />
             </VStack>
         );
@@ -360,10 +365,11 @@ const ShowDetailsToggle: React.FC<{
 export type NewResourceEditorProps = {
     editorId: string;
     resourceType?: K8sResourceTypeIdentifier;
+    isSuspended?: boolean;
 };
 
 export const NewResourceEditor: React.FC<NewResourceEditorProps> = (props) => {
-    const { editorId, resourceType } = props;
+    const { editorId, isSuspended = false, resourceType } = props;
 
     const [selectedResourceType, setSelectedResourceType] = useState<
         K8sResourceTypeIdentifier | undefined
@@ -441,6 +447,7 @@ export const NewResourceEditor: React.FC<NewResourceEditorProps> = (props) => {
                         object={object}
                         onAfterApply={onAfterApply}
                         shouldShowBackButton={false}
+                        isSuspended={isSuspended}
                     />
                 )}
             </VStack>

@@ -407,38 +407,49 @@ const AppContent: React.FC<AppContentProps> = (props) => {
     const { editor, menuItem } = props;
 
     const editorDefs = useAppEditors();
-    const editorDef = useMemo(
-        () => editorDefs.find((e) => e.id === editor),
-        [editor, editorDefs]
-    );
 
     return (
         <Suspense fallback={<Box />}>
-            {menuItem && !editorDef && (
+            {menuItem && !editor && (
                 <ParamNamespace name={menuItem}>
                     {appComponents[menuItem] ?? <Box />}
                 </ParamNamespace>
             )}
-            {editorDef && (
-                <ParamNamespace name="editor">
-                    {editorDef.type === "resource" && (
-                        <ResourceEditor editorResource={editorDef} />
-                    )}
-                    {editorDef.type === "new-resource" && (
-                        <NewResourceEditor
-                            editorId={editorDef.id}
-                            resourceType={
-                                editorDef.apiVersion && editorDef.kind
-                                    ? {
-                                          apiVersion: editorDef.apiVersion,
-                                          kind: editorDef.kind,
-                                      }
-                                    : null
-                            }
-                        />
-                    )}
+            {editorDefs.map((editorDef) => (
+                <ParamNamespace
+                    name={`editor:${editorDef.id}`}
+                    key={editorDef.id}
+                >
+                    <VStack
+                        flex="1 0 0"
+                        alignItems="stretch"
+                        w="100%"
+                        h="100%"
+                        display={editorDef.id === editor ? "flex" : "none"}
+                    >
+                        {editorDef.type === "resource" && (
+                            <ResourceEditor
+                                editorResource={editorDef}
+                                isSuspended={editorDef.id !== editor}
+                            />
+                        )}
+                        {editorDef.type === "new-resource" && (
+                            <NewResourceEditor
+                                editorId={editorDef.id}
+                                isSuspended={editorDef.id !== editor}
+                                resourceType={
+                                    editorDef.apiVersion && editorDef.kind
+                                        ? {
+                                              apiVersion: editorDef.apiVersion,
+                                              kind: editorDef.kind,
+                                          }
+                                        : null
+                                }
+                            />
+                        )}
+                    </VStack>
                 </ParamNamespace>
-            )}
+            ))}
         </Suspense>
     );
 };

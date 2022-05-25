@@ -35,6 +35,7 @@ export type ResourceYamlEditorProps = {
     onBackPressed?: () => void;
     onAfterApply?: (object: K8sObject) => void;
     shouldShowBackButton?: boolean;
+    isSuspended?: boolean;
 };
 
 export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
@@ -45,6 +46,7 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
         onBackPressed,
         onAfterApply,
         shouldShowBackButton = false,
+        isSuspended = false,
     } = props;
 
     const client = useK8sClient();
