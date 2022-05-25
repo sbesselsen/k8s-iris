@@ -26,7 +26,7 @@ const listWatches: Record<string, K8sObjectListWatch> = {};
 store.subscribe((handles) => {
     for (const context of Object.keys(handles)) {
         if (!listWatches[context]) {
-            console.log("creating listwatch", context);
+            console.log("Start tracking resource types", context);
             // Create a new listwatch to keep the store value up-to-date.
             listWatches[context] = handles[context].client.listWatch(
                 {
@@ -88,7 +88,7 @@ store.subscribe((handles) => {
     for (const context of Object.keys(listWatches)) {
         if (!handles[context]) {
             // Remove the listwatch; it is no longer neeeded.
-            console.log("deleting listwatch", context);
+            console.log("Stop tracking resource types", context);
             listWatches[context].stop();
             delete listWatches[context];
         }
