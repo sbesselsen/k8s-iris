@@ -78,8 +78,6 @@ export const RootAppUI: React.FunctionComponent = () => {
 
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
 
-    const searchStore = useAppSearchStore();
-    const searchValue = useAppSearch();
     const searchBoxRef = useRef<HTMLInputElement>();
     const contextSelectMenuRef = useRef<HTMLButtonElement>();
 
@@ -193,13 +191,6 @@ export const RootAppUI: React.FunctionComponent = () => {
             }
         },
         [createWindow, getAppRoute, setAppRoute]
-    );
-
-    const setSearchValue = useCallback(
-        (query: string) => {
-            searchStore.set({ query });
-        },
-        [searchStore]
     );
 
     const contextualColorTheme = useMemo(() => {
@@ -337,11 +328,7 @@ export const RootAppUI: React.FunctionComponent = () => {
                 }
                 search={
                     <Box px={2} py={2}>
-                        <SearchInput
-                            value={searchValue.query}
-                            onChange={setSearchValue}
-                            ref={searchBoxRef}
-                        />
+                        <AppSearchBox ref={searchBoxRef} />
                     </Box>
                 }
                 sidebar={
@@ -402,6 +389,26 @@ type AppContentProps = {
     menuItem: string | undefined;
     editor: string | undefined;
 };
+
+const AppSearchBox = React.forwardRef<HTMLInputElement, {}>((props, ref) => {
+    const searchStore = useAppSearchStore();
+    const searchValue = useAppSearch();
+
+    const setSearchValue = useCallback(
+        (query: string) => {
+            searchStore.set({ query });
+        },
+        [searchStore]
+    );
+
+    return (
+        <SearchInput
+            value={searchValue.query}
+            onChange={setSearchValue}
+            ref={ref}
+        />
+    );
+});
 
 const AppContent: React.FC<AppContentProps> = (props) => {
     const { editor, menuItem } = props;
