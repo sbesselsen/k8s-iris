@@ -1,40 +1,40 @@
-import { AddIcon } from "@chakra-ui/icons";
 import {
     Badge,
     Box,
-    Button,
+    Checkbox,
     HStack,
     Table,
     Tbody,
     Td,
-    Tfoot,
     Th,
     Thead,
     Tr,
     useBreakpointValue,
+    useControllableState,
     VStack,
 } from "@chakra-ui/react";
-import React, { useCallback, useMemo } from "react";
+import React, { ChangeEvent, useCallback, useMemo, useState } from "react";
 import {
     K8sObject,
     K8sResourceTypeIdentifier,
     K8sResourceTypeInfo,
 } from "../../../common/k8s/client";
+import { resourceIdentifier } from "../../../common/k8s/util";
 import { resourceMatch } from "../../../common/util/search";
 import { k8sSmartCompare } from "../../../common/util/sort";
 import { ScrollBox } from "../../component/main/ScrollBox";
 import { Selectable } from "../../component/main/Selectable";
-import { newResourceEditor } from "../../context/editors";
 import { useK8sNamespaces } from "../../context/k8s-namespaces";
 import { useAppParam } from "../../context/param";
-import { useAppRouteGetter, useAppRouteSetter } from "../../context/route";
 import { useAppSearch } from "../../context/search";
 import { useIpcCall } from "../../hook/ipc";
 import { useModifierKeyRef } from "../../hook/keyboard";
+import { useMultiSelectUpdater } from "../../hook/multi-select";
 import { useK8sApiResourceTypes } from "../../k8s/api-resources";
 import { useK8sListWatch } from "../../k8s/list-watch";
 import { formatDeveloperDateTime } from "../../util/date";
 import { ResourceEditorLink } from "./ResourceEditorLink";
+import { ResourcesToolbar } from "./ResourcesToolbar";
 import { ResourceTypeSelector } from "./ResourceTypeSelector";
 
 export const ResourceAllOverview: React.FC = () => {
@@ -44,8 +44,12 @@ export const ResourceAllOverview: React.FC = () => {
 
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
     const metaKeyRef = useModifierKeyRef("Meta");
-    const getAppRoute = useAppRouteGetter();
-    const setAppRoute = useAppRouteSetter();
+
+    // TODO: we should put this in an appParam but we can't because it would not fit
+    // Think of something, I guess?
+    const [selectedResources, onChangeSelectedResources] = useState<
+        K8sObject[]
+    >([]);
 
     const onSelectResourceType = useCallback(
         (type: K8sResourceTypeIdentifier | undefined) => {
@@ -60,28 +64,9 @@ export const ResourceAllOverview: React.FC = () => {
         [createWindow, metaKeyRef, setSelectedResourceType]
     );
 
-    const onClickAddNew = useCallback(() => {
-        const editor = newResourceEditor(selectedResourceType);
-        if (metaKeyRef.current) {
-            createWindow({
-                route: {
-                    ...getAppRoute(),
-                    activeEditor: editor,
-                },
-            });
-        } else {
-            setAppRoute((route) => ({
-                ...route,
-                activeEditor: editor,
-            }));
-        }
-    }, [
-        createWindow,
-        getAppRoute,
-        setAppRoute,
-        metaKeyRef,
-        selectedResourceType,
-    ]);
+    const onClearSelection = useCallback(() => {
+        onChangeSelectedResources([]);
+    }, [onChangeSelectedResources]);
 
     return (
         <VStack flex="1 0 0" spacing={0} alignItems="stretch">
@@ -92,20 +77,24 @@ export const ResourceAllOverview: React.FC = () => {
                     emptyValueContent="Select a resource type..."
                 />
             </HStack>
-            <ScrollBox px={4} py={2} flex="1 0 0">
+            <ScrollBox
+                px={4}
+                py={2}
+                flex="1 0 0"
+                bottomToolbar={
+                    <ResourcesToolbar
+                        resourceType={selectedResourceType}
+                        resources={selectedResources}
+                        onClearSelection={onClearSelection}
+                    />
+                }
+            >
                 {selectedResourceType && (
-                    <VStack alignItems="stretch">
-                        <ResourceList resourceType={selectedResourceType} />
-                        <Box>
-                            <Button
-                                size="sm"
-                                onClick={onClickAddNew}
-                                leftIcon={<AddIcon w={2} h={2} />}
-                            >
-                                Add new
-                            </Button>
-                        </Box>
-                    </VStack>
+                    <ResourceList
+                        resourceType={selectedResourceType}
+                        selectedResources={selectedResources}
+                        onChangeSelectedResources={onChangeSelectedResources}
+                    />
                 )}
             </ScrollBox>
         </VStack>
@@ -114,10 +103,13 @@ export const ResourceAllOverview: React.FC = () => {
 
 type ResourceListProps = {
     resourceType: K8sResourceTypeIdentifier;
+    defaultSelectedResources?: K8sObject[];
+    selectedResources?: K8sObject[];
+    onChangeSelectedResources?: (resources: K8sObject[]) => void;
 };
 
 const ResourceList: React.FC<ResourceListProps> = (props) => {
-    const { resourceType } = props;
+    const { resourceType, ...otherProps } = props;
 
     const [_isLoadingResourcesTypes, resourcesTypesInfo, _resourcesError] =
         useK8sApiResourceTypes();
@@ -130,16 +122,35 @@ const ResourceList: React.FC<ResourceListProps> = (props) => {
     );
 
     return resourceTypeInfo ? (
-        <InnerResourceList resourceTypeInfo={resourceTypeInfo} />
+        <InnerResourceList
+            resourceTypeInfo={resourceTypeInfo}
+            {...otherProps}
+        />
     ) : null;
 };
 
 type InnerResourceListProps = {
     resourceTypeInfo: K8sResourceTypeInfo;
+    defaultSelectedResources?: K8sObject[];
+    selectedResources?: K8sObject[];
+    onChangeSelectedResources?: (resources: K8sObject[]) => void;
 };
 
 const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
-    const { resourceTypeInfo } = props;
+    const {
+        resourceTypeInfo,
+        defaultSelectedResources = [],
+        selectedResources,
+        onChangeSelectedResources,
+    } = props;
+
+    const [selectedResourcesState, setSelectedResources] = useControllableState(
+        {
+            defaultValue: defaultSelectedResources,
+            value: selectedResources,
+            onChange: onChangeSelectedResources,
+        }
+    );
 
     const namespaces = useK8sNamespaces();
 
@@ -166,11 +177,16 @@ const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
         );
     }, [resources, query]);
 
-    const sortedResources = useMemo(
+    const sortedKeyedResources = useMemo(
         () =>
-            [...filteredResources].sort((x, y) =>
-                k8sSmartCompare(x.metadata.name, y.metadata.name)
-            ),
+            [...filteredResources]
+                .sort((x, y) =>
+                    k8sSmartCompare(x.metadata.name, y.metadata.name)
+                )
+                .map((resource) => ({
+                    key: resourceIdentifier(resource),
+                    resource,
+                })),
         [filteredResources]
     );
 
@@ -180,6 +196,82 @@ const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
             resourceTypeInfo.namespaced &&
             (namespaces.mode === "all" || namespaces.selected.length > 1),
     });
+
+    const keys = useMemo(
+        () => sortedKeyedResources.map(({ key }) => key),
+        [sortedKeyedResources]
+    );
+
+    const selectedResourceIdentifiers = useMemo(
+        () => selectedResourcesState.map((r) => resourceIdentifier(r)),
+        [selectedResourcesState]
+    );
+    const setSelectedResourceIdentifiers = useCallback(
+        (updater: (keys: string[]) => string[]) => {
+            setSelectedResources((selectedResources) => {
+                const keys = selectedResources.map((r) =>
+                    resourceIdentifier(r)
+                );
+                const newKeys = updater(keys);
+                if (newKeys === keys) {
+                    return selectedResources;
+                }
+                const keyedResources = Object.fromEntries(
+                    (resources?.items ?? []).map((r) => [
+                        resourceIdentifier(r),
+                        r,
+                    ])
+                );
+                return newKeys.map((key) => keyedResources[key]);
+            });
+        },
+        [resources, setSelectedResources]
+    );
+
+    const shiftKeyRef = useModifierKeyRef("Shift");
+    const updateSelection = useMultiSelectUpdater(
+        keys,
+        selectedResourceIdentifiers
+    );
+
+    const onSelectHandlers = useMemo(
+        () =>
+            Object.fromEntries(
+                sortedKeyedResources.map(({ key }) => [
+                    key,
+                    (selected: boolean) => {
+                        setSelectedResourceIdentifiers((keys) => {
+                            if (selected === keys.includes(key)) {
+                                return keys;
+                            }
+                            return updateSelection(
+                                selected
+                                    ? [...keys, key]
+                                    : keys.filter((k) => k !== key),
+                                shiftKeyRef.current
+                            );
+                        });
+                    },
+                ])
+            ),
+        [
+            setSelectedResourceIdentifiers,
+            shiftKeyRef,
+            sortedKeyedResources,
+            updateSelection,
+        ]
+    );
+
+    const onChangeSelectAll = useCallback(
+        (e: ChangeEvent<HTMLInputElement>) => {
+            setSelectedResourceIdentifiers(() =>
+                e.target.checked
+                    ? sortedKeyedResources.map(({ key }) => key)
+                    : []
+            );
+        },
+        [setSelectedResourceIdentifiers, sortedKeyedResources]
+    );
 
     return (
         <Box>
@@ -191,21 +283,36 @@ const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
             >
                 <Thead>
                     <Tr>
+                        <Th ps={2} width="40px">
+                            <Checkbox
+                                colorScheme="gray"
+                                isIndeterminate={
+                                    selectedResourcesState.length > 0 &&
+                                    selectedResourcesState.length <
+                                        sortedKeyedResources.length
+                                }
+                                isChecked={
+                                    selectedResourcesState.length ===
+                                    sortedKeyedResources.length
+                                }
+                                onChange={onChangeSelectAll}
+                            />
+                        </Th>
                         <Th ps={0}>Name</Th>
                         {showNamespace && <Th width="150px">Namespace</Th>}
                         <Th width="150px">Created</Th>
                     </Tr>
                 </Thead>
                 <Tbody>
-                    {sortedResources.map((resource, index) => (
+                    {sortedKeyedResources.map(({ key, resource }, index) => (
                         <ResourceRow
                             resource={resource}
                             showNamespace={showNamespace}
-                            key={
-                                resource.metadata.namespace +
-                                ":" +
-                                resource.metadata.name
-                            }
+                            key={key}
+                            isSelected={selectedResourceIdentifiers.includes(
+                                key
+                            )}
+                            onChangeSelect={onSelectHandlers[key]}
                         />
                     ))}
                 </Tbody>
@@ -217,10 +324,12 @@ const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
 type ResourceRowProps = {
     resource: K8sObject;
     showNamespace: boolean;
+    isSelected?: boolean;
+    onChangeSelect?: (selected: boolean) => void;
 };
 
 const ResourceRow: React.FC<ResourceRowProps> = (props) => {
-    const { resource, showNamespace } = props;
+    const { resource, isSelected, onChangeSelect, showNamespace } = props;
 
     const creationDate = new Date((resource as any).metadata.creationTimestamp);
 
@@ -229,8 +338,22 @@ const ResourceRow: React.FC<ResourceRowProps> = (props) => {
 
     const isDeleting = Boolean((resource as any).metadata.deletionTimestamp);
 
+    const onChange = useCallback(
+        (e: ChangeEvent<HTMLInputElement>) => {
+            onChangeSelect?.(e.target.checked);
+        },
+        [onChangeSelect]
+    );
+
     return (
         <Tr>
+            <Td ps={2} verticalAlign="baseline">
+                <Checkbox
+                    colorScheme="primary"
+                    isChecked={isSelected}
+                    onChange={onChange}
+                />
+            </Td>
             <Td ps={0} verticalAlign="baseline">
                 <HStack p={0}>
                     <Selectable

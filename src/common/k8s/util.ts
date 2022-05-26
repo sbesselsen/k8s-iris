@@ -1,4 +1,4 @@
-import { K8sObject, K8sObjectList } from "./client";
+import { K8sObject, K8sObjectIdentifier, K8sObjectList } from "./client";
 
 export function objSameRef(
     obj1: K8sObject,
@@ -20,6 +20,17 @@ export function objSameRef(
         obj1.metadata.name === obj2.metadata.name &&
         obj1.metadata.namespace === obj2.metadata.namespace
     );
+}
+
+export function resourceIdentifier(
+    obj: K8sObject | K8sObjectIdentifier
+): string {
+    if ("metadata" in obj) {
+        return `${obj.apiVersion}:${obj.kind}:${obj.metadata.namespace ?? ""}:${
+            obj.metadata.name
+        }`;
+    }
+    return `${obj.apiVersion}:${obj.kind}:${obj.namespace ?? ""}:${obj.name}`;
 }
 
 export function addListObject<T extends K8sObject = K8sObject>(

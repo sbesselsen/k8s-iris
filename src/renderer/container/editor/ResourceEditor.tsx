@@ -421,13 +421,18 @@ export const NewResourceEditor: React.FC<NewResourceEditorProps> = (props) => {
 
     const onAfterApply = useCallback(
         (object: K8sObject) => {
-            setAppRoute((route) => ({
-                ...route,
-                activeEditor: appEditorForK8sObject(object),
-            }));
+            const createdResourceEditor = appEditorForK8sObject(object);
             editorsStore.set((editors) =>
-                editors.filter((e) => e.id !== editorId)
+                editors.map((e) =>
+                    e.id === editorId ? createdResourceEditor : e
+                )
             );
+            setAppRoute((route) => {
+                if (route.activeEditor?.id === editorId) {
+                    return { ...route, activeEditor: createdResourceEditor };
+                }
+                return route;
+            });
         },
         [editorId, editorsStore, setAppRoute]
     );
