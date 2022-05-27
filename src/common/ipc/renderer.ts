@@ -1,9 +1,36 @@
-import { ipcRenderer } from "electron";
+import { ipcRenderer, IpcRendererEvent } from "electron";
 import {
     prefixEventChannel,
     prefixHandlerChannel,
     prefixSubscriptionChannel,
 } from "./shared";
+
+let ipcRendererSubscriberTotal = 0;
+let ipcRendererMaxListeners = ipcRenderer.getMaxListeners();
+
+function ipcRendererOn(
+    channel: string,
+    listener: (e: IpcRendererEvent, ...args: any[]) => void
+): void {
+    ipcRendererSubscriberTotal++;
+    if (ipcRendererSubscriberTotal * 2 > ipcRendererMaxListeners) {
+        console.log(
+            "Increasing ipc renderer max listeners to:",
+            ipcRendererMaxListeners * 2
+        );
+        ipcRendererMaxListeners *= 2;
+        ipcRenderer.setMaxListeners(ipcRendererMaxListeners);
+    }
+    ipcRenderer.on(channel, listener);
+}
+
+function ipcRendererOff(
+    channel: string,
+    listener: (...args: any[]) => void
+): void {
+    ipcRendererSubscriberTotal--;
+    ipcRenderer.off(channel, listener);
+}
 
 function ipcInvoke<T, U>(name: string, data: T): Promise<U> {
     return ipcRenderer
@@ -46,10 +73,10 @@ function ipcSubscribe<T, U>(
             }
             handler(data.error, data.message);
         };
-        ipcRenderer.on(subscriptionChannel, listener);
+        ipcRendererOn(subscriptionChannel, listener);
         stopSubscription = () => {
             ipcRenderer.send(`${subscriptionChannel}:stop`);
-            ipcRenderer.off(subscriptionChannel, listener);
+            ipcRendererOff(subscriptionChannel, listener);
         };
         if (stopped) {
             stopSubscription();
@@ -84,7 +111,7 @@ export function ipcEventSubscriber<T>(
 ): (handler: (event: T) => void) => IpcEventSubscription {
     let handlers: Array<(event: T) => void> = [];
 
-    ipcRenderer.on(prefixEventChannel(name), (_e, data) => {
+    ipcRendererOn(prefixEventChannel(name), (_e, data) => {
         handlers.forEach((h) => h(data));
     });
 
