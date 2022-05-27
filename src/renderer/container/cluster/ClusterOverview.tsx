@@ -1,5 +1,4 @@
-import { Box, Button } from "@chakra-ui/react";
-import React, { useCallback, useEffect } from "react";
+import React, { useCallback } from "react";
 import { ContentTabs } from "../../component/main/ContentTabs";
 import { useAppParam } from "../../context/param";
 import { useIpcCall } from "../../hook/ipc";
@@ -35,7 +34,7 @@ export const ClusterOverview: React.FC<{}> = () => {
             tabs={tabs}
             selected={activeTab}
             onChangeSelection={onChangeTabSelection}
-            isLazy
+            isLazy="lazy-create"
         />
     );
 };

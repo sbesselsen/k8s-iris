@@ -461,13 +461,13 @@ const AppContent: React.FC<{}> = () => {
 
                 return (
                     <LazyComponent key={key} isActive={isActive}>
-                        <HibernateContainer hibernate={!isActive}>
-                            <ParamNamespace name={key}>
+                        <ParamNamespace name={key}>
+                            <HibernateContainer hibernate={!isActive}>
                                 <AppContentContainer isVisible={isActive}>
                                     {component}
                                 </AppContentContainer>
-                            </ParamNamespace>
-                        </HibernateContainer>
+                            </HibernateContainer>
+                        </ParamNamespace>
                     </LazyComponent>
                 );
             })}

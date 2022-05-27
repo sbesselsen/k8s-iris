@@ -7,15 +7,15 @@ export function useHibernate(): boolean {
 }
 
 export const HibernateContainer: React.FC<{
-    hibernate?: true | false | "inherit";
+    hibernate?: boolean;
 }> = (props) => {
-    const { hibernate = "inherit", children } = props;
+    const { hibernate = false, children } = props;
 
     const parentValue = useHibernate();
 
     return React.createElement(
         HibernateContext.Provider,
-        { value: hibernate === "inherit" ? parentValue : hibernate },
+        { value: parentValue || hibernate },
         children
     );
 };

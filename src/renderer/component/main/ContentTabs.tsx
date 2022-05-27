@@ -10,9 +10,11 @@ import {
     useToken,
 } from "@chakra-ui/react";
 import React, { ReactNode, useCallback, useMemo, useRef } from "react";
+import { HibernateContainer } from "../../context/hibernate";
 import { ParamNamespace } from "../../context/param";
 import { useModifierKeyRef } from "../../hook/keyboard";
 import { useWindowFocusValue } from "../../hook/window-focus";
+import { LazyComponent } from "./LazyComponent";
 
 export type ContentTab = {
     id: string;
@@ -24,7 +26,7 @@ export type ContentTabsProps = {
     tabs: ContentTab[];
     selected?: string;
     onChangeSelection?: (selection: string, requestNewWindow?: boolean) => void;
-    isLazy?: boolean;
+    isLazy?: boolean | "lazy-create";
 };
 
 export const ContentTabs: React.FC<ContentTabsProps> = (props) => {
@@ -79,7 +81,7 @@ export const ContentTabs: React.FC<ContentTabsProps> = (props) => {
             variant="soft-rounded"
             colorScheme="primary"
             index={tabIndex}
-            isLazy={isLazy}
+            isLazy={isLazy === "lazy-create" ? false : isLazy}
         >
             <TabList flex="0 0 0" opacity={opacity} m={2}>
                 <HStack
@@ -126,7 +128,18 @@ export const ContentTabs: React.FC<ContentTabsProps> = (props) => {
                         p={0}
                     >
                         <ParamNamespace name={tab.id}>
-                            {tab.content}
+                            <LazyComponent
+                                isActive={
+                                    isLazy !== "lazy-create" ||
+                                    tab.id === selected
+                                }
+                            >
+                                <HibernateContainer
+                                    hibernate={tab.id !== selected}
+                                >
+                                    {tab.content}
+                                </HibernateContainer>
+                            </LazyComponent>
                         </ParamNamespace>
                     </TabPanel>
                 ))}
