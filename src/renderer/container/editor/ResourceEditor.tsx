@@ -193,27 +193,11 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
 
     const appEditorStore = useAppEditorsStore();
 
-    const [showDetails, setShowDetails] = useAppParam("showDetails", false);
+    const [showDetails, setShowDetails] = useState(false);
     const [mode, setMode] = useAppParam<"view" | "edit">("editorMode", "view");
     const [isDeleting, setIsDeleting] = useState(false);
-    const onChangeShowDetails = useCallback(
-        (value: boolean) => {
-            setShowDetails(value, true);
-        },
-        [setShowDetails]
-    );
 
-    const [expandedItems, setExpandedItems] = useAppParam<string[]>(
-        "expandedItems",
-        []
-    );
-
-    const onChangeExpandedItems = useCallback(
-        (items: string[]) => {
-            setExpandedItems(items, true);
-        },
-        [setExpandedItems]
-    );
+    const [expandedItems, setExpandedItems] = useState<string[]>([]);
 
     const onCancelEdit = useCallback(() => {
         setMode("view");
@@ -291,7 +275,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
                     <Box flex="1 0 0"></Box>
                     <ShowDetailsToggle
                         value={showDetails}
-                        onChange={onChangeShowDetails}
+                        onChange={setShowDetails}
                     />
                 </Toolbar>
             }
@@ -309,7 +293,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
                     <K8sObjectViewer
                         data={object}
                         expandedItems={expandedItems}
-                        onChangeExpandedItems={onChangeExpandedItems}
+                        onChangeExpandedItems={setExpandedItems}
                         displayRules={
                             showDetails
                                 ? detailedDisplayRules
