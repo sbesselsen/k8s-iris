@@ -292,8 +292,9 @@ const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
                                         sortedKeyedResources.length
                                 }
                                 isChecked={
+                                    selectedResourcesState.length > 0 &&
                                     selectedResourcesState.length ===
-                                    sortedKeyedResources.length
+                                        sortedKeyedResources.length
                                 }
                                 onChange={onChangeSelectAll}
                             />

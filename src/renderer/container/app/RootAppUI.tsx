@@ -147,6 +147,14 @@ export const RootAppUI: React.FunctionComponent = () => {
                     key === "w"
                 ) {
                     const activeEditorId = getAppRoute().activeEditor?.id;
+                    if (
+                        activeEditorId &&
+                        editorsStore.get().length === 1 &&
+                        !getAppRoute().isSidebarVisible
+                    ) {
+                        // This is a "one-issue window" which is only here to edit this one resource. Just let it close.
+                        return;
+                    }
                     if (activeEditorId) {
                         // Close the current editor.
                         let nextActiveEditor: AppEditor;
@@ -176,6 +184,12 @@ export const RootAppUI: React.FunctionComponent = () => {
                             );
                             return updatedEditors;
                         });
+                        // Show the sidebar after closing a resource to make it clear what the fuck is happening.
+                        setAppRoute((route) =>
+                            route.isSidebarVisible
+                                ? route
+                                : { ...route, isSidebarVisible: true }
+                        );
                         e.preventDefault();
                     }
                 }
