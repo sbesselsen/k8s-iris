@@ -48,6 +48,8 @@ import {
     useAppEditors,
     useAppEditorsStore,
 } from "../../context/editors";
+import { LazyComponent } from "../../component/main/LazyComponent";
+import { HibernateContainer } from "../../context/hibernate";
 
 const ClusterOverview = React.lazy(async () => ({
     default: (await import("../cluster/ClusterOverview")).ClusterOverview,
@@ -454,11 +456,21 @@ const AppContent: React.FC<{}> = () => {
 
     return (
         <Suspense fallback={<Box />}>
-            {menuItem && !editor && (
-                <ParamNamespace name={menuItem}>
-                    {appComponents[menuItem] ?? <Box />}
-                </ParamNamespace>
-            )}
+            {Object.entries(appComponents).map(([key, component]) => {
+                const isActive = key === menuItem && !editor;
+
+                return (
+                    <LazyComponent key={key} isActive={isActive}>
+                        <HibernateContainer hibernate={!isActive}>
+                            <ParamNamespace name={key}>
+                                <AppContentContainer isVisible={isActive}>
+                                    {component}
+                                </AppContentContainer>
+                            </ParamNamespace>
+                        </HibernateContainer>
+                    </LazyComponent>
+                );
+            })}
             {editorDefs.map((editorDef) => (
                 <AppContentEditor
                     key={editorDef.id}
@@ -470,29 +482,34 @@ const AppContent: React.FC<{}> = () => {
     );
 };
 
+const AppContentContainer: React.FC<{ isVisible: boolean }> = (props) => {
+    const { isVisible, children } = props;
+    return (
+        <VStack
+            flex="1 0 0"
+            alignItems="stretch"
+            w="100%"
+            h="100%"
+            display={isVisible ? "flex" : "none"}
+        >
+            {children}
+        </VStack>
+    );
+};
+
 const AppContentEditor: React.FC<{ editor: AppEditor; isSelected: boolean }> =
     React.memo((props) => {
         const { editor, isSelected } = props;
 
         return (
             <ParamNamespace name={`editor:${editor.id}`} key={editor.id}>
-                <VStack
-                    flex="1 0 0"
-                    alignItems="stretch"
-                    w="100%"
-                    h="100%"
-                    display={isSelected ? "flex" : "none"}
-                >
+                <AppContentContainer isVisible={isSelected}>
                     {editor.type === "resource" && (
-                        <ResourceEditor
-                            editorResource={editor}
-                            isSuspended={!isSelected}
-                        />
+                        <ResourceEditor editorResource={editor} />
                     )}
                     {editor.type === "new-resource" && (
                         <NewResourceEditor
                             editorId={editor.id}
-                            isSuspended={!isSelected}
                             resourceType={
                                 editor.apiVersion && editor.kind
                                     ? {
@@ -503,7 +520,7 @@ const AppContentEditor: React.FC<{ editor: AppEditor; isSelected: boolean }> =
                             }
                         />
                     )}
-                </VStack>
+                </AppContentContainer>
             </ParamNamespace>
         );
     });
