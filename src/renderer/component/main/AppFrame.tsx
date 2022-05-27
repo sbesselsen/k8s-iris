@@ -9,6 +9,7 @@ import React, {
     PointerEventHandler,
     ReactElement,
     useCallback,
+    useLayoutEffect,
     useRef,
     useState,
 } from "react";
@@ -20,10 +21,18 @@ export type AppFrameProps = {
     content: ReactElement;
     title: ReactElement;
     toolbar: ReactElement;
+    isSidebarVisible?: boolean;
 };
 
 export const AppFrame: React.FC<AppFrameProps> = (props) => {
-    const { search, sidebar, content, toolbar, title } = props;
+    const {
+        search,
+        sidebar,
+        content,
+        toolbar,
+        title,
+        isSidebarVisible = true,
+    } = props;
 
     const [sidebarWidth, setSidebarWidth] = useState("250px");
     const sidebarMinWidth = 200;
@@ -31,6 +40,7 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
 
     const vSeparatorBoxRef = useRef<HTMLDivElement>();
     const sidebarBoxRef = useRef<HTMLDivElement>();
+    const sidebarContentRef = useRef<HTMLDivElement>();
 
     // Separator dragging logic.
     const [separatorDragState] = useState({
@@ -49,8 +59,9 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                 separatorDragState.currentSidebarWidth =
                     separatorDragState.dragStartSidebarWidth =
                         sidebarBoxRef.current.clientWidth;
+                sidebarBoxRef.current.style.transition = "none";
             },
-            [separatorDragState, sidebarBoxRef]
+            [separatorDragState, sidebarBoxRef, sidebarContentRef]
         );
 
     // When pointer is moved while dragging, dynamically recalculate the layout *without rerendering*.
@@ -72,9 +83,11 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                 );
                 sidebarBoxRef.current.style.flexBasis =
                     separatorDragState.currentSidebarWidth + "px";
+                sidebarContentRef.current.style.width =
+                    separatorDragState.currentSidebarWidth + "px";
             }
         },
-        [separatorDragState, sidebarBoxRef, vSeparatorBoxRef]
+        [separatorDragState, sidebarBoxRef, sidebarContentRef, vSeparatorBoxRef]
     );
 
     // When dragging ends, rerender with the new sidebar width.
@@ -84,6 +97,16 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
             setSidebarWidth(separatorDragState.currentSidebarWidth + "px");
         }
     }, [separatorDragState, setSidebarWidth]);
+
+    useLayoutEffect(() => {
+        if (sidebarBoxRef.current) {
+            sidebarBoxRef.current.style.flexBasis = "";
+            sidebarBoxRef.current.style.transition = "";
+        }
+        if (sidebarContentRef.current) {
+            sidebarContentRef.current.style.width = "";
+        }
+    }, [sidebarWidth, sidebarBoxRef, sidebarContentRef]);
 
     const contentBackground = useColorModeValue("white", "gray.900");
     const headerBackground = useColorModeValue(
@@ -118,8 +141,8 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                 sx={{ WebkitAppRegion: "drag" }}
             >
                 <Box
-                    flexGrow="0"
-                    flexShrink="0"
+                    flexGrow={0}
+                    flexShrink={0}
                     flexBasis="250px"
                     pl="85px"
                     h="100%"
@@ -127,8 +150,8 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                     {toolbar}
                 </Box>
                 <Box
-                    flexGrow="1"
-                    flexShrink="0"
+                    flexGrow={1}
+                    flexShrink={0}
                     flexBasis="300px"
                     overflow="hidden"
                     h="100%"
@@ -136,8 +159,8 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                     {title}
                 </Box>
                 <Box
-                    flexGrow="0"
-                    flexShrink="0"
+                    flexGrow={0}
+                    flexShrink={0}
                     flexBasis="250px"
                     overflow="hidden"
                     textAlign="end"
@@ -155,13 +178,17 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                     zIndex={1}
                 ></Box>
                 <Box
-                    flexGrow="0"
-                    flexShrink="0"
-                    flexBasis={sidebarWidth}
+                    flexGrow={0}
+                    flexShrink={0}
+                    flexBasis={isSidebarVisible ? sidebarWidth : 0}
                     bg={sidebarBackground}
                     overflow="hidden"
                     ref={sidebarBoxRef}
                     position="relative"
+                    transitionDelay="100ms"
+                    transitionDuration="200ms"
+                    transitionTimingFunction="ease-out"
+                    transitionProperty="flex-basis"
                 >
                     <Box
                         position="absolute"
@@ -174,7 +201,16 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                         ref={vSeparatorBoxRef}
                         zIndex={1}
                     ></Box>
-                    {sidebar}
+                    <Box
+                        w={sidebarWidth}
+                        ref={sidebarContentRef}
+                        h="100%"
+                        position="absolute"
+                        right={0}
+                        overflow="hidden"
+                    >
+                        {sidebar}
+                    </Box>
                 </Box>
                 <Box flex="1 0 0" bg={contentBackground} overflow="hidden">
                     {content}

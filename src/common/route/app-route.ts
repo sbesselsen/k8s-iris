@@ -2,6 +2,7 @@ export type AppRoute = {
     context: string;
     namespaces: AppNamespacesSelection;
     menuItem: string | null;
+    isSidebarVisible: boolean;
     params: Record<string, unknown>;
     activeEditor: AppEditor | null;
 };
@@ -35,6 +36,7 @@ export const emptyAppRoute: AppRoute = {
         selected: [],
     },
     menuItem: null,
+    isSidebarVisible: true,
     params: {},
     activeEditor: null,
 };

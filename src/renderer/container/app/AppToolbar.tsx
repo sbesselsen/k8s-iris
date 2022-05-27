@@ -1,12 +1,29 @@
 import React, { useCallback } from "react";
-import { Box, ButtonGroup, Icon, IconButton } from "@chakra-ui/react";
+import { ButtonGroup, HStack, Icon, IconButton } from "@chakra-ui/react";
 
 import { MdArrowBackIosNew, MdArrowForwardIos } from "react-icons/md";
-import { useAppRouteHistory } from "../../context/route";
+import {
+    useAppRoute,
+    useAppRouteHistory,
+    useAppRouteSetter,
+} from "../../context/route";
 import { useKeyListener, useModifierKeyRef } from "../../hook/keyboard";
+import { HamburgerIcon } from "@chakra-ui/icons";
 
 export const AppToolbar: React.FC = () => {
     const { canGoBack, canGoForward, goBack, goForward } = useAppRouteHistory();
+    const isSidebarVisible = useAppRoute((route) => route.isSidebarVisible);
+    const setAppRoute = useAppRouteSetter();
+
+    const toggleSidebarVisible = useCallback(() => {
+        setAppRoute(
+            (route) => ({
+                ...route,
+                isSidebarVisible: !route.isSidebarVisible,
+            }),
+            true
+        );
+    }, [setAppRoute]);
 
     const metaKeyRef = useModifierKeyRef("Meta");
     useKeyListener(
@@ -25,7 +42,7 @@ export const AppToolbar: React.FC = () => {
     );
 
     return (
-        <Box py={2}>
+        <HStack py={2}>
             <ButtonGroup
                 variant="ghost"
                 colorScheme="primary"
@@ -49,6 +66,15 @@ export const AppToolbar: React.FC = () => {
                     tabIndex={-1}
                 />
             </ButtonGroup>
-        </Box>
+            <ButtonGroup variant="ghost" colorScheme="primary" size="sm">
+                <IconButton
+                    onClick={toggleSidebarVisible}
+                    icon={<HamburgerIcon />}
+                    aria-label={isSidebarVisible ? "Hide menu" : "Show menu"}
+                    _focus={{}}
+                    tabIndex={-1}
+                />
+            </ButtonGroup>
+        </HStack>
     );
 };

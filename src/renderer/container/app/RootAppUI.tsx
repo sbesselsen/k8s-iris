@@ -87,6 +87,7 @@ export const RootAppUI: React.FunctionComponent = () => {
     usePageTitle(kubeContext);
 
     const [_loadingContextsInfo, contextsInfo] = useK8sContextsInfo();
+    const isSidebarVisible = useAppRoute((route) => route.isSidebarVisible);
 
     const getAppRoute = useAppRouteGetter();
     const setAppRoute = useAppRouteSetter();
@@ -126,6 +127,19 @@ export const RootAppUI: React.FunctionComponent = () => {
                         ...route,
                         activeEditor: newResourceEditor(),
                     }));
+                }
+                if (
+                    eventType === "keydown" &&
+                    metaKeyRef.current &&
+                    key === "b"
+                ) {
+                    setAppRoute(
+                        (route) => ({
+                            ...route,
+                            isSidebarVisible: !route.isSidebarVisible,
+                        }),
+                        true
+                    );
                 }
                 if (
                     eventType === "keydown" &&
@@ -204,6 +218,7 @@ export const RootAppUI: React.FunctionComponent = () => {
         <Fragment>
             <AppFrame
                 toolbar={<AppToolbar />}
+                isSidebarVisible={isSidebarVisible}
                 title={
                     <HStack p={2} spacing="2px" maxWidth="350px" mx="auto">
                         <ContextSelectMenu ref={contextSelectMenuRef} />
@@ -350,6 +365,7 @@ const AppEditors: React.FC<{}> = () => {
                 route: {
                     ...getAppRoute(),
                     activeEditor: editor,
+                    isSidebarVisible: false,
                 },
             });
         } else {

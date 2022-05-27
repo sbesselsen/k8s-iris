@@ -205,7 +205,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
     const onClickEdit = useCallback(() => {
         if (metaKeyPressedRef.current) {
             createWindow({
-                route: setMode.asRoute("edit"),
+                route: { ...setMode.asRoute("edit"), isSidebarVisible: false },
             });
         } else {
             setMode("edit");
@@ -400,17 +400,15 @@ export const NewResourceEditor: React.FC<NewResourceEditorProps> = (props) => {
     const onAfterApply = useCallback(
         (object: K8sObject) => {
             const createdResourceEditor = appEditorForK8sObject(object);
-            editorsStore.set((editors) =>
-                editors.map((e) =>
-                    e.id === editorId ? createdResourceEditor : e
-                )
-            );
             setAppRoute((route) => {
                 if (route.activeEditor?.id === editorId) {
                     return { ...route, activeEditor: createdResourceEditor };
                 }
                 return route;
             });
+            editorsStore.set((editors) =>
+                editors.filter((e) => e.id !== editorId)
+            );
         },
         [editorId, editorsStore, setAppRoute]
     );

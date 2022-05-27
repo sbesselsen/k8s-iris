@@ -26,10 +26,16 @@ export function useEditorLink(resource: K8sObject | K8sObjectIdentifier): {
             ? appEditorForK8sObject(resource)
             : appEditorForK8sObjectIdentifier(resource);
         if (metaKeyRef.current) {
+            console.log({
+                ...getAppRoute(),
+                activeEditor: editor,
+                isSidebarVisible: false,
+            });
             createWindow({
                 route: {
                     ...getAppRoute(),
                     activeEditor: editor,
+                    isSidebarVisible: false,
                 },
             });
         } else {

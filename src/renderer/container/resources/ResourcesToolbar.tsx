@@ -45,6 +45,7 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
                 route: {
                     ...getAppRoute(),
                     activeEditor: editor,
+                    isSidebarVisible: false,
                 },
             });
         } else if (altKeyRef.current) {
