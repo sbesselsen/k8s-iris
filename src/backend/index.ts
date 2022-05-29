@@ -12,7 +12,11 @@ import { createWindowManager, WindowParameters } from "./window";
 (async () => {
     await app.whenReady();
 
-    const k8sClientManager = createClientManager();
+    const k8sClientManager = createClientManager({
+        ...(process.env.WRITABLE_CONTEXTS
+            ? { writableContexts: process.env.WRITABLE_CONTEXTS.split(/,/) }
+            : {}),
+    });
     const cloudManager = createCloudManager({
         didLogin: () => {
             // Retry outstanding connections (like for listWatches) when logging in with a cloud provider.

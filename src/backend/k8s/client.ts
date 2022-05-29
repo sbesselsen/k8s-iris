@@ -80,10 +80,11 @@ export function createClient(
         ...options,
     };
 
-    // TEMPORARY SAFETY MEASURE
-    // TODO: REMOVE
-    if (kubeConfig.getCurrentContext() !== "colima") {
-        opts.readonly = true;
+    if (opts.readonly) {
+        console.log(
+            "Opening in readonly mode:",
+            kubeConfig.getCurrentContext()
+        );
     }
 
     const objectApi = kubeConfig.makeApiClient(k8s.KubernetesObjectApi);

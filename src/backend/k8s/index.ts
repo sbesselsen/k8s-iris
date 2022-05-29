@@ -4,6 +4,11 @@ import { K8sClient, K8sContext } from "../../common/k8s/client";
 
 import { createClient, K8sBackendClient } from "./client";
 
+export type K8sClientManagerOptions = {
+    kubeConfig?: k8s.KubeConfig;
+    writableContexts?: string[];
+};
+
 export type K8sClientManager = {
     listContexts(): K8sContext[];
     clientForContext(context: string): K8sClient;
@@ -20,9 +25,9 @@ function getKubeConfigFromDefault(): k8s.KubeConfig {
 }
 
 export function createClientManager(
-    kubeConfig?: k8s.KubeConfig
+    opts: K8sClientManagerOptions = {}
 ): K8sClientManager {
-    const kc = kubeConfig ?? getKubeConfigFromDefault();
+    const kc = opts.kubeConfig ?? getKubeConfigFromDefault();
 
     const clients: Record<string, K8sBackendClient> = {};
 
@@ -44,6 +49,9 @@ export function createClientManager(
             clientConfig.setCurrentContext(context);
             clients[context] = createClient(clientConfig, {
                 getTempDirPath: () => app.getPath("temp"),
+                readonly:
+                    opts.writableContexts &&
+                    !opts.writableContexts.includes(context),
             });
         }
         return clients[context];
