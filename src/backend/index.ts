@@ -7,11 +7,13 @@ import { wireCloudIpc } from "./cloud/ipc";
 import { createClientManager } from "./k8s";
 import { wireK8sClientIpc } from "./k8s/ipc";
 import { createMenuManager } from "./menu";
+import { createPrefsManager } from "./prefs";
 import { createWindowManager, WindowParameters } from "./window";
 
 (async () => {
     await app.whenReady();
 
+    const prefsManager = createPrefsManager();
     const k8sClientManager = createClientManager({
         ...(process.env.WRITABLE_CONTEXTS
             ? { writableContexts: process.env.WRITABLE_CONTEXTS.split(/,/) }
