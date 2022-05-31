@@ -9,7 +9,8 @@
         "build": "parcel build",
         "format": "prettier --config .prettierrc 'src/**/*.ts' --write",
         "dev": "parcel build --target backend --target preload && concurrently 'parcel serve --dist-dir=renderer-dev --target renderer-dev' 'WRITABLE_CONTEXTS=colima npm run start'",
-        "test": "parcel build && ELECTRON_DEV=0 npm run start"
+        "test": "parcel build && ELECTRON_DEV=0 npm run start",
+        "package": "npm run build && electron-packager . --ignore='^/(_sb|.parcel-cache|renderer-dev|src)'"
     },
     "author": "Sebastiaan Besselsen <sebastiaan.besselsen@gmail.com>",
     "license": "UNLICENSED",
@@ -41,6 +42,7 @@
         "buffer": "^6.0.3",
         "concurrently": "^6.5.0",
         "electron": "^17.4.5",
+        "electron-packager": "^15.5.1",
         "parcel": "^2.5.0",
         "prettier": "^2.6.2",
         "react": "^17.0.2",

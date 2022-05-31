@@ -3,3 +3,5 @@
 /node_modules
 /renderer-dev
 /.vscode
+/*-darwin-x64
+*.DS_Store
