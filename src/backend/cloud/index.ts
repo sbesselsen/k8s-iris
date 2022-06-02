@@ -2,6 +2,7 @@ import { loadSharedConfigFiles } from "@aws-sdk/shared-ini-file-loader";
 import { exec } from "child_process";
 import { CloudK8sContextInfo } from "../../common/cloud/k8s";
 import { K8sContext } from "../../common/k8s/client";
+import { shellOptions } from "../util/shell";
 
 export type CloudManager = {
     augmentK8sContexts(
@@ -156,11 +157,15 @@ async function awsEksLoginForContext(
     }
 
     const [profileName] = awsProfileEntry;
+    const shellOpts = shellOptions();
 
     return new Promise((resolve, reject) => {
         exec(
             "aws sso login",
-            { env: { AWS_PROFILE: profileName } },
+            {
+                shell: shellOpts.executablePath,
+                env: { ...shellOpts.env, AWS_PROFILE: profileName },
+            },
             (error, stdout, stderr) => {
                 if (error) {
                     console.error(`Error during app login`, error);

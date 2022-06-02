@@ -1,4 +1,5 @@
 import execa = require("execa");
+import { shellOptions } from "../../util/shell";
 
 interface CredentialStatus {
     readonly token: string;
@@ -92,12 +93,20 @@ export class CharmPatchedExecAuth {
         if (!exec.command) {
             throw new Error("No command was specified for exec authProvider!");
         }
-        let opts: execa.Options = {};
+        const shellOpts = shellOptions();
+        let opts: execa.Options = {
+            shell: shellOpts.executablePath,
+        };
         if (exec.env) {
             const env = process.env;
             exec.env.forEach((elt) => (env[elt.name] = elt.value));
             opts = { ...opts, env };
         }
+
+        // Set a search path for executables
+        // TODO: do this in a nicer way
+        opts = { ...opts, env: { ...(opts.env ?? {}), ...shellOpts.env } };
+
         const result = await this.execFn(exec.command, exec.args, opts);
         if (result.exitCode === 0) {
             const obj = JSON.parse(result.stdout) as Credential;

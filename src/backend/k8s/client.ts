@@ -36,6 +36,7 @@ import { deepEqual } from "../../common/util/deep-equal";
 import { kubeRequestOpts } from "./util";
 import { CharmPatchedExecAuth } from "./authenticator/exec";
 import { toYaml } from "../../common/util/yaml";
+import { shellOptions } from "../util/shell";
 
 const defaultRemoveOptions: K8sRemoveOptions = {
     waitForCompletion: true,
@@ -182,8 +183,13 @@ export function createClient(
             kubeConfig,
             (kubeConfigPath) =>
                 new Promise((resolve, reject) => {
+                    const shellOpts = shellOptions();
                     const process = exec(
                         `kubectl apply --kubeconfig=${kubeConfigPath} -f -`,
+                        {
+                            shell: shellOpts.executablePath,
+                            env: shellOpts.env,
+                        },
                         (err, stdout, stderr) => {
                             if (err) {
                                 reject(stderr);
