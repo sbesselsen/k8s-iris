@@ -10,22 +10,15 @@
         "format": "prettier --config .prettierrc 'src/**/*.ts' --write",
         "dev": "parcel build --target backend --target preload && concurrently 'parcel serve --dist-dir=renderer-dev --target renderer-dev' 'WRITABLE_CONTEXTS=colima npm run start'",
         "test": "parcel build && ELECTRON_DEV=0 npm run start",
-        "package": "npm run build && electron-packager . --ignore='^/(_sb|.parcel-cache|renderer-dev|src)'"
+        "package": "npm run build && electron-packager . --ignore='^/(_sb|.parcel-cache|renderer-dev|src|dist/renderer-dev)'"
     },
     "author": "Sebastiaan Besselsen <sebastiaan.besselsen@gmail.com>",
     "license": "UNLICENSED",
     "dependencies": {
         "@aws-sdk/shared-ini-file-loader": "^3.80.0",
-        "@chakra-ui/icons": "^1.1.1",
-        "@chakra-ui/react": "^1.8.8",
-        "@emotion/react": "^11.9.0",
-        "@emotion/styled": "^11.6.0",
         "@kubernetes/client-node": "^0.16.1",
         "execa": "^5.0.0",
-        "framer-motion": "^5.5.5",
         "js-yaml": "^3.14.1",
-        "monaco-editor": "0.31.0",
-        "react-icons": "^4.3.1",
         "seedrandom": "^3.0.5"
     },
     "alias": {
@@ -36,6 +29,13 @@
         "chrome 90"
     ],
     "devDependencies": {
+        "@chakra-ui/icons": "^1.1.1",
+        "@chakra-ui/react": "^1.8.8",
+        "@emotion/react": "^11.9.0",
+        "@emotion/styled": "^11.6.0",
+        "framer-motion": "^5.5.5",
+        "monaco-editor": "0.31.0",
+        "react-icons": "^4.3.1",
         "@types/react": "^17.0.45",
         "@types/react-dom": "^17.0.17",
         "@types/seedrandom": "^3.0.2",
