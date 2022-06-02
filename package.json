@@ -10,7 +10,7 @@
         "format": "prettier --config .prettierrc 'src/**/*.ts' --write",
         "dev": "parcel build --target backend --target preload && concurrently 'parcel serve --dist-dir=renderer-dev --target renderer-dev' 'WRITABLE_CONTEXTS=colima npm run start'",
         "test": "parcel build && ELECTRON_DEV=0 npm run start",
-        "package": "npm run build && electron-packager . --ignore='^/(_sb|.parcel-cache|renderer-dev|src|dist/renderer-dev)'"
+        "package": "npm run build && electron-packager . Iris --icon=res/icon.icns --ignore='^/(_sb|.parcel-cache|res|renderer-dev|src|dist/renderer-dev)'"
     },
     "author": "Sebastiaan Besselsen <sebastiaan.besselsen@gmail.com>",
     "license": "UNLICENSED",
