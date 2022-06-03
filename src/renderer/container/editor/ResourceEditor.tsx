@@ -24,6 +24,7 @@ import {
 } from "../../component/k8s/K8sObjectViewer";
 import { ScrollBox } from "../../component/main/ScrollBox";
 import { Toolbar } from "../../component/main/Toolbar";
+import { useContextLock } from "../../context/context-lock";
 import {
     appEditorForK8sObject,
     isAppEditorForK8sObject,
@@ -191,6 +192,8 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
     const client = useK8sClient();
     const showDialog = useDialog();
 
+    const isClusterLocked = useContextLock();
+
     const appEditorStore = useAppEditorsStore();
 
     const [showDetails, setShowDetails] = useState(false);
@@ -213,6 +216,16 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
     }, [createWindow, metaKeyPressedRef, setMode]);
     const onClickDelete = useCallback(() => {
         (async () => {
+            if (isClusterLocked) {
+                showDialog({
+                    title: "Read-only mode",
+                    type: "error",
+                    message: "This cluster is in read-only mode.",
+                    detail: "You can delete after you click 'Allow changes' next to the cluster selector.",
+                    buttons: ["OK"],
+                });
+                return;
+            }
             const result = await showDialog({
                 title: "Confirm deletion",
                 message: "Are you sure?",
@@ -232,7 +245,14 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
                 );
             }
         })();
-    }, [appEditorStore, client, object, setIsDeleting]);
+    }, [
+        appEditorStore,
+        client,
+        isClusterLocked,
+        object,
+        setIsDeleting,
+        showDialog,
+    ]);
 
     if (!kind || !apiVersion || !metadata) {
         return <Box p={4}>This resource is not available.</Box>;

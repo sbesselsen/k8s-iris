@@ -6,6 +6,7 @@ import {
     K8sResourceTypeIdentifier,
 } from "../../../common/k8s/client";
 import { Toolbar } from "../../component/main/Toolbar";
+import { useContextLock } from "../../context/context-lock";
 import {
     isAppEditorForK8sObject,
     newResourceEditor,
@@ -29,6 +30,8 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
     const getAppRoute = useAppRouteGetter();
     const setAppRoute = useAppRouteSetter();
     const appEditorsStore = useAppEditorsStore();
+
+    const isClusterLocked = useContextLock();
 
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
     const altKeyRef = useModifierKeyRef("Alt");
@@ -73,6 +76,16 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
 
     const onClickDelete = useCallback(() => {
         (async () => {
+            if (isClusterLocked) {
+                showDialog({
+                    title: "Read-only mode",
+                    type: "error",
+                    message: "This cluster is in read-only mode.",
+                    detail: "You can delete after you click 'Allow changes' next to the cluster selector.",
+                    buttons: ["OK"],
+                });
+                return;
+            }
             const detail =
                 resources.length === 1
                     ? `Are you sure you want to delete this resource?`
@@ -105,7 +118,15 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
                 );
             }
         })();
-    }, [appEditorStore, client, resources, onClearSelection, setIsDeleting]);
+    }, [
+        appEditorStore,
+        client,
+        isClusterLocked,
+        resources,
+        onClearSelection,
+        setIsDeleting,
+        showDialog,
+    ]);
 
     return (
         <Toolbar>
