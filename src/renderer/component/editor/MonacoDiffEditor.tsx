@@ -15,6 +15,7 @@ export type MonacoCodeEditorProps = {
     onChange?: (newValue: string) => void;
     options?: editor.IStandaloneDiffEditorConstructionOptions & {
         language?: string;
+        jumpToFirstChange?: boolean;
     };
     runtimeOptions?: editor.IDiffEditorOptions & editor.IGlobalEditorOptions;
     configureEditor?: (editor: editor.IStandaloneDiffEditor) => void;
@@ -56,8 +57,11 @@ export const MonacoDiffEditor: React.FC<MonacoCodeEditorProps> = (props) => {
         if (!containerRef.current) {
             return;
         }
-        const { language = "text/plain", ...editorOptions } =
-            optionsConst ?? {};
+        const {
+            language = "text/plain",
+            jumpToFirstChange = true,
+            ...editorOptions
+        } = optionsConst ?? {};
         const editorInstance = editor.createDiffEditor(containerRef.current, {
             theme,
             automaticLayout: true,
@@ -81,8 +85,17 @@ export const MonacoDiffEditor: React.FC<MonacoCodeEditorProps> = (props) => {
         if (runtimeOptions && !isNew) {
             editorInstance.updateOptions(runtimeOptions);
         }
+        let navi: editor.IDiffNavigator | undefined;
+        if (jumpToFirstChange) {
+            navi = editor.createDiffNavigator(editorInstance, {
+                followsCaret: true, // resets the navigator state when the user selects something in the editor
+            });
+            navi.next();
+        }
+
         configureEditorConst?.(editorInstance);
         return () => {
+            navi?.dispose();
             editorInstance.dispose();
         };
     }, [
