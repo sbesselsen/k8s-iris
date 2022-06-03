@@ -216,6 +216,13 @@ export const RootAppUI: React.FunctionComponent = () => {
         return k8sAccountIdColor(accountId ?? null);
     }, [contextsInfo, kubeContext]);
 
+    const onRequestSidebarVisibilityChange = useCallback(
+        (visible: boolean) => {
+            setAppRoute((route) => ({ ...route, isSidebarVisible: visible }));
+        },
+        [setAppRoute]
+    );
+
     useEffect(() => {
         if (
             contextualColorTheme !== null &&
@@ -240,6 +247,9 @@ export const RootAppUI: React.FunctionComponent = () => {
             <AppFrame
                 toolbar={<AppToolbar />}
                 isSidebarVisible={isSidebarVisible}
+                onRequestSidebarVisibilityChange={
+                    onRequestSidebarVisibilityChange
+                }
                 title={
                     <HStack p={2} spacing="2px" maxWidth="350px" mx="auto">
                         <ContextSelectMenu ref={contextSelectMenuRef} />

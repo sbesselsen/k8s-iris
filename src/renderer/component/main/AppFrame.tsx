@@ -9,11 +9,13 @@ import React, {
     PointerEventHandler,
     ReactElement,
     useCallback,
+    useEffect,
     useLayoutEffect,
     useRef,
     useState,
 } from "react";
 import { useWindowFocusValue } from "../../hook/window-focus";
+import { useWindowResizeListener } from "../../hook/window-resize";
 
 export type AppFrameProps = {
     search: ReactElement;
@@ -22,6 +24,7 @@ export type AppFrameProps = {
     title: ReactElement;
     toolbar: ReactElement;
     isSidebarVisible?: boolean;
+    onRequestSidebarVisibilityChange?: (visible: boolean) => void;
 };
 
 export const AppFrame: React.FC<AppFrameProps> = (props) => {
@@ -32,9 +35,11 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
         toolbar,
         title,
         isSidebarVisible = true,
+        onRequestSidebarVisibilityChange,
     } = props;
 
     const [sidebarWidth, setSidebarWidth] = useState("250px");
+    const floatingSidebarWidth = "300px";
     const sidebarMinWidth = 200;
     const contentMinWidth = 400;
 
@@ -49,6 +54,13 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
         dragStartSidebarWidth: 0,
         currentSidebarWidth: 0,
     });
+
+    const shouldSidebarBeFloating = useCallback(() => {
+        return window.innerWidth - parseInt(sidebarWidth, 10) <= 380;
+    }, [sidebarWidth]);
+    const [isSidebarFloating, setSidebarFloating] = useState(
+        shouldSidebarBeFloating()
+    );
 
     // When pointer is pressed on the separator, initiate dragging.
     const onVSeparatorPointerDown: PointerEventHandler<HTMLDivElement> =
@@ -120,6 +132,26 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
         primaryColorIsGray ? "primary.800" : "primary.900"
     );
 
+    useWindowResizeListener(() => {
+        const newSidebarFloating = shouldSidebarBeFloating();
+        if (newSidebarFloating !== isSidebarFloating) {
+            // Make the window floating.
+            setSidebarFloating(newSidebarFloating);
+            onRequestSidebarVisibilityChange?.(!newSidebarFloating);
+        }
+    }, [
+        isSidebarFloating,
+        onRequestSidebarVisibilityChange,
+        setSidebarFloating,
+        shouldSidebarBeFloating,
+    ]);
+
+    const onClickContent = useCallback(() => {
+        if (isSidebarFloating) {
+            onRequestSidebarVisibilityChange?.(false);
+        }
+    }, [isSidebarFloating, onRequestSidebarVisibilityChange]);
+
     // TODO: make button offset work in Windows as well, on the other side
 
     return (
@@ -169,13 +201,19 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                     {search}
                 </Box>
             </HStack>
-            <HStack spacing={0} flex="1 0 0" alignItems="stretch" h={0}>
+            <HStack
+                spacing={0}
+                flex="1 0 0"
+                alignItems="stretch"
+                position="relative"
+                h={0}
+            >
                 <Box
                     w="100%"
                     h="3px"
                     position="absolute"
                     bgGradient="linear(to-b, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0))"
-                    zIndex={1}
+                    zIndex={30}
                 ></Box>
                 <Box
                     flexGrow={0}
@@ -184,13 +222,25 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                     bg={sidebarBackground}
                     overflow="hidden"
                     ref={sidebarBoxRef}
-                    position="relative"
-                    transitionDelay="100ms"
-                    transitionDuration="200ms"
+                    position={isSidebarFloating ? "absolute" : "relative"}
+                    top={isSidebarFloating ? 0 : "initial"}
+                    left={isSidebarFloating ? 0 : "initial"}
+                    h={isSidebarFloating ? "100%" : "initial"}
+                    w={
+                        isSidebarFloating
+                            ? isSidebarVisible
+                                ? floatingSidebarWidth
+                                : 0
+                            : "initial"
+                    }
+                    zIndex={20}
+                    transitionDuration={isSidebarFloating ? "100ms" : "200ms"}
                     transitionTimingFunction="ease-out"
-                    transitionProperty="flex-basis"
+                    transitionProperty="flex-basis, width"
+                    boxShadow={isSidebarFloating ? "lg" : "none"}
                 >
                     <Box
+                        display={isSidebarFloating ? "none" : "block"}
                         position="absolute"
                         w={2}
                         h="100%"
@@ -202,7 +252,11 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                         zIndex={1}
                     ></Box>
                     <Box
-                        w={sidebarWidth}
+                        w={
+                            isSidebarFloating
+                                ? floatingSidebarWidth
+                                : sidebarWidth
+                        }
                         ref={sidebarContentRef}
                         h="100%"
                         position="absolute"
@@ -212,7 +266,12 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                         {sidebar}
                     </Box>
                 </Box>
-                <Box flex="1 0 0" bg={contentBackground} overflow="hidden">
+                <Box
+                    flex="1 0 0"
+                    bg={contentBackground}
+                    overflow="hidden"
+                    onClick={onClickContent}
+                >
                     {content}
                 </Box>
             </HStack>

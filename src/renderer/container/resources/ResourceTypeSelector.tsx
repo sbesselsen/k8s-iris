@@ -266,7 +266,7 @@ export const ResourceTypeSelector: React.FC<ResourceTypeSelectorProps> = (
                 </MenuButton>
                 <MenuList
                     zIndex={18}
-                    maxHeight="calc(100vh - 300px)"
+                    maxHeight="calc(100vh - 200px)"
                     overflowY="scroll"
                 >
                     <MenuInput
