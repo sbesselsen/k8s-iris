@@ -372,7 +372,8 @@ const ResourceRow: React.FC<ResourceRowProps> = (props) => {
                         </ResourceEditorLink>
                     </Selectable>
                     {badges.map((badge) => {
-                        const { id, text, variant, badgeProps } = badge;
+                        const { id, text, variant, details, badgeProps } =
+                            badge;
                         const colorScheme = {
                             positive: "green",
                             negative: "red",
@@ -383,6 +384,7 @@ const ResourceRow: React.FC<ResourceRowProps> = (props) => {
                             <Badge
                                 key={id}
                                 colorScheme={colorScheme}
+                                title={details ?? text}
                                 {...badgeProps}
                             >
                                 {text}
