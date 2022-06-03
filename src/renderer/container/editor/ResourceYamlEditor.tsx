@@ -424,8 +424,8 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
 function addDefaultEditorActions(editor: monaco.editor.IStandaloneCodeEditor) {
     editor.addAction({
         id: "b64-decode",
-        label: "Base64 decode",
-        contextMenuGroupId: "navigation",
+        label: "Base64 Decode",
+        contextMenuGroupId: "1_modification",
         contextMenuOrder: 1.1,
         run: async () => {
             // Get the current selection in the editor.
@@ -445,8 +445,8 @@ function addDefaultEditorActions(editor: monaco.editor.IStandaloneCodeEditor) {
     });
     editor.addAction({
         id: "b64-encode",
-        label: "Base64 encode",
-        contextMenuGroupId: "navigation",
+        label: "Base64 Encode",
+        contextMenuGroupId: "1_modification",
         contextMenuOrder: 1.11,
         run: async () => {
             // Get the current selection in the editor.
@@ -466,12 +466,12 @@ function addDefaultEditorActions(editor: monaco.editor.IStandaloneCodeEditor) {
     });
     editor.addAction({
         id: "copy-as-plain",
-        label: "Base64 decode and copy",
+        label: "Copy Base64 Decoded",
         keybindings: [
             monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KeyC,
         ],
-        contextMenuGroupId: "navigation",
-        contextMenuOrder: 1.3,
+        contextMenuGroupId: "9_cutcopypaste",
+        contextMenuOrder: 1.5,
         run: async () => {
             // Get the current selection in the editor.
             const selection = editor.getSelection();
@@ -482,14 +482,15 @@ function addDefaultEditorActions(editor: monaco.editor.IStandaloneCodeEditor) {
             navigator.clipboard.writeText(atob(b64));
         },
     });
+    console.log("actions", editor.getSupportedActions());
     editor.addAction({
         id: "paste-as-base64",
-        label: "Paste as base64",
+        label: "Paste Base64 Encoded",
         keybindings: [
             monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KeyV,
         ],
-        contextMenuGroupId: "navigation",
-        contextMenuOrder: 1.4,
+        contextMenuGroupId: "9_cutcopypaste",
+        contextMenuOrder: 2.5,
         run: async () => {
             editor.focus();
 
