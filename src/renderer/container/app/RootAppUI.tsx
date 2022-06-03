@@ -121,6 +121,7 @@ export const RootAppUI: React.FunctionComponent = () => {
                 if (
                     eventType === "keydown" &&
                     metaKeyRef.current &&
+                    !shiftKeyRef.current &&
                     key === "n"
                 ) {
                     setAppRoute((route) => ({
@@ -194,7 +195,14 @@ export const RootAppUI: React.FunctionComponent = () => {
                     }
                 }
             },
-            [metaKeyRef, editorsStore, getAppRoute, setAppRoute, searchBoxRef]
+            [
+                metaKeyRef,
+                editorsStore,
+                getAppRoute,
+                setAppRoute,
+                searchBoxRef,
+                shiftKeyRef,
+            ]
         )
     );
 
