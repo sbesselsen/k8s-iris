@@ -38,9 +38,8 @@ import { ResourcesToolbar } from "./ResourcesToolbar";
 import { ResourceTypeSelector } from "./ResourceTypeSelector";
 
 export const ResourceAllOverview: React.FC = () => {
-    const [selectedResourceType, setSelectedResourceType] = useAppParam<
-        K8sResourceTypeIdentifier | undefined
-    >("resourceType", undefined);
+    const [selectedResourceType, setSelectedResourceType] =
+        useAppParam<K8sResourceTypeIdentifier | null>("resourceType", null);
 
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
     const metaKeyRef = useModifierKeyRef("Meta");
@@ -52,7 +51,7 @@ export const ResourceAllOverview: React.FC = () => {
     >([]);
 
     const onSelectResourceType = useCallback(
-        (type: K8sResourceTypeIdentifier | undefined) => {
+        (type: K8sResourceTypeIdentifier | null) => {
             if (metaKeyRef.current) {
                 createWindow({
                     route: setSelectedResourceType.asRoute(type),

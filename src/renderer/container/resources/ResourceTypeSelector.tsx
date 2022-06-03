@@ -29,9 +29,9 @@ import { useModifierKeyRef } from "../../hook/keyboard";
 import { useK8sApiResourceTypes } from "../../k8s/api-resources";
 
 export type ResourceTypeSelectorProps = {
-    value?: K8sResourceTypeIdentifier | undefined;
+    value?: K8sResourceTypeIdentifier | null;
     onChange?: (
-        value: K8sResourceTypeIdentifier | undefined,
+        value: K8sResourceTypeIdentifier | null,
         requestNewWindow: boolean
     ) => void;
     emptyValueContent?: ReactNode;
@@ -65,7 +65,7 @@ export const ResourceTypeSelector: React.FC<ResourceTypeSelectorProps> = (
     const { isOpen, onOpen, onClose: onDisclosureClose } = useDisclosure();
 
     const selectValue = useCallback(
-        (type: K8sResourceTypeIdentifier | undefined) => {
+        (type: K8sResourceTypeIdentifier | null) => {
             if (metaKeyPressedRef.current) {
                 onChange(type, true);
             } else {
