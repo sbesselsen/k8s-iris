@@ -31,6 +31,7 @@ import { useIpcCall } from "../../hook/ipc";
 import { useModifierKeyRef } from "../../hook/keyboard";
 import { useMultiSelectUpdater } from "../../hook/multi-select";
 import { useK8sApiResourceTypes } from "../../k8s/api-resources";
+import { generateBadges, ResourceBadge } from "../../k8s/badges";
 import { useK8sListWatch } from "../../k8s/list-watch";
 import { formatDeveloperDateTime } from "../../util/date";
 import { ResourceEditorLink } from "./ResourceEditorLink";
@@ -332,10 +333,6 @@ const ResourceRow: React.FC<ResourceRowProps> = (props) => {
     const { resource, isSelected, onChangeSelect, showNamespace } = props;
 
     const creationDate = new Date((resource as any).metadata.creationTimestamp);
-
-    const isNew =
-        new Date().getTime() - creationDate.getTime() < 2 * 3600 * 1000;
-
     const isDeleting = Boolean((resource as any).metadata.deletionTimestamp);
 
     const onChange = useCallback(
@@ -343,6 +340,11 @@ const ResourceRow: React.FC<ResourceRowProps> = (props) => {
             onChangeSelect?.(e.target.checked);
         },
         [onChangeSelect]
+    );
+
+    const badges: ResourceBadge[] = useMemo(
+        () => generateBadges(resource),
+        [resource]
     );
 
     return (
@@ -354,11 +356,10 @@ const ResourceRow: React.FC<ResourceRowProps> = (props) => {
                     onChange={onChange}
                 />
             </Td>
-            <Td ps={0} verticalAlign="baseline">
+            <Td ps={0} verticalAlign="baseline" userSelect="text">
                 <HStack p={0}>
                     <Selectable
                         display="block"
-                        w="100%"
                         cursor="inherit"
                         textColor={isDeleting ? "gray.500" : ""}
                         isTruncated
@@ -370,10 +371,24 @@ const ResourceRow: React.FC<ResourceRowProps> = (props) => {
                             {resource.metadata.name}
                         </ResourceEditorLink>
                     </Selectable>
-                    {isNew && !isDeleting && (
-                        <Badge colorScheme="primary">new</Badge>
-                    )}
-                    {isDeleting && <Badge colorScheme="gray">deleting</Badge>}
+                    {badges.map((badge) => {
+                        const { id, text, variant, badgeProps } = badge;
+                        const colorScheme = {
+                            positive: "green",
+                            negative: "red",
+                            changing: "orange",
+                            other: "gray",
+                        }[variant ?? "other"];
+                        return (
+                            <Badge
+                                key={id}
+                                colorScheme={colorScheme}
+                                {...badgeProps}
+                            >
+                                {text}
+                            </Badge>
+                        );
+                    })}
                 </HStack>
             </Td>
             {showNamespace && (
