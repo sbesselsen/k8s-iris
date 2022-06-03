@@ -276,6 +276,7 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
 
     const configureEditor = useCallback(
         (editor: monaco.editor.IStandaloneCodeEditor) => {
+            addDefaultEditorActions(editor);
             editor.addAction({
                 id: "review-changes",
                 label: "Review changes",
@@ -291,6 +292,7 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
     );
     const configureDiffEditor = useCallback(
         (editor: monaco.editor.IStandaloneDiffEditor) => {
+            addDefaultEditorActions(editor.getModifiedEditor());
             editor.addAction({
                 id: "save",
                 label: "Save to cluster",
@@ -418,3 +420,96 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
         </VStack>
     );
 };
+
+function addDefaultEditorActions(editor: monaco.editor.IStandaloneCodeEditor) {
+    editor.addAction({
+        id: "b64-decode",
+        label: "Base64 decode",
+        contextMenuGroupId: "navigation",
+        contextMenuOrder: 1.1,
+        run: async () => {
+            // Get the current selection in the editor.
+            const selection = editor.getSelection();
+            if (!selection) {
+                return;
+            }
+            const b64 = editor.getModel().getValueInRange(selection);
+            editor.executeEdits("clipboard", [
+                {
+                    range: selection,
+                    text: atob(b64),
+                    forceMoveMarkers: true,
+                },
+            ]);
+        },
+    });
+    editor.addAction({
+        id: "b64-encode",
+        label: "Base64 encode",
+        contextMenuGroupId: "navigation",
+        contextMenuOrder: 1.11,
+        run: async () => {
+            // Get the current selection in the editor.
+            const selection = editor.getSelection();
+            if (!selection) {
+                return;
+            }
+            const plain = editor.getModel().getValueInRange(selection);
+            editor.executeEdits("clipboard", [
+                {
+                    range: selection,
+                    text: btoa(plain),
+                    forceMoveMarkers: true,
+                },
+            ]);
+        },
+    });
+    editor.addAction({
+        id: "copy-as-plain",
+        label: "Base64 decode and copy",
+        keybindings: [
+            monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KeyC,
+        ],
+        contextMenuGroupId: "navigation",
+        contextMenuOrder: 1.3,
+        run: async () => {
+            // Get the current selection in the editor.
+            const selection = editor.getSelection();
+            if (!selection) {
+                return;
+            }
+            const b64 = editor.getModel().getValueInRange(selection);
+            navigator.clipboard.writeText(atob(b64));
+        },
+    });
+    editor.addAction({
+        id: "paste-as-base64",
+        label: "Paste as base64",
+        keybindings: [
+            monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.KeyV,
+        ],
+        contextMenuGroupId: "navigation",
+        contextMenuOrder: 1.4,
+        run: async () => {
+            editor.focus();
+
+            // Get the current clipboard contents
+            const text = await navigator.clipboard.readText();
+
+            // Get the current selection in the editor.
+            const selection = editor.getSelection();
+            if (!selection) {
+                return;
+            }
+
+            // Replace the current contents with the text from the clipboard.
+            editor.executeEdits("clipboard", [
+                {
+                    range: selection,
+                    text: btoa(text),
+                    forceMoveMarkers: true,
+                },
+            ]);
+        },
+    });
+}
