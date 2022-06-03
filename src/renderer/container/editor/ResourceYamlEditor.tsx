@@ -482,7 +482,6 @@ function addDefaultEditorActions(editor: monaco.editor.IStandaloneCodeEditor) {
             navigator.clipboard.writeText(atob(b64));
         },
     });
-    console.log("actions", editor.getSupportedActions());
     editor.addAction({
         id: "paste-as-base64",
         label: "Paste Base64 Encoded",
