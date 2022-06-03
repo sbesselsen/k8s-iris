@@ -358,10 +358,15 @@ const ResourceRow: React.FC<ResourceRowProps> = (props) => {
                 <HStack p={0}>
                     <Selectable
                         display="block"
+                        w="100%"
+                        cursor="inherit"
                         textColor={isDeleting ? "gray.500" : ""}
                         isTruncated
                     >
-                        <ResourceEditorLink editorResource={resource}>
+                        <ResourceEditorLink
+                            userSelect="text"
+                            editorResource={resource}
+                        >
                             {resource.metadata.name}
                         </ResourceEditorLink>
                     </Selectable>
