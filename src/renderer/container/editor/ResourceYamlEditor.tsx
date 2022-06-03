@@ -154,7 +154,7 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
                 title: "Read-only mode",
                 type: "error",
                 message: "This cluster is in read-only mode.",
-                detail: "You can save after you click 'Allow changes' next to the cluster selector.",
+                detail: "You can save after you click 'Allow changes' in the menu.",
                 buttons: ["OK"],
             });
             return;

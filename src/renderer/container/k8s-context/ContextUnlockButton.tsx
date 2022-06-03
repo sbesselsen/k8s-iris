@@ -25,6 +25,7 @@ export const ContextUnlockButton: React.FC = () => {
             size="sm"
             colorScheme="primary"
             boxShadow="0 1px 2px rgba(0, 0, 0, 0.1)"
+            aria-label="Allow changes"
         >
             Allow changes
         </Button>

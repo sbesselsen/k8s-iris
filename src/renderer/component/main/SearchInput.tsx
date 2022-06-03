@@ -17,11 +17,12 @@ import { useWindowFocusValue } from "../../hook/window-focus";
 export type SearchInputProps = {
     value: string;
     onChange: (value: string) => void;
+    shouldShowIcon?: boolean;
 };
 
 export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
     (props, ref) => {
-        const { value, onChange } = props;
+        const { value, onChange, shouldShowIcon = true } = props;
 
         const [innerValue, setInnerValue] = useState("");
         useEffect(() => {
@@ -68,11 +69,13 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
         const iconColor = itemPlaceholderColor;
         return (
             <InputGroup size="sm" opacity={opacity}>
-                <InputLeftElement
-                    children={<SearchIcon />}
-                    color={iconColor}
-                    onClick={onClick}
-                />
+                {shouldShowIcon && (
+                    <InputLeftElement
+                        children={<SearchIcon />}
+                        color={iconColor}
+                        onClick={onClick}
+                    />
+                )}
                 <Input
                     placeholder="Search"
                     borderRadius="md"

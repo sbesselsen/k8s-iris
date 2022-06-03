@@ -1,7 +1,14 @@
 import React, { useCallback } from "react";
-import { ButtonGroup, HStack, Icon, IconButton } from "@chakra-ui/react";
+import {
+    ButtonGroup,
+    HStack,
+    Icon,
+    IconButton,
+    ScaleFade,
+} from "@chakra-ui/react";
 
 import { MdArrowBackIosNew, MdArrowForwardIos } from "react-icons/md";
+import { HiLockClosed } from "react-icons/hi";
 import {
     useAppRoute,
     useAppRouteHistory,
@@ -9,6 +16,10 @@ import {
 } from "../../context/route";
 import { useKeyListener, useModifierKeyRef } from "../../hook/keyboard";
 import { HamburgerIcon } from "@chakra-ui/icons";
+import {
+    useContextLock,
+    useContextLockSetter,
+} from "../../context/context-lock";
 
 export const AppToolbar: React.FC = () => {
     const { canGoBack, canGoForward, goBack, goForward } = useAppRouteHistory();
@@ -41,8 +52,14 @@ export const AppToolbar: React.FC = () => {
         )
     );
 
+    const isLocked = useContextLock();
+    const setLock = useContextLockSetter();
+    const onClickUnlock = useCallback(() => {
+        setLock(false);
+    }, [setLock]);
+
     return (
-        <HStack py={2}>
+        <HStack py={2} spacing={0}>
             <ButtonGroup
                 variant="ghost"
                 colorScheme="primary"
@@ -54,6 +71,7 @@ export const AppToolbar: React.FC = () => {
                     onClick={goBack}
                     icon={<Icon as={MdArrowBackIosNew} />}
                     aria-label="Back"
+                    title="Back"
                     _focus={{}}
                     tabIndex={-1}
                 />
@@ -62,6 +80,7 @@ export const AppToolbar: React.FC = () => {
                     onClick={goForward}
                     icon={<Icon as={MdArrowForwardIos} />}
                     aria-label="Forward"
+                    title="Forward"
                     _focus={{}}
                     tabIndex={-1}
                 />
@@ -71,10 +90,23 @@ export const AppToolbar: React.FC = () => {
                     onClick={toggleSidebarVisible}
                     icon={<HamburgerIcon />}
                     aria-label={isSidebarVisible ? "Hide menu" : "Show menu"}
+                    title={isSidebarVisible ? "Hide menu" : "Show menu"}
                     _focus={{}}
                     tabIndex={-1}
                 />
             </ButtonGroup>
+            <ScaleFade in={isLocked} unmountOnExit={true}>
+                <ButtonGroup variant="ghost" colorScheme="primary" size="sm">
+                    <IconButton
+                        onClick={onClickUnlock}
+                        icon={<Icon as={HiLockClosed} />}
+                        aria-label="Allow changes"
+                        title="Allow changes"
+                        _focus={{}}
+                        tabIndex={-1}
+                    />
+                </ButtonGroup>
+            </ScaleFade>
         </HStack>
     );
 };

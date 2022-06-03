@@ -142,7 +142,7 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
             >
                 <Box
                     flexGrow={0}
-                    flexShrink={0}
+                    flexShrink={10}
                     flexBasis="250px"
                     pl="85px"
                     h="100%"
@@ -151,7 +151,7 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                 </Box>
                 <Box
                     flexGrow={1}
-                    flexShrink={0}
+                    flexShrink={11}
                     flexBasis="300px"
                     overflow="hidden"
                     h="100%"
@@ -160,7 +160,7 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                 </Box>
                 <Box
                     flexGrow={0}
-                    flexShrink={0}
+                    flexShrink={10}
                     flexBasis="250px"
                     overflow="hidden"
                     textAlign="end"

@@ -47,7 +47,7 @@ export function createWindowManager(): WindowManager {
         const options: BrowserWindowConstructorOptions = {
             width: 850,
             height: 600,
-            minWidth: 850,
+            minWidth: 380,
             titleBarStyle: "hiddenInset",
             title: "Charm",
             trafficLightPosition: {

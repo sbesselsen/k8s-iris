@@ -221,7 +221,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
                     title: "Read-only mode",
                     type: "error",
                     message: "This cluster is in read-only mode.",
-                    detail: "You can delete after you click 'Allow changes' next to the cluster selector.",
+                    detail: "You can delete after you click 'Allow changes' in the menu.",
                     buttons: ["OK"],
                 });
                 return;

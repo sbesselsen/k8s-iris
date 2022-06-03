@@ -1,4 +1,4 @@
-import { Box, HStack, VStack } from "@chakra-ui/react";
+import { Box, HStack, useBreakpointValue, VStack } from "@chakra-ui/react";
 import React, {
     Fragment,
     ReactNode,
@@ -42,7 +42,6 @@ import {
 import { AppToolbar } from "./AppToolbar";
 import { ParamNamespace } from "../../context/param";
 import { k8sSmartCompare } from "../../../common/util/sort";
-import { ContextUnlockButton } from "../k8s-context/ContextUnlockButton";
 import {
     newResourceEditor,
     useAppEditors,
@@ -244,7 +243,6 @@ export const RootAppUI: React.FunctionComponent = () => {
                 title={
                     <HStack p={2} spacing="2px" maxWidth="350px" mx="auto">
                         <ContextSelectMenu ref={contextSelectMenuRef} />
-                        <ContextUnlockButton />
                     </HStack>
                 }
                 search={
@@ -296,8 +294,11 @@ const AppSearchBox = React.forwardRef<HTMLInputElement, {}>((props, ref) => {
         [searchStore]
     );
 
+    const shouldShowIcon = useBreakpointValue({ base: false, sm: true });
+
     return (
         <SearchInput
+            shouldShowIcon={shouldShowIcon}
             value={searchValue.query}
             onChange={setSearchValue}
             ref={ref}
