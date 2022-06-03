@@ -293,7 +293,7 @@ function objectDiff(a: object, b: object): Diff {
         } else {
             hasDiff = true;
             const value = b[key];
-            if (typeof value === "object" && !Array.isArray(value)) {
+            if (typeof value === "object" && !Array.isArray(value) && value) {
                 diffs[key] = objectDiff({}, value);
             } else {
                 diffs[key] = { diff: "value", value };
