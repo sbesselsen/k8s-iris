@@ -7,6 +7,7 @@ import {
     K8sObjectListWatch,
     K8sObjectListWatcherMessage,
 } from "../../common/k8s/client";
+import { useHibernate } from "../context/hibernate";
 import { useK8sContext } from "../context/k8s-context";
 import { useK8sClient } from "./client";
 
@@ -18,6 +19,7 @@ const loadingValue: [boolean, undefined, undefined] = [
 
 export type K8sListWatchOptions = {
     kubeContext?: string;
+    pauseOnHibernate?: boolean;
 };
 
 export type K8sCoalescedObjectListWatcherMessage<
@@ -91,7 +93,42 @@ export function useK8sListWatchListener<T extends K8sObject = K8sObject>(
     const client = useK8sClient(options.kubeContext);
     const listWatchRef = useRef<K8sObjectListWatch | undefined>();
 
-    const { onUpdate, onWatchError, updateCoalesceInterval = 0 } = options;
+    const {
+        onUpdate,
+        onWatchError,
+        updateCoalesceInterval = 0,
+        pauseOnHibernate = true,
+    } = options;
+
+    const isPaused = useHibernate() && pauseOnHibernate;
+
+    const pausedUpdateRef = useRef<K8sCoalescedObjectListWatcherMessage<T>>();
+    const pausableOnUpdate = useCallback(
+        (message: K8sCoalescedObjectListWatcherMessage<T>) => {
+            if (!isPaused) {
+                onUpdate(message);
+            } else {
+                if (pausedUpdateRef.current) {
+                    pausedUpdateRef.current.list = message.list;
+                    pausedUpdateRef.current.updates.push(...message.updates);
+                } else {
+                    pausedUpdateRef.current = {
+                        list: message.list,
+                        updates: [...message.updates],
+                    };
+                }
+            }
+        },
+        [onUpdate, pausedUpdateRef, isPaused]
+    );
+    useEffect(() => {
+        if (!isPaused && pausedUpdateRef.current) {
+            // Updates came in while we were paused.
+            const message = pausedUpdateRef.current;
+            pausedUpdateRef.current = undefined;
+            onUpdate(message);
+        }
+    }, [onUpdate, pausedUpdateRef, isPaused]);
 
     const lastUpdateTimestampRef = useRef(0);
     const coalescedUpdateRef =
@@ -122,7 +159,7 @@ export function useK8sListWatchListener<T extends K8sObject = K8sObject>(
                 // Update is coming in too soon. Need to schedule it.
                 if (!updateTimeoutRef.current) {
                     updateTimeoutRef.current = setTimeout(() => {
-                        onUpdate(coalescedUpdateRef.current);
+                        pausableOnUpdate(coalescedUpdateRef.current);
                         lastUpdateTimestampRef.current = ts;
                         updateTimeoutRef.current = null;
                         coalescedUpdateRef.current = null;
@@ -145,13 +182,13 @@ export function useK8sListWatchListener<T extends K8sObject = K8sObject>(
             if (message.update) {
                 coalescedMessage.updates.push(message.update);
             }
-            onUpdate(coalescedMessage);
+            pausableOnUpdate(coalescedMessage);
             lastUpdateTimestampRef.current = ts;
         },
         [
             coalescedUpdateRef,
             lastUpdateTimestampRef,
-            onUpdate,
+            pausableOnUpdate,
             updateCoalesceInterval,
             updateTimeoutRef,
         ]
