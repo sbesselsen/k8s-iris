@@ -85,10 +85,10 @@ export function ipcProvideSubscription<T, U>(
 }
 
 export type IpcMainSocketHooks = {
-    onMessage: (listener: (message: string | ArrayBuffer) => void) => void;
+    onMessage: (listener: (message: string | Uint8Array) => void) => void;
     onClose: (listener: () => void) => void;
     close: () => void;
-    send: (message: string | ArrayBuffer) => void;
+    send: (message: string | Uint8Array) => void;
 };
 
 export function ipcProvideSocket<T>(
@@ -98,7 +98,7 @@ export function ipcProvideSocket<T>(
     ipcMain.on(prefixSocketChannel(name), async (e, data) => {
         const port = e.ports[0];
         handler(data, {
-            onMessage: (listener: (message: string | ArrayBuffer) => void) => {
+            onMessage: (listener: (message: string | Uint8Array) => void) => {
                 port.on("message", (e) => {
                     listener(e.data);
                 });
@@ -113,7 +113,7 @@ export function ipcProvideSocket<T>(
                 port.postMessage([-1, null]);
                 port.close();
             },
-            send: (message: string | ArrayBuffer) => {
+            send: (message: string | Uint8Array) => {
                 port.postMessage([0, message]);
             },
         });
