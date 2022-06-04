@@ -26,7 +26,7 @@
         "README_FOR_LINE_ABOVE": "work around a parcel 2.3 bug that would install a process polyfill"
     },
     "browserslist": [
-        "chrome 90"
+        "chrome >= 98"
     ],
     "devDependencies": {
         "@chakra-ui/icons": "^1.1.1",
