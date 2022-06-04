@@ -127,10 +127,10 @@ export function ipcEventSubscriber<T>(
 }
 
 export type IpcRendererSocketHooks = {
-    onMessage: (listener: (message: string | Uint8Array) => void) => void;
+    onMessage: (listener: (message: string | ArrayBuffer) => void) => void;
     onClose: (listener: () => void) => void;
     close: () => void;
-    send: (message: string | Uint8Array) => void;
+    send: (message: string | ArrayBuffer) => void;
 };
 
 export function ipcSocketOpener<T>(
@@ -145,7 +145,7 @@ export function ipcSocketOpener<T>(
         let closeListener: () => void | undefined;
 
         return {
-            onMessage: (listener: (message: string | Uint8Array) => void) => {
+            onMessage: (listener: (message: string | ArrayBuffer) => void) => {
                 port.onmessage = (e) => {
                     const [type, data] = e.data;
                     if (type === 0) {
@@ -162,7 +162,7 @@ export function ipcSocketOpener<T>(
             close: () => {
                 port.close();
             },
-            send: (message: string | Uint8Array) => {
+            send: (message: string | ArrayBuffer) => {
                 port.postMessage(message);
             },
         };
