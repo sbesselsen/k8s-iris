@@ -517,9 +517,19 @@ export function createClient(
                 console.error("Informer error", err);
                 // TODO: make this configurable or handlable somehow?
                 // Restart informer after 5sec.
-                retrySignal().then(() => {
-                    informer.start();
-                });
+                (async () => {
+                    await retrySignal();
+                    if (stopped) {
+                        return;
+                    }
+                    console.log("Informer restarting");
+
+                    await informer.start();
+                    console.log("Informer restarted");
+                    watcher(undefined, {
+                        list,
+                    });
+                })();
             });
 
             console.log(
@@ -527,7 +537,7 @@ export function createClient(
                 kubeConfig.getCurrentContext(),
                 spec.kind
             );
-            informer.start();
+            await informer.start();
         })().catch((e) => {
             // Send error to listener.
             console.error("Listwatch error", e);

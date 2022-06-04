@@ -80,18 +80,22 @@ export const wireK8sClientIpc = (clientManager: K8sClientManager): void => {
             send: K8sPartialObjectListWatcher
         ) => {
             let didSendInitialList = false;
+            let lastMessageWasError = false;
             const listWatch = clientManager
                 .clientForContext(context)
                 .listWatch(spec, (error, message) => {
                     if (error) {
                         send(error);
+                        lastMessageWasError = true;
                     } else {
-                        if (!didSendInitialList) {
+                        if (!didSendInitialList || lastMessageWasError) {
                             send(undefined, { list: message.list });
                             didSendInitialList = true;
+                            lastMessageWasError = false;
                         }
                         if (message.update) {
                             send(undefined, { update: message.update });
+                            lastMessageWasError = false;
                         }
                     }
                 });
