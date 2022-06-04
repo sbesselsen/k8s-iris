@@ -211,7 +211,7 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
                     boxShadow="xl"
                     borderColor={popupBorderColor}
                     bg={popupBackground}
-                    zIndex={20}
+                    zIndex={40}
                 >
                     <MenuInput
                         placeholder="Search"
