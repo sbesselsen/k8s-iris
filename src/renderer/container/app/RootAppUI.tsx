@@ -121,6 +121,8 @@ export const RootAppUI: React.FunctionComponent = () => {
                     eventType === "keydown" &&
                     metaKeyRef.current &&
                     !shiftKeyRef.current &&
+                    (getAppRoute().menuItem !== "resources" ||
+                        getAppRoute().activeEditor) &&
                     key === "n"
                 ) {
                     setAppRoute((route) => ({

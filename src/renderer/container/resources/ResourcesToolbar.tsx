@@ -15,7 +15,7 @@ import {
 import { useAppRouteGetter, useAppRouteSetter } from "../../context/route";
 import { useDialog } from "../../hook/dialog";
 import { useIpcCall } from "../../hook/ipc";
-import { useModifierKeyRef } from "../../hook/keyboard";
+import { useKeyListener, useModifierKeyRef } from "../../hook/keyboard";
 import { useK8sClient } from "../../k8s/client";
 
 export type ResourcesToolbarProps = {
@@ -36,41 +36,45 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
     const altKeyRef = useModifierKeyRef("Alt");
     const metaKeyRef = useModifierKeyRef("Meta");
+    const shiftKeyRef = useModifierKeyRef("Shift");
 
     const showDialog = useDialog();
     const appEditorStore = useAppEditorsStore();
     const client = useK8sClient();
 
-    const onClickAddNew = useCallback(() => {
-        const editor = newResourceEditor(resourceType);
-        if (metaKeyRef.current) {
-            createWindow({
-                route: {
-                    ...getAppRoute(),
+    const onClickAddNew = useCallback(
+        (supportNewWindow = true) => {
+            const editor = newResourceEditor(resourceType);
+            if (supportNewWindow && metaKeyRef.current) {
+                createWindow({
+                    route: {
+                        ...getAppRoute(),
+                        activeEditor: editor,
+                        isSidebarVisible: false,
+                    },
+                });
+            } else if (altKeyRef.current) {
+                // Option+click: open in background.
+                appEditorsStore.set((editors) => {
+                    return [...editors, editor];
+                });
+            } else {
+                setAppRoute((route) => ({
+                    ...route,
                     activeEditor: editor,
-                    isSidebarVisible: false,
-                },
-            });
-        } else if (altKeyRef.current) {
-            // Option+click: open in background.
-            appEditorsStore.set((editors) => {
-                return [...editors, editor];
-            });
-        } else {
-            setAppRoute((route) => ({
-                ...route,
-                activeEditor: editor,
-            }));
-        }
-    }, [
-        appEditorsStore,
-        createWindow,
-        getAppRoute,
-        setAppRoute,
-        altKeyRef,
-        metaKeyRef,
-        resourceType,
-    ]);
+                }));
+            }
+        },
+        [
+            appEditorsStore,
+            createWindow,
+            getAppRoute,
+            setAppRoute,
+            altKeyRef,
+            metaKeyRef,
+            resourceType,
+        ]
+    );
 
     const [isDeleting, setIsDeleting] = useState(false);
 
@@ -127,6 +131,27 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
         setIsDeleting,
         showDialog,
     ]);
+
+    useKeyListener(
+        useCallback(
+            (event, key) => {
+                if (
+                    event === "keydown" &&
+                    key === "n" &&
+                    metaKeyRef.current &&
+                    !shiftKeyRef.current
+                ) {
+                    onClickAddNew(false);
+                }
+                if (event === "keydown" && key === "Delete") {
+                    if (resources?.length > 0) {
+                        onClickDelete();
+                    }
+                }
+            },
+            [onClickAddNew, onClickDelete, metaKeyRef, shiftKeyRef, resources]
+        )
+    );
 
     return (
         <Toolbar>
