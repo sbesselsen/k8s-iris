@@ -403,7 +403,7 @@ export function createClient(
             return spec.namespaces.includes(obj.metadata.namespace);
         };
 
-        (async () => {
+        async function startListWatch() {
             let path: string;
             let opts: request.CoreOptions;
             while (!stopped) {
@@ -514,18 +514,36 @@ export function createClient(
                     return;
                 }
                 watcher(err);
-                console.error("Informer error", err);
+                console.error(
+                    "Informer error",
+                    kubeConfig.getCurrentContext(),
+                    spec.kind,
+                    err
+                );
                 // TODO: make this configurable or handlable somehow?
                 // Restart informer after 5sec.
                 (async () => {
                     await retrySignal();
                     if (stopped) {
+                        console.log(
+                            "Informer stopped after retry signal",
+                            kubeConfig.getCurrentContext(),
+                            spec.kind
+                        );
                         return;
                     }
-                    console.log("Informer restarting");
+                    console.log(
+                        "Informer restarting",
+                        kubeConfig.getCurrentContext(),
+                        spec.kind
+                    );
 
                     await informer.start();
-                    console.log("Informer restarted");
+                    console.log(
+                        "Informer restarted",
+                        kubeConfig.getCurrentContext(),
+                        spec.kind
+                    );
                     watcher(undefined, {
                         list,
                     });
@@ -538,11 +556,25 @@ export function createClient(
                 spec.kind
             );
             await informer.start();
-        })().catch((e) => {
-            // Send error to listener.
-            console.error("Listwatch error", e);
-            watcher(e);
-        });
+        }
+
+        (async () => {
+            while (!stopped) {
+                try {
+                    await startListWatch();
+                    return;
+                } catch (e) {
+                    watcher(e);
+                    console.error(
+                        "Listwatch startup error",
+                        kubeConfig.getCurrentContext(),
+                        spec.kind,
+                        e
+                    );
+                    await retrySignal();
+                }
+            }
+        })();
 
         return {
             stop() {
