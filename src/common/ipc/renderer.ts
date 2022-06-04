@@ -2,6 +2,7 @@ import { ipcRenderer, IpcRendererEvent } from "electron";
 import {
     prefixEventChannel,
     prefixHandlerChannel,
+    prefixSocketChannel,
     prefixSubscriptionChannel,
 } from "./shared";
 
@@ -120,6 +121,49 @@ export function ipcEventSubscriber<T>(
         return {
             stop() {
                 handlers = handlers.filter((h) => h !== handler);
+            },
+        };
+    };
+}
+
+export type IpcRendererSocketHooks = {
+    onMessage: (listener: (message: string | ArrayBuffer) => void) => void;
+    onClose: (listener: () => void) => void;
+    close: () => void;
+    send: (message: string | ArrayBuffer) => void;
+};
+
+export function ipcSocketOpener<T>(
+    name: string
+): (data: T) => IpcRendererSocketHooks {
+    return (data: T) => {
+        const channel = new MessageChannel();
+        const port = channel.port2;
+        ipcRenderer.postMessage(prefixSocketChannel(name), data, [
+            channel.port1,
+        ]);
+        let closeListener: () => void | undefined;
+
+        return {
+            onMessage: (listener: (message: string | ArrayBuffer) => void) => {
+                port.onmessage = (e) => {
+                    const [type, data] = e.data;
+                    if (type === 0) {
+                        listener(data);
+                    } else if (type === -1) {
+                        closeListener?.();
+                    }
+                };
+                port.start();
+            },
+            onClose: (listener: () => void) => {
+                closeListener = listener;
+            },
+            close: () => {
+                port.close();
+            },
+            send: (message: string | ArrayBuffer) => {
+                port.postMessage(message);
             },
         };
     };

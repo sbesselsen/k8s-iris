@@ -6,6 +6,10 @@ export function prefixSubscriptionChannel(name: string): string {
     return `charmsubscription:${name}`;
 }
 
+export function prefixSocketChannel(name: string): string {
+    return `charmsocket:${name}`;
+}
+
 export function prefixEventChannel(name: string): string {
     return `charmevent:${name}`;
 }
