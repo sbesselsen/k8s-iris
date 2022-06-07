@@ -801,7 +801,6 @@ export function createClient(
         const stdout: Buffer[] = [];
         const stderr: Buffer[] = [];
         handler.onStdout((chunk) => {
-            // WHY DOES SCARY CERTIFICATE INFO ENTER MY BUFFER? What the hell is happening here?
             stdout.push(Buffer.from(chunk));
         });
         handler.onStderr((chunk) => {
