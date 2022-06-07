@@ -745,10 +745,11 @@ export function createClient(
                 }
                 stderrListener = (chunk: string | Buffer) => {
                     listener(
-                        (typeof chunk === "string"
-                            ? Buffer.from(chunk, "utf8")
-                            : chunk
-                        ).buffer
+                        bufferToArrayBuffer(
+                            typeof chunk === "string"
+                                ? Buffer.from(chunk, "utf8")
+                                : chunk
+                        )
                     );
                 };
                 stderr.on("data", stderrListener);
