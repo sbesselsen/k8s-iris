@@ -1,7 +1,9 @@
 import * as k8s from "@kubernetes/client-node";
 import { KubeConfig, KubernetesObject } from "@kubernetes/client-node";
 import * as request from "request";
-import { exec } from "child_process";
+import { exec as execChildProcess } from "child_process";
+import { Exec } from "@kubernetes/client-node";
+import { PassThrough } from "stream";
 import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
@@ -20,6 +22,13 @@ import {
     K8sPatchOptions,
     K8sRemoveOptions,
     K8sRemoveStatus,
+    K8sExecSpec,
+    K8sExecOptions,
+    K8sExecHandler,
+    K8sExecCommandSpec,
+    K8sExecCommandOptions,
+    K8sExecCommandStatus,
+    K8sExecCommandResult,
 } from "../../common/k8s/client";
 import {
     fetchApiList,
@@ -37,6 +46,7 @@ import { kubeRequestOpts } from "./util";
 import { CharmPatchedExecAuth } from "./authenticator/exec";
 import { toYaml } from "../../common/util/yaml";
 import { shellOptions } from "../util/shell";
+import { bufferToArrayBuffer } from "../util/buffer";
 
 const defaultRemoveOptions: K8sRemoveOptions = {
     waitForCompletion: true,
@@ -184,13 +194,13 @@ export function createClient(
             (kubeConfigPath) =>
                 new Promise((resolve, reject) => {
                     const shellOpts = shellOptions();
-                    const process = exec(
+                    const process = execChildProcess(
                         `kubectl apply --kubeconfig=${kubeConfigPath} -f -`,
                         {
                             shell: shellOpts.executablePath,
                             env: shellOpts.env,
                         },
-                        (err, stdout, stderr) => {
+                        (err, _stdout, stderr) => {
                             if (err) {
                                 reject(stderr);
                             } else {
@@ -693,12 +703,131 @@ export function createClient(
             }));
     };
 
+    const exec = async (
+        spec: K8sExecSpec,
+        options?: K8sExecOptions
+    ): Promise<K8sExecHandler> => {
+        // TODO: set some high water marks?
+        const stdout = new PassThrough();
+        const stderr = new PassThrough();
+        const stdin = new PassThrough();
+
+        let socket: {
+            close(): void;
+        };
+
+        let stdoutListener, stderrListener;
+        let closeListener: (status?: K8sExecCommandStatus) => void;
+
+        const handler: K8sExecHandler = {
+            onStdout(listener) {
+                if (stdoutListener && stdoutListener !== listener) {
+                    throw new Error(
+                        "Cannot call .onStdout() multiple times with different arguments"
+                    );
+                }
+                stdoutListener = (chunk: string | Buffer) => {
+                    listener(
+                        bufferToArrayBuffer(
+                            typeof chunk === "string"
+                                ? Buffer.from(chunk, "utf8")
+                                : chunk
+                        )
+                    );
+                };
+                stdout.on("data", stdoutListener);
+            },
+            onStderr(listener) {
+                if (stderrListener && stderrListener !== listener) {
+                    throw new Error(
+                        "Cannot call .onStdout() multiple times with different arguments"
+                    );
+                }
+                stderrListener = (chunk: string | Buffer) => {
+                    listener(
+                        (typeof chunk === "string"
+                            ? Buffer.from(chunk, "utf8")
+                            : chunk
+                        ).buffer
+                    );
+                };
+                stderr.on("data", stderrListener);
+            },
+            onError(listener) {
+                // TODO: don't really know what to do here yet
+            },
+            onEnd(listener) {
+                closeListener = listener;
+            },
+            send(chunk) {
+                stdin.push(Buffer.from(chunk));
+            },
+            async close() {
+                socket?.close();
+                await Promise.all([
+                    new Promise((resolve) => stdin.end(resolve)),
+                    new Promise((resolve) => stdout.end(resolve)),
+                    new Promise((resolve) => stderr.end(resolve)),
+                ]);
+                closeListener?.();
+            },
+        };
+
+        socket = await new Exec(kubeConfig).exec(
+            spec.namespace,
+            spec.podName,
+            spec.containerName,
+            spec.command,
+            stdout,
+            stderr,
+            stdin,
+            spec.tty ?? false,
+            (status) => {
+                closeListener?.({
+                    status: status.status ?? "",
+                    message: status.message ?? "",
+                });
+            }
+        );
+        return handler;
+    };
+
+    const execCommand = async (
+        spec: K8sExecCommandSpec,
+        options?: K8sExecCommandOptions
+    ): Promise<K8sExecCommandResult> => {
+        const handler = await exec({ ...spec, tty: false });
+        const stdout: Buffer[] = [];
+        const stderr: Buffer[] = [];
+        handler.onStdout((chunk) => {
+            // WHY DOES SCARY CERTIFICATE INFO ENTER MY BUFFER? What the hell is happening here?
+            stdout.push(Buffer.from(chunk));
+        });
+        handler.onStderr((chunk) => {
+            stderr.push(Buffer.from(chunk));
+        });
+        return new Promise((resolve) => {
+            handler.onEnd((status) => {
+                resolve({
+                    status: {
+                        status: status.status ?? "",
+                        message: status.message ?? "",
+                    },
+                    stdout: bufferToArrayBuffer(Buffer.concat(stdout)),
+                    stderr: bufferToArrayBuffer(Buffer.concat(stderr)),
+                });
+            });
+        });
+    };
+
     return {
         read,
         apply,
         patch,
         replace,
         remove,
+        exec,
+        execCommand,
         list,
         listWatch,
         retryConnections,

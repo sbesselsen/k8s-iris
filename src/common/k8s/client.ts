@@ -79,11 +79,48 @@ export type K8sContext = {
     namespace?: string;
 };
 
+export type K8sExecCommandSpec = {
+    namespace: string;
+    podName: string;
+    containerName: string;
+    command: string[];
+};
+
+export type K8sExecSpec = K8sExecCommandSpec & {
+    tty?: boolean;
+};
+
+export type K8sExecOptions = {};
+export type K8sExecCommandOptions = {};
+export type K8sExecCommandStatus = {
+    status: string;
+    message: string;
+};
+export type K8sExecCommandResult = {
+    status: K8sExecCommandStatus;
+    stdout: ArrayBuffer;
+    stderr: ArrayBuffer;
+};
+
+export type K8sExecHandler = {
+    onStdout: (listener: (chunk: ArrayBuffer) => void) => void;
+    onStderr: (listener: (chunk: ArrayBuffer) => void) => void;
+    onEnd: (listener: (status?: K8sExecCommandStatus) => void) => void;
+    onError: (listener: (error: any) => void) => void;
+    send: (chunk: ArrayBuffer) => void;
+    close: () => Promise<void>;
+};
+
 export type K8sClient = {
     read(spec: K8sObject): Promise<K8sObject | null>;
     apply(spec: K8sObject, options?: K8sApplyOptions): Promise<K8sObject>;
     patch(spec: K8sObject, options?: K8sPatchOptions): Promise<K8sObject>;
     replace(spec: K8sObject): Promise<K8sObject>;
+    exec(spec: K8sExecSpec, options?: K8sExecOptions): Promise<K8sExecHandler>;
+    execCommand(
+        spec: K8sExecCommandSpec,
+        options?: K8sExecCommandOptions
+    ): Promise<K8sExecCommandResult>;
     remove(
         spec: K8sObject,
         options?: K8sRemoveOptions
