@@ -174,13 +174,15 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
             >
                 New
             </Button>
-            <IconButton
-                colorScheme="primary"
-                icon={<EditIcon />}
-                aria-label="Bulk open editor"
-                title="Bulk open editor"
-                onClick={onClickBulkEdit}
-            />
+            {resources.length > 0 && (
+                <IconButton
+                    colorScheme="primary"
+                    icon={<EditIcon />}
+                    aria-label="Bulk open editor"
+                    title="Bulk open editor"
+                    onClick={onClickBulkEdit}
+                />
+            )}
             {resources.length > 0 && (
                 <IconButton
                     colorScheme="primary"
