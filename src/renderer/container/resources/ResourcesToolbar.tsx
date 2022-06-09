@@ -1,4 +1,4 @@
-import { AddIcon, DeleteIcon } from "@chakra-ui/icons";
+import { AddIcon, DeleteIcon, EditIcon } from "@chakra-ui/icons";
 import { Button, IconButton } from "@chakra-ui/react";
 import React, { useCallback, useState } from "react";
 import {
@@ -8,6 +8,7 @@ import {
 import { Toolbar } from "../../component/main/Toolbar";
 import { useContextLock } from "../../context/context-lock";
 import {
+    appEditorForK8sObject,
     isAppEditorForK8sObject,
     newResourceEditor,
     useAppEditorsStore,
@@ -75,6 +76,17 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
             resourceType,
         ]
     );
+
+    const onClickBulkEdit = useCallback(() => {
+        const newEditors = resources?.map(appEditorForK8sObject) ?? [];
+        appEditorsStore.set((editors) => {
+            const editorIds = new Set(editors.map((e) => e.id));
+            return [
+                ...newEditors.filter((e) => !editorIds.has(e.id)),
+                ...editors,
+            ];
+        });
+    }, [appEditorsStore, resources]);
 
     const [isDeleting, setIsDeleting] = useState(false);
 
@@ -162,6 +174,13 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
             >
                 New
             </Button>
+            <IconButton
+                colorScheme="primary"
+                icon={<EditIcon />}
+                aria-label="Bulk open editor"
+                title="Bulk open editor"
+                onClick={onClickBulkEdit}
+            />
             {resources.length > 0 && (
                 <IconButton
                     colorScheme="primary"
