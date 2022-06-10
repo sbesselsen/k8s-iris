@@ -50,13 +50,17 @@ export function isEditorForResource(
     return false;
 }
 
-export function shellEditor(resource: K8sObject): AppEditor {
+export function shellEditor(
+    resource: K8sObject,
+    containerName: string
+): AppEditor {
     const resourceIdentifier = toK8sObjectIdentifier(resource);
     return {
         type: "pod-shell",
         id: `pod-shell:${resourceIdentifier.apiVersion}:${resourceIdentifier.kind}:${resourceIdentifier.namespace}:${resourceIdentifier.name}`,
         name: resourceIdentifier.name,
         namespace: resourceIdentifier.namespace,
+        containerName,
     };
 }
 

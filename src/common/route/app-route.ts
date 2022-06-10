@@ -23,6 +23,13 @@ export type AppEditor =
       }
     | {
           id: string;
+          type: "pod-shell";
+          name: string;
+          containerName: string;
+          namespace: string;
+      }
+    | {
+          id: string;
           type: "new-resource";
           name: string;
           apiVersion?: string;

@@ -1,8 +1,10 @@
 import { ChevronDownIcon, DeleteIcon, EditIcon } from "@chakra-ui/icons";
+import { FiTerminal } from "react-icons/fi";
 import {
     Box,
     Button,
     HStack,
+    Icon,
     IconButton,
     Menu,
     MenuButton,
@@ -29,6 +31,7 @@ import {
     resourceEditor,
     isEditorForResource,
     useAppEditorsStore,
+    shellEditor,
 } from "../../context/editors";
 import { useK8sNamespaces } from "../../context/k8s-namespaces";
 import { useAppParam } from "../../context/param";
@@ -41,6 +44,7 @@ import { useK8sClient } from "../../k8s/client";
 import { useK8sListWatch } from "../../k8s/list-watch";
 import { ResourceTypeSelector } from "../resources/ResourceTypeSelector";
 import { ResourceYamlEditor } from "./ResourceYamlEditor";
+import { useEditorOpener } from "../../hook/editor-link";
 
 export type ResourceEditorProps = {
     editorResource: K8sObjectIdentifier;
@@ -192,6 +196,8 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
     const client = useK8sClient();
     const showDialog = useDialog();
 
+    const openEditor = useEditorOpener();
+
     const isClusterLocked = useContextLock();
 
     const appEditorStore = useAppEditorsStore();
@@ -253,6 +259,12 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
         setIsDeleting,
         showDialog,
     ]);
+    const onClickShell = useCallback(
+        (containerName: string) => {
+            openEditor(shellEditor(object, containerName));
+        },
+        [openEditor, object]
+    );
 
     if (!kind || !apiVersion || !metadata) {
         return <Box p={4}>This resource is not available.</Box>;
@@ -284,6 +296,11 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
                     >
                         Edit
                     </Button>
+                    <ShellButton
+                        object={object}
+                        isDisabled={isDeleting}
+                        onClick={onClickShell}
+                    />
                     <IconButton
                         colorScheme="primary"
                         icon={<DeleteIcon />}
@@ -325,6 +342,63 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
         </ScrollBox>
     );
 });
+
+const ShellButton: React.FC<{
+    object: K8sObject;
+    isDisabled?: boolean;
+    onClick?: (containerName: string) => void;
+}> = (props) => {
+    const { object, onClick, isDisabled = false } = props;
+
+    const containers = useMemo(
+        () =>
+            (object as any).spec?.containers?.map((container) => ({
+                name: container.name,
+                onClick: () => {
+                    onClick(container.name);
+                },
+            })) ?? [],
+        [object]
+    );
+
+    if (containers.length === 1) {
+        return (
+            <IconButton
+                colorScheme="primary"
+                icon={<Icon as={FiTerminal} />}
+                aria-label="Shell"
+                title="Shell"
+                fontWeight="normal"
+                isDisabled={isDisabled}
+                onClick={containers[0].onClick}
+            />
+        );
+    } else {
+        return (
+            <Menu>
+                <MenuButton
+                    colorScheme="primary"
+                    as={IconButton}
+                    icon={<Icon as={FiTerminal} />}
+                    aria-label="Shell"
+                    title="Shell"
+                    fontWeight="normal"
+                    isDisabled={isDisabled}
+                />
+                <MenuList>
+                    {containers.map((container) => (
+                        <MenuItem
+                            key={container.name}
+                            onClick={container.onClick}
+                        >
+                            {container.name}
+                        </MenuItem>
+                    ))}
+                </MenuList>
+            </Menu>
+        );
+    }
+};
 
 const ShowDetailsToggle: React.FC<{
     value: boolean;

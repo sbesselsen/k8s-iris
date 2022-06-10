@@ -22,6 +22,7 @@ import React, {
     useCallback,
     useMemo,
 } from "react";
+import { FiTerminal } from "react-icons/fi";
 import { K8sObject } from "../../../common/k8s/client";
 import {
     AppEditor,
@@ -496,8 +497,14 @@ const SidebarEditorsMenuButton: React.FC<SidebarEditorsMenuButtonProps> = (
         [onClose]
     );
 
+    const leftIcon = useMemo(
+        () => (item.type === "pod-shell" ? <Icon as={FiTerminal} /> : null),
+        [item]
+    );
+
     return (
         <SidebarEditorsCustomMenuButton
+            leftIcon={leftIcon}
             rightIcon={icon}
             onClick={onSelect}
             onKeyDown={onKeyDown}
