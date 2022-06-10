@@ -26,8 +26,8 @@ import { ScrollBox } from "../../component/main/ScrollBox";
 import { Toolbar } from "../../component/main/Toolbar";
 import { useContextLock } from "../../context/context-lock";
 import {
-    appEditorForK8sObject,
-    isAppEditorForK8sObject,
+    resourceEditor,
+    isEditorForResource,
     useAppEditorsStore,
 } from "../../context/editors";
 import { useK8sNamespaces } from "../../context/k8s-namespaces";
@@ -241,7 +241,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
                 // Close the editor.
                 // TODO: some kind of bus for updates to objects, so we can do this in a central place?
                 appEditorStore.set((editors) =>
-                    editors.filter((e) => !isAppEditorForK8sObject(e, object))
+                    editors.filter((e) => !isEditorForResource(e, object))
                 );
             }
         })();
@@ -419,7 +419,7 @@ export const NewResourceEditor: React.FC<NewResourceEditorProps> = (props) => {
 
     const onAfterApply = useCallback(
         (object: K8sObject) => {
-            const createdResourceEditor = appEditorForK8sObject(object);
+            const createdResourceEditor = resourceEditor(object);
             setAppRoute((route) => {
                 if (route.activeEditor?.id === editorId) {
                     return { ...route, activeEditor: createdResourceEditor };

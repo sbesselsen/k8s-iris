@@ -8,8 +8,8 @@ import {
 import { Toolbar } from "../../component/main/Toolbar";
 import { useContextLock } from "../../context/context-lock";
 import {
-    appEditorForK8sObject,
-    isAppEditorForK8sObject,
+    resourceEditor,
+    isEditorForResource,
     newResourceEditor,
     useAppEditorsStore,
 } from "../../context/editors";
@@ -78,7 +78,7 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
     );
 
     const onClickBulkEdit = useCallback(() => {
-        const newEditors = resources?.map(appEditorForK8sObject) ?? [];
+        const newEditors = resources?.map(resourceEditor) ?? [];
         appEditorsStore.set((editors) => {
             const editorIds = new Set(editors.map((e) => e.id));
             return [
@@ -126,10 +126,7 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
                 // TODO: again, this coupling is bad, we want to do it automatically
                 appEditorStore.set((editors) =>
                     editors.filter(
-                        (e) =>
-                            !resources.some((r) =>
-                                isAppEditorForK8sObject(e, r)
-                            )
+                        (e) => !resources.some((r) => isEditorForResource(e, r))
                     )
                 );
             }

@@ -1,10 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { K8sObject, K8sObjectIdentifier } from "../../common/k8s/client";
-import {
-    appEditorForK8sObject,
-    appEditorForK8sObjectIdentifier,
-    useAppEditorsStore,
-} from "../context/editors";
+import { resourceEditor, useAppEditorsStore } from "../context/editors";
 import { useAppRouteGetter, useAppRouteSetter } from "../context/route";
 import { useIpcCall } from "./ipc";
 import { useModifierKeyRef } from "./keyboard";
@@ -22,9 +18,7 @@ export function useEditorLink(resource: K8sObject | K8sObjectIdentifier): {
     const appEditorsStore = useAppEditorsStore();
 
     const openEditor = useCallback(() => {
-        const editor = isK8sObject(resource)
-            ? appEditorForK8sObject(resource)
-            : appEditorForK8sObjectIdentifier(resource);
+        const editor = resourceEditor(resource);
         if (metaKeyRef.current) {
             console.log({
                 ...getAppRoute(),
@@ -61,10 +55,4 @@ export function useEditorLink(resource: K8sObject | K8sObjectIdentifier): {
     ]);
 
     return useMemo(() => ({ openEditor }), [openEditor]);
-}
-
-function isK8sObject(
-    resource: K8sObject | K8sObjectIdentifier
-): resource is K8sObject {
-    return "metadata" in (resource as any);
 }

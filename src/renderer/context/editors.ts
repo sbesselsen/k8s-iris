@@ -3,65 +3,61 @@ import {
     K8sObjectIdentifier,
     K8sResourceTypeIdentifier,
 } from "../../common/k8s/client";
+import { toK8sObjectIdentifier } from "../../common/k8s/util";
 import { AppEditor } from "../../common/route/app-route";
-import { useK8sApiResourceTypes } from "../k8s/api-resources";
 import { create } from "../util/state";
 
 export const { useStore: useAppEditorsStore, useStoreValue: useAppEditors } =
     create([] as AppEditor[]);
 
-export function appEditorForK8sObjectIdentifier(
-    resource: K8sObjectIdentifier
+export function resourceEditor(
+    resource: K8sObject | K8sObjectIdentifier
 ): AppEditor {
+    const resourceIdentifier = toK8sObjectIdentifier(resource);
     return {
         type: "resource",
-        id: `${resource.apiVersion}:${resource.kind}:${
-            resource.namespace ?? ""
-        }:${resource.name}`,
-        apiVersion: resource.apiVersion,
-        kind: resource.kind,
-        name: resource.name,
-        namespace: resource.namespace,
+        id: `${resourceIdentifier.apiVersion}:${resourceIdentifier.kind}:${
+            resourceIdentifier.namespace ?? ""
+        }:${resourceIdentifier.name}`,
+        apiVersion: resourceIdentifier.apiVersion,
+        kind: resourceIdentifier.kind,
+        name: resourceIdentifier.name,
+        namespace: resourceIdentifier.namespace,
     };
 }
 
-export function appEditorForK8sObject(resource: K8sObject): AppEditor {
+export function isEditorForResource(
+    editor: AppEditor,
+    resource: K8sObject | K8sObjectIdentifier
+): boolean {
+    const resourceIdentifier = toK8sObjectIdentifier(resource);
+    if (editor.type === "resource") {
+        return (
+            editor.apiVersion === resourceIdentifier.apiVersion &&
+            editor.kind === resourceIdentifier.kind &&
+            editor.name === resourceIdentifier.name &&
+            editor.namespace === resourceIdentifier.namespace
+        );
+    }
+    if (editor.type === "pod-shell") {
+        return (
+            resourceIdentifier.apiVersion === "v1" &&
+            resourceIdentifier.kind === "Pod" &&
+            editor.name === resourceIdentifier.name &&
+            editor.namespace === resourceIdentifier.namespace
+        );
+    }
+    return false;
+}
+
+export function shellEditor(resource: K8sObject): AppEditor {
+    const resourceIdentifier = toK8sObjectIdentifier(resource);
     return {
-        type: "resource",
-        id: `${resource.apiVersion}:${resource.kind}:${
-            resource.metadata.namespace ?? ""
-        }:${resource.metadata.name}`,
-        apiVersion: resource.apiVersion,
-        kind: resource.kind,
-        name: resource.metadata.name,
-        namespace: resource.metadata.namespace,
+        type: "pod-shell",
+        id: `pod-shell:${resourceIdentifier.apiVersion}:${resourceIdentifier.kind}:${resourceIdentifier.namespace}:${resourceIdentifier.name}`,
+        name: resourceIdentifier.name,
+        namespace: resourceIdentifier.namespace,
     };
-}
-
-export function isAppEditorForK8sObjectIdentifier(
-    editor: AppEditor,
-    resource: K8sObjectIdentifier
-): boolean {
-    return (
-        editor.type === "resource" &&
-        editor.apiVersion === resource.apiVersion &&
-        editor.kind === resource.kind &&
-        editor.name === resource.name &&
-        editor.namespace === resource.namespace
-    );
-}
-
-export function isAppEditorForK8sObject(
-    editor: AppEditor,
-    resource: K8sObject
-): boolean {
-    return (
-        editor.type === "resource" &&
-        editor.apiVersion === resource.apiVersion &&
-        editor.kind === resource.kind &&
-        editor.name === resource.metadata.name &&
-        editor.namespace === resource.metadata.namespace
-    );
 }
 
 let newResourceIndex = 1;

@@ -553,7 +553,7 @@ const AppContentEditor: React.FC<{ editor: AppEditor; isSelected: boolean }> =
         const { editor, isSelected } = props;
 
         return (
-            <ParamNamespace name={`editor:${editor.id}`} key={editor.id}>
+            <ParamNamespace name={`editor:${editor.id}`}>
                 <AppContentContainer isVisible={isSelected}>
                     {editor.type === "resource" && (
                         <ResourceEditor editorResource={editor} />

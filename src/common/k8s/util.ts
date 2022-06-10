@@ -33,6 +33,22 @@ export function resourceIdentifier(
     return `${obj.apiVersion}:${obj.kind}:${obj.namespace ?? ""}:${obj.name}`;
 }
 
+export function toK8sObjectIdentifier(
+    obj: K8sObject | K8sObjectIdentifier
+): K8sObjectIdentifier {
+    if ("metadata" in obj) {
+        return {
+            apiVersion: obj.apiVersion,
+            kind: obj.kind,
+            name: obj.metadata.name,
+            ...(obj.metadata.namespace
+                ? { namespace: obj.metadata.namespace }
+                : {}),
+        };
+    }
+    return obj;
+}
+
 export function addListObject<T extends K8sObject = K8sObject>(
     list: K8sObjectList<T>,
     obj: T,
