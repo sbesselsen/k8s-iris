@@ -9,6 +9,9 @@ import {
     K8sClient,
     K8sExecCommandOptions,
     K8sExecCommandSpec,
+    K8sExecHandler,
+    K8sExecOptions,
+    K8sExecSpec,
     K8sObject,
     K8sObjectList,
     K8sObjectListQuery,
@@ -38,6 +41,7 @@ export function useK8sClient(kubeContext?: string): K8sClient {
     const ipcListApiResourceTypes = useIpcCall(
         (ipc) => ipc.k8s.listApiResourceTypes
     );
+    const ipcExec = useIpcCall((ipc) => ipc.k8s.exec);
     const ipcExecCommand = useIpcCall((ipc) => ipc.k8s.execCommand);
     const listWatchesRef = useRef<K8sObjectListWatch[]>([]);
 
@@ -151,6 +155,53 @@ export function useK8sClient(kubeContext?: string): K8sClient {
             spec: K8sExecCommandSpec,
             options?: K8sExecCommandOptions
         ) => ipcExecCommand({ context, spec, options });
+
+        const exec = async (
+            spec: K8sExecSpec,
+            options?: K8sExecOptions
+        ): Promise<K8sExecHandler> => {
+            const hooks = await ipcExec({
+                context,
+                spec,
+                options,
+            });
+            return {
+                onReceive: (listener) => {
+                    hooks.onMessage((message) => {
+                        if (typeof message === "string") {
+                            console.error(
+                                "Invalid message in onReceive from exec()"
+                            );
+                            return;
+                        }
+                        const view = new Uint8Array(message);
+                        if (view[0] === 0) {
+                            // stdout
+                            listener(message.slice(1), null);
+                        } else {
+                            // stderr
+                            listener(null, message.slice(1));
+                        }
+                    });
+                },
+                onEnd: (listener) => {
+                    hooks.onClose(listener);
+                },
+                send: (chunk) => {
+                    hooks.send(chunk);
+                },
+                resizeTerminal: (size) => {
+                    const { cols, rows } = size;
+                    hooks.send(
+                        JSON.stringify({ cmd: "resizeTerminal", cols, rows })
+                    );
+                },
+                close: async () => {
+                    // TODO: should we await something here?
+                    hooks.close();
+                },
+            };
+        };
         const listApiResourceTypes = () => ipcListApiResourceTypes({ context });
 
         return {
@@ -161,6 +212,7 @@ export function useK8sClient(kubeContext?: string): K8sClient {
             remove,
             list,
             listWatch,
+            exec,
             execCommand,
             listApiResourceTypes,
         };
@@ -173,6 +225,7 @@ export function useK8sClient(kubeContext?: string): K8sClient {
         ipcRemove,
         ipcList,
         ipcListWatch,
+        ipcExec,
         ipcExecCommand,
     ]);
 

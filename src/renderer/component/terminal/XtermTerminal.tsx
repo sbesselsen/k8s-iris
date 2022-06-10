@@ -1,16 +1,20 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Box, Button } from "@chakra-ui/react";
+import React, { useEffect, useRef } from "react";
+import { Box, BoxProps, VStack } from "@chakra-ui/react";
 import { Terminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
+import { useWindowResizeListener } from "../../hook/window-resize";
 
-export const XtermTerminal: React.FC<{}> = (props) => {
+export type XtermTerminalProps = BoxProps & {
+    onInitializeTerminal?: (terminal: Terminal) => void;
+};
+
+export const XtermTerminal: React.FC<XtermTerminalProps> = (props) => {
+    const { onInitializeTerminal, ...boxProps } = props;
+
     const containerRef = useRef<HTMLDivElement>();
-
-    const [height, setHeight] = useState(200);
-    const onClick = useCallback(() => {
-        setHeight((h) => h + 50);
-    }, [setHeight]);
+    const fitAddonRef = useRef<FitAddon>();
+    const termRef = useRef<Terminal>();
 
     useEffect(() => {
         const term = new Terminal();
@@ -20,23 +24,29 @@ export const XtermTerminal: React.FC<{}> = (props) => {
         term.open(containerRef.current);
 
         fitAddon.fit();
+        fitAddonRef.current = fitAddon;
 
-        term.write("Hello from \x1B[1;3;31mxterm.js\x1B[0m $ ");
+        termRef.current = term;
+
         return () => {
             term.dispose();
+            termRef.current = null;
         };
+    }, [containerRef, fitAddonRef, termRef]);
+
+    useEffect(() => {
+        if (termRef.current && onInitializeTerminal) {
+            onInitializeTerminal(termRef.current);
+        }
+    }, [onInitializeTerminal, termRef]);
+
+    useWindowResizeListener(() => {
+        fitAddonRef.current.fit();
     }, [containerRef]);
 
     return (
-        <Box>
-            <Button onClick={onClick}>klik</Button>
-            <Box
-                w="300px"
-                h={height + "px"}
-                bg="red"
-                border="2px solid yellow"
-                ref={containerRef}
-            ></Box>
-        </Box>
+        <VStack bg="black" p={2} {...boxProps} spacing={0} alignItems="stretch">
+            <Box flex="1 0 0" overflow="hidden" ref={containerRef} />
+        </VStack>
     );
 };

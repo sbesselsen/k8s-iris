@@ -103,10 +103,14 @@ export type K8sExecCommandResult = {
 };
 
 export type K8sExecHandler = {
-    onStdout: (listener: (chunk: ArrayBuffer) => void) => void;
-    onStderr: (listener: (chunk: ArrayBuffer) => void) => void;
+    onReceive: (
+        listener: (
+            stdout: ArrayBuffer | null,
+            stderr: ArrayBuffer | null
+        ) => void
+    ) => void;
     onEnd: (listener: (status?: K8sExecCommandStatus) => void) => void;
-    onError: (listener: (error: any) => void) => void;
+    resizeTerminal: (size: { cols: number; rows: number }) => void;
     send: (chunk: ArrayBuffer) => void;
     close: () => Promise<void>;
 };

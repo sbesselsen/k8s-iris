@@ -91,31 +91,67 @@ export type IpcMainSocketHooks = {
     send: (message: string | ArrayBuffer) => void;
 };
 
+let portId = 1;
+
 export function ipcProvideSocket<T>(
     name: string,
-    handler: (data: T, hooks: IpcMainSocketHooks) => void
+    handler: (data: T, hooks: IpcMainSocketHooks) => Promise<void>
 ) {
     ipcMain.on(prefixSocketChannel(name), async (e, data) => {
+        const webContents = e.sender;
+
         const port = e.ports[0];
-        handler(data, {
-            onMessage: (listener: (message: string | ArrayBuffer) => void) => {
-                port.on("message", (e) => {
-                    listener(e.data);
-                });
-                port.start();
-            },
-            onClose: (listener: () => void) => {
-                port.on("close", () => {
-                    listener();
-                });
-            },
-            close: () => {
-                port.postMessage([-1, null]);
-                port.close();
-            },
-            send: (message: string | ArrayBuffer) => {
-                port.postMessage([0, message]);
-            },
-        });
+        const id = portId++;
+        console.log("Opening socket port", id);
+
+        let isClosed = false;
+
+        function closePort() {
+            if (isClosed) {
+                return;
+            }
+            console.log("Closing socket port", id);
+            port.close();
+            isClosed = true;
+        }
+
+        function webContentsDestroyListener() {
+            closePort();
+        }
+
+        webContents.once("destroyed", webContentsDestroyListener);
+        webContents.once("did-navigate", webContentsDestroyListener);
+
+        try {
+            await handler(data, {
+                onMessage: (
+                    listener: (message: string | ArrayBuffer) => void
+                ) => {
+                    port.on("message", (e) => {
+                        listener(e.data);
+                    });
+                    port.start();
+                },
+                onClose: (listener: () => void) => {
+                    port.on("close", () => {
+                        listener();
+                    });
+                },
+                close: () => {
+                    port.postMessage([-1, null]);
+                    closePort();
+                },
+                send: (message: string | ArrayBuffer) => {
+                    port.postMessage([0, message]);
+                },
+            });
+            // We are ready. Send start message.
+            console.log("Opened socket handler", id);
+            port.postMessage([-2, null]);
+        } catch (e) {
+            console.error("Error opening socket handler", id, e);
+            port.postMessage([-2, wrapError(e)]);
+            closePort();
+        }
     });
 }

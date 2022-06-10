@@ -1,4 +1,5 @@
 import { CloudK8sContextInfo } from "../cloud/k8s";
+import { IpcRendererSocketHooks } from "../ipc/renderer";
 import {
     K8sApplyOptions,
     K8sContext,
@@ -82,6 +83,11 @@ export type IpcCalls = {
             },
             watcher: K8sPartialObjectListWatcher<T>
         ): { stop: () => void };
+        exec(params: {
+            context: string;
+            spec: K8sExecCommandSpec;
+            options: K8sExecCommandOptions;
+        }): Promise<IpcRendererSocketHooks>;
         execCommand(params: {
             context: string;
             spec: K8sExecCommandSpec;

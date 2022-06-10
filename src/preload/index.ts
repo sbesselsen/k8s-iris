@@ -3,6 +3,7 @@ import {
     ipcInvoker,
     ipcEventSubscriber,
     ipcSubscriber,
+    ipcSocketOpener,
 } from "../common/ipc/renderer";
 import { IpcCalls } from "../common/ipc-types";
 
@@ -19,6 +20,7 @@ const remove = ipcInvoker("k8s:client:remove");
 const list = ipcInvoker("k8s:client:list");
 const listWatch = ipcSubscriber("k8s:client:listWatch");
 const listApiResourceTypes = ipcInvoker("k8s:client:listApiResourceTypes");
+const exec = ipcSocketOpener("k8s:client:exec");
 const execCommand = ipcInvoker("k8s:client:execCommand");
 const onWindowFocusChange = ipcEventSubscriber<boolean>(
     "app:window:focus-change"
@@ -41,6 +43,7 @@ contextBridge.exposeInMainWorld("charm", {
         patch,
         replace,
         remove,
+        exec,
         execCommand,
         list,
         listWatch,

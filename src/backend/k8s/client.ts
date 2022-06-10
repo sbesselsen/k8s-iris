@@ -707,10 +707,18 @@ export function createClient(
         spec: K8sExecSpec,
         options?: K8sExecOptions
     ): Promise<K8sExecHandler> => {
+        if (opts.readonly) {
+            throw new Error("Running in readonly mode");
+        }
+
         // TODO: set some high water marks?
         const stdout = new PassThrough();
         const stderr = new PassThrough();
         const stdin = new PassThrough();
+
+        // Make this stream resizeable so .exec handles it properly.
+        (stdout as any).rows = 30;
+        (stdout as any).columns = 80;
 
         let socket: {
             close(): void;
@@ -720,10 +728,10 @@ export function createClient(
         let closeListener: (status?: K8sExecCommandStatus) => void;
 
         const handler: K8sExecHandler = {
-            onStdout(listener) {
-                if (stdoutListener && stdoutListener !== listener) {
+            onReceive(listener) {
+                if (stdoutListener) {
                     throw new Error(
-                        "Cannot call .onStdout() multiple times with different arguments"
+                        "Cannot call .onReceive() multiple times with different arguments"
                     );
                 }
                 stdoutListener = (chunk: string | Buffer) => {
@@ -732,19 +740,13 @@ export function createClient(
                             typeof chunk === "string"
                                 ? Buffer.from(chunk, "utf8")
                                 : chunk
-                        )
+                        ),
+                        null
                     );
                 };
-                stdout.on("data", stdoutListener);
-            },
-            onStderr(listener) {
-                if (stderrListener && stderrListener !== listener) {
-                    throw new Error(
-                        "Cannot call .onStdout() multiple times with different arguments"
-                    );
-                }
                 stderrListener = (chunk: string | Buffer) => {
                     listener(
+                        null,
                         bufferToArrayBuffer(
                             typeof chunk === "string"
                                 ? Buffer.from(chunk, "utf8")
@@ -752,13 +754,16 @@ export function createClient(
                         )
                     );
                 };
+                stdout.on("data", stdoutListener);
                 stderr.on("data", stderrListener);
-            },
-            onError(listener) {
-                // TODO: don't really know what to do here yet
             },
             onEnd(listener) {
                 closeListener = listener;
+            },
+            resizeTerminal(size) {
+                (stdout as any).rows = size.rows;
+                (stdout as any).columns = size.cols;
+                stdout.emit("resize");
             },
             send(chunk) {
                 stdin.push(Buffer.from(chunk));
@@ -800,11 +805,13 @@ export function createClient(
         const handler = await exec({ ...spec, tty: false });
         const stdout: Buffer[] = [];
         const stderr: Buffer[] = [];
-        handler.onStdout((chunk) => {
-            stdout.push(Buffer.from(chunk));
-        });
-        handler.onStderr((chunk) => {
-            stderr.push(Buffer.from(chunk));
+        handler.onReceive((stdoutChunk, stderrChunk) => {
+            if (stdoutChunk) {
+                stdout.push(Buffer.from(stdoutChunk));
+            }
+            if (stderrChunk) {
+                stdout.push(Buffer.from(stderrChunk));
+            }
         });
         return new Promise((resolve) => {
             handler.onEnd((status) => {

@@ -4,6 +4,7 @@ import {
     prefixHandlerChannel,
     prefixSocketChannel,
     prefixSubscriptionChannel,
+    unwrapError,
 } from "./shared";
 
 let ipcRendererSubscriberTotal = 0;
@@ -135,14 +136,40 @@ export type IpcRendererSocketHooks = {
 
 export function ipcSocketOpener<T>(
     name: string
-): (data: T) => IpcRendererSocketHooks {
-    return (data: T) => {
+): (data: T) => Promise<IpcRendererSocketHooks> {
+    return async (data: T) => {
         const channel = new MessageChannel();
         const port = channel.port2;
+
+        const startMessagePromise = new Promise<void>((resolve, reject) => {
+            port.onmessage = (e) => {
+                const [type, error] = e.data;
+                if (type === -2) {
+                    // This is the start message.
+                    if (error) {
+                        reject(unwrapError(error));
+                        return;
+                    }
+                    resolve();
+                } else {
+                    reject(new Error("Invalid start message received"));
+                }
+            };
+        });
+        console.log("Opening socket", prefixSocketChannel(name));
+
         ipcRenderer.postMessage(prefixSocketChannel(name), data, [
             channel.port1,
         ]);
+
+        console.log("Waiting for start message");
+
         let closeListener: () => void | undefined;
+
+        // Wait until the other end is ready.
+        await startMessagePromise;
+
+        console.log("Start message received");
 
         return {
             onMessage: (listener: (message: string | ArrayBuffer) => void) => {

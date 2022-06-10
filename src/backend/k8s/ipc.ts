@@ -1,9 +1,15 @@
 import { K8sClientManager } from "./index";
-import { ipcHandle, ipcProvideSubscription } from "../../common/ipc/main";
+import {
+    ipcHandle,
+    ipcProvideSocket,
+    ipcProvideSubscription,
+} from "../../common/ipc/main";
 import {
     K8sApplyOptions,
     K8sExecCommandOptions,
     K8sExecCommandSpec,
+    K8sExecOptions,
+    K8sExecSpec,
     K8sObject,
     K8sObjectListQuery,
     K8sPatchOptions,
@@ -68,6 +74,72 @@ export const wireK8sClientIpc = (clientManager: K8sClientManager): void => {
             context: string;
             spec: K8sObjectListQuery;
         }) => clientManager.clientForContext(context).list(spec)
+    );
+    ipcProvideSocket(
+        "k8s:client:exec",
+        async (
+            {
+                context,
+                spec,
+                options,
+            }: { context: string; spec: K8sExecSpec; options: K8sExecOptions },
+            hooks
+        ) => {
+            const client = clientManager.clientForContext(context);
+            const execHandler = await client.exec(spec, options);
+
+            execHandler.onReceive((stdoutChunk, stderrChunk) => {
+                if (stdoutChunk) {
+                    const newBuffer = new ArrayBuffer(
+                        stdoutChunk.byteLength + 1
+                    );
+                    const intArray = new Uint8Array(newBuffer);
+                    intArray[0] = 0;
+                    intArray.set(new Uint8Array(stdoutChunk), 1);
+                    hooks.send(newBuffer);
+                }
+                if (stderrChunk) {
+                    const newBuffer = new ArrayBuffer(
+                        stderrChunk.byteLength + 1
+                    );
+                    const intArray = new Uint8Array(newBuffer);
+                    intArray[0] = 1;
+                    intArray.set(new Uint8Array(stderrChunk), 1);
+                    hooks.send(newBuffer);
+                }
+            });
+            execHandler.onEnd((status) => {
+                console.log("ExecHandler onEnd", status);
+                hooks.close();
+            });
+            hooks.onClose(() => {
+                execHandler.close();
+            });
+            hooks.onMessage((message) => {
+                if (typeof message === "string") {
+                    // Side channel data.
+                    let data: any;
+                    try {
+                        data = JSON.parse(message);
+                    } catch (e) {
+                        console.error("Invalid side channel data", message);
+                    }
+                    if (
+                        data.cmd === "resizeTerminal" &&
+                        typeof data.cols === "number" &&
+                        typeof data.rows === "number"
+                    ) {
+                        execHandler.resizeTerminal({
+                            cols: data.cols,
+                            rows: data.rows,
+                        });
+                    }
+                } else {
+                    // Plain shell data.
+                    execHandler.send(message);
+                }
+            });
+        }
     );
     ipcHandle(
         "k8s:client:execCommand",

@@ -49,6 +49,7 @@ import {
 } from "../../context/editors";
 import { LazyComponent } from "../../component/main/LazyComponent";
 import { HibernateContainer } from "../../context/hibernate";
+import { PodShellEditor } from "../editor/PodShellEditor";
 
 const ClusterOverview = React.lazy(async () => ({
     default: (await import("../cluster/ClusterOverview")).ClusterOverview,
@@ -569,6 +570,13 @@ const AppContentEditor: React.FC<{ editor: AppEditor; isSelected: boolean }> =
                                       }
                                     : null
                             }
+                        />
+                    )}
+                    {editor.type === "pod-shell" && (
+                        <PodShellEditor
+                            name={editor.name}
+                            namespace={editor.namespace}
+                            containerName={editor.containerName}
                         />
                     )}
                 </AppContentContainer>
