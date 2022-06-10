@@ -2,6 +2,8 @@ import { K8sClientManager } from "./index";
 import { ipcHandle, ipcProvideSubscription } from "../../common/ipc/main";
 import {
     K8sApplyOptions,
+    K8sExecCommandOptions,
+    K8sExecCommandSpec,
     K8sObject,
     K8sObjectListQuery,
     K8sPatchOptions,
@@ -66,6 +68,18 @@ export const wireK8sClientIpc = (clientManager: K8sClientManager): void => {
             context: string;
             spec: K8sObjectListQuery;
         }) => clientManager.clientForContext(context).list(spec)
+    );
+    ipcHandle(
+        "k8s:client:execCommand",
+        async ({
+            context,
+            spec,
+            options,
+        }: {
+            context: string;
+            spec: K8sExecCommandSpec;
+            options: K8sExecCommandOptions;
+        }) => clientManager.clientForContext(context).execCommand(spec, options)
     );
     ipcProvideSubscription(
         "k8s:client:listWatch",

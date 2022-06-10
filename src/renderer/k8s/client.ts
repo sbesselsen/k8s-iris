@@ -7,6 +7,8 @@ import {
 import {
     K8sApplyOptions,
     K8sClient,
+    K8sExecCommandOptions,
+    K8sExecCommandSpec,
     K8sObject,
     K8sObjectList,
     K8sObjectListQuery,
@@ -36,6 +38,7 @@ export function useK8sClient(kubeContext?: string): K8sClient {
     const ipcListApiResourceTypes = useIpcCall(
         (ipc) => ipc.k8s.listApiResourceTypes
     );
+    const ipcExecCommand = useIpcCall((ipc) => ipc.k8s.execCommand);
     const listWatchesRef = useRef<K8sObjectListWatch[]>([]);
 
     const isLocked = useContextLock();
@@ -144,6 +147,10 @@ export function useK8sClient(kubeContext?: string): K8sClient {
             listWatchesRef.current.push(result);
             return result;
         };
+        const execCommand = (
+            spec: K8sExecCommandSpec,
+            options?: K8sExecCommandOptions
+        ) => ipcExecCommand({ context, spec, options });
         const listApiResourceTypes = () => ipcListApiResourceTypes({ context });
 
         return {
@@ -154,6 +161,7 @@ export function useK8sClient(kubeContext?: string): K8sClient {
             remove,
             list,
             listWatch,
+            execCommand,
             listApiResourceTypes,
         };
     }, [
@@ -165,6 +173,7 @@ export function useK8sClient(kubeContext?: string): K8sClient {
         ipcRemove,
         ipcList,
         ipcListWatch,
+        ipcExecCommand,
     ]);
 
     return client;

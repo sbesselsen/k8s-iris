@@ -2,6 +2,9 @@ import { CloudK8sContextInfo } from "../cloud/k8s";
 import {
     K8sApplyOptions,
     K8sContext,
+    K8sExecCommandOptions,
+    K8sExecCommandResult,
+    K8sExecCommandSpec,
     K8sObject,
     K8sObjectList,
     K8sObjectListQuery,
@@ -79,6 +82,11 @@ export type IpcCalls = {
             },
             watcher: K8sPartialObjectListWatcher<T>
         ): { stop: () => void };
+        execCommand(params: {
+            context: string;
+            spec: K8sExecCommandSpec;
+            options: K8sExecCommandOptions;
+        }): Promise<K8sExecCommandResult>;
         listApiResourceTypes(params: {
             context: string;
         }): Promise<K8sResourceTypeInfo[]>;
