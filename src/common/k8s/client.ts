@@ -115,6 +115,31 @@ export type K8sExecHandler = {
     close: () => Promise<void>;
 };
 
+export type K8sLogSpec = {
+    namespace: string;
+    podName: string;
+    containerName: string;
+};
+
+export type K8sLogOptions = {
+    previous?: boolean;
+    timestamps?: boolean;
+    match?: string;
+};
+
+export type K8sLogResult = {
+    logLines: string[];
+};
+
+export type K8sLogWatchOptions = K8sLogOptions & {
+    onLogLine: (line: string) => void;
+    onEnd: () => void;
+};
+
+export type K8sLogWatch = {
+    stop(): void;
+};
+
 export type K8sClient = {
     read(spec: K8sObject): Promise<K8sObject | null>;
     apply(spec: K8sObject, options?: K8sApplyOptions): Promise<K8sObject>;
@@ -136,5 +161,7 @@ export type K8sClient = {
         spec: K8sObjectListQuery,
         watcher: K8sObjectListWatcher<T>
     ): K8sObjectListWatch;
+    log(spec: K8sLogSpec, options?: K8sLogOptions): Promise<K8sLogResult>;
+    logWatch(spec: K8sLogSpec, options: K8sLogWatchOptions): K8sLogWatch;
     listApiResourceTypes(): Promise<K8sResourceTypeInfo[]>;
 };

@@ -1,9 +1,10 @@
 import * as k8s from "@kubernetes/client-node";
-import { KubeConfig, KubernetesObject } from "@kubernetes/client-node";
+import { KubeConfig, KubernetesObject, Log } from "@kubernetes/client-node";
 import * as request from "request";
 import { exec as execChildProcess } from "child_process";
 import { Exec } from "@kubernetes/client-node";
 import { PassThrough } from "stream";
+import { isMatch } from "matcher";
 import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
@@ -29,6 +30,11 @@ import {
     K8sExecCommandOptions,
     K8sExecCommandStatus,
     K8sExecCommandResult,
+    K8sLogSpec,
+    K8sLogOptions,
+    K8sLogResult,
+    K8sLogWatchOptions,
+    K8sLogWatch,
 } from "../../common/k8s/client";
 import {
     fetchApiList,
@@ -47,6 +53,7 @@ import { CharmPatchedExecAuth } from "./authenticator/exec";
 import { toYaml } from "../../common/util/yaml";
 import { shellOptions } from "../util/shell";
 import { bufferToArrayBuffer } from "../util/buffer";
+import { streamSplitter } from "../../common/util/stream-splitter";
 
 const defaultRemoveOptions: K8sRemoveOptions = {
     waitForCompletion: true,
@@ -827,6 +834,113 @@ export function createClient(
         });
     };
 
+    const log = async (
+        spec: K8sLogSpec,
+        options?: K8sLogOptions
+    ): Promise<K8sLogResult> => {
+        let resolveReadyPromise: () => void;
+        const readyPromise = new Promise<void>((resolve) => {
+            resolveReadyPromise = resolve;
+        });
+        const logLines: string[] = [];
+        innerLogWatch(spec, {
+            ...options,
+            follow: false,
+            onLogLine: (line) => {
+                logLines.push(line);
+            },
+            onEnd: resolveReadyPromise,
+        });
+        await readyPromise;
+        return { logLines };
+    };
+
+    const innerLogWatch = (
+        spec: K8sLogSpec,
+        options: K8sLogWatchOptions & { follow: boolean }
+    ): K8sLogWatch => {
+        let stopped = false;
+        let ended = false;
+        let request: {
+            destroy: () => void;
+        };
+
+        const watch = {
+            stop() {
+                stopped = true;
+                request?.destroy();
+                if (!ended) {
+                    ended = true;
+                    options.onEnd();
+                }
+            },
+        };
+
+        (async () => {
+            const log = new Log(kubeConfig);
+
+            const logOutput = new PassThrough();
+            logOutput.setEncoding("utf8");
+
+            request = await log.log(
+                spec.namespace,
+                spec.podName,
+                spec.containerName,
+                logOutput,
+                {
+                    previous: options.previous ?? false,
+                    timestamps: options.timestamps ?? false,
+                    follow: options.follow,
+                }
+            );
+            if (stopped) {
+                return;
+            }
+
+            const match: (line: string) => boolean = options.match
+                ? (line: string) =>
+                      isMatch(
+                          line,
+                          options.match.startsWith("!")
+                              ? options.match
+                              : "*" + options.match + "*",
+                          {
+                              caseSensitive: false,
+                          }
+                      )
+                : () => true;
+
+            const splitter = streamSplitter(/[\n\r]+/, (line) => {
+                if (stopped) {
+                    return;
+                }
+                if (match(line)) {
+                    options.onLogLine(line);
+                }
+            });
+            logOutput.on("data", (chunk) => {
+                splitter.push(chunk);
+            });
+
+            logOutput.on("end", () => {
+                splitter.end();
+                if (!ended) {
+                    ended = true;
+                    options.onEnd();
+                }
+            });
+        })();
+
+        return watch;
+    };
+
+    const logWatch = (
+        spec: K8sLogSpec,
+        options: K8sLogWatchOptions
+    ): K8sLogWatch => {
+        return innerLogWatch(spec, { ...options, follow: true });
+    };
+
     return {
         read,
         apply,
@@ -837,6 +951,8 @@ export function createClient(
         execCommand,
         list,
         listWatch,
+        log,
+        logWatch,
         retryConnections,
         listApiResourceTypes,
     };
