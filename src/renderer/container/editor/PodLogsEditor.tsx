@@ -58,12 +58,7 @@ export const PodLogsEditor: React.FC<PodLogsEditorProps> = (props) => {
                 p={2}
                 overflowY="scroll"
             >
-                {lines.map((line, index) => (
-                    <Fragment key={index}>
-                        {line}
-                        <br />
-                    </Fragment>
-                ))}
+                <Box whiteSpace="pre-line">{lines.join("\n")}</Box>
                 <Box ref={logBottomRef} pt={2}>
                     {isEnded ? (
                         "(log ended)"
