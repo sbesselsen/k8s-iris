@@ -12,6 +12,10 @@ import {
     K8sExecHandler,
     K8sExecOptions,
     K8sExecSpec,
+    K8sLogOptions,
+    K8sLogSpec,
+    K8sLogWatch,
+    K8sLogWatchOptions,
     K8sObject,
     K8sObjectList,
     K8sObjectListQuery,
@@ -43,6 +47,8 @@ export function useK8sClient(kubeContext?: string): K8sClient {
     );
     const ipcExec = useIpcCall((ipc) => ipc.k8s.exec);
     const ipcExecCommand = useIpcCall((ipc) => ipc.k8s.execCommand);
+    const ipcLog = useIpcCall((ipc) => ipc.k8s.log);
+    const ipcLogWatch = useIpcCall((ipc) => ipc.k8s.logWatch);
     const listWatchesRef = useRef<K8sObjectListWatch[]>([]);
 
     const isLocked = useContextLock();
@@ -204,6 +210,39 @@ export function useK8sClient(kubeContext?: string): K8sClient {
         };
         const listApiResourceTypes = () => ipcListApiResourceTypes({ context });
 
+        const log = (spec: K8sLogSpec, options?: K8sLogOptions) =>
+            ipcLog({ context, spec, options });
+        const logWatch = (
+            spec: K8sLogSpec,
+            options?: K8sLogWatchOptions
+        ): K8sLogWatch => {
+            const { onLogLine, onEnd, ...otherOptions } = options;
+            const subscription = ipcLogWatch(
+                {
+                    context,
+                    spec,
+                    options: otherOptions,
+                },
+                (error, logLines) => {
+                    if (error) {
+                        console.error("logWatch error: ", error);
+                    }
+                    if (logLines) {
+                        if (logLines.length === 0) {
+                            onEnd();
+                        } else {
+                            logLines.forEach(onLogLine);
+                        }
+                    }
+                }
+            );
+            return {
+                stop() {
+                    subscription.stop();
+                },
+            };
+        };
+
         return {
             read,
             apply,
@@ -212,6 +251,8 @@ export function useK8sClient(kubeContext?: string): K8sClient {
             remove,
             list,
             listWatch,
+            log,
+            logWatch,
             exec,
             execCommand,
             listApiResourceTypes,
@@ -227,6 +268,8 @@ export function useK8sClient(kubeContext?: string): K8sClient {
         ipcListWatch,
         ipcExec,
         ipcExecCommand,
+        ipcLog,
+        ipcLogWatch,
     ]);
 
     return client;

@@ -10,6 +10,9 @@ import {
     K8sExecCommandSpec,
     K8sExecOptions,
     K8sExecSpec,
+    K8sLogOptions,
+    K8sLogSpec,
+    K8sLogWatchOptions,
     K8sObject,
     K8sObjectListQuery,
     K8sPatchOptions,
@@ -153,6 +156,18 @@ export const wireK8sClientIpc = (clientManager: K8sClientManager): void => {
             options: K8sExecCommandOptions;
         }) => clientManager.clientForContext(context).execCommand(spec, options)
     );
+    ipcHandle(
+        "k8s:client:log",
+        async ({
+            context,
+            spec,
+            options,
+        }: {
+            context: string;
+            spec: K8sLogSpec;
+            options: K8sLogOptions;
+        }) => clientManager.clientForContext(context).log(spec, options)
+    );
     ipcProvideSubscription(
         "k8s:client:listWatch",
         (
@@ -188,6 +203,36 @@ export const wireK8sClientIpc = (clientManager: K8sClientManager): void => {
             return {
                 stop() {
                     listWatch.stop();
+                },
+            };
+        }
+    );
+    ipcProvideSubscription(
+        "k8s:client:logWatch",
+        (
+            {
+                context,
+                spec,
+                options,
+            }: {
+                context: string;
+                spec: K8sLogSpec;
+                options: Omit<K8sLogWatchOptions, "onLogLine" | "onEnd">;
+            },
+            send
+        ) => {
+            const onLogLine = (line: string) => {
+                send(undefined, [line]);
+            };
+            const onEnd = () => {
+                send(undefined, []);
+            };
+            const logWatch = clientManager
+                .clientForContext(context)
+                .logWatch(spec, { ...options, onLogLine, onEnd });
+            return {
+                stop() {
+                    logWatch.stop();
                 },
             };
         }

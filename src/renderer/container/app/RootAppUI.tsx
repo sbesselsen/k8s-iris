@@ -50,6 +50,7 @@ import {
 import { LazyComponent } from "../../component/main/LazyComponent";
 import { HibernateContainer } from "../../context/hibernate";
 import { PodShellEditor } from "../editor/PodShellEditor";
+import { PodLogsEditor } from "../editor/PodLogsEditor";
 
 const ClusterOverview = React.lazy(async () => ({
     default: (await import("../cluster/ClusterOverview")).ClusterOverview,
@@ -555,31 +556,40 @@ const AppContentEditor: React.FC<{ editor: AppEditor; isSelected: boolean }> =
 
         return (
             <ParamNamespace name={`editor:${editor.id}`}>
-                <AppContentContainer isVisible={isSelected}>
-                    {editor.type === "resource" && (
-                        <ResourceEditor editorResource={editor} />
-                    )}
-                    {editor.type === "new-resource" && (
-                        <NewResourceEditor
-                            editorId={editor.id}
-                            resourceType={
-                                editor.apiVersion && editor.kind
-                                    ? {
-                                          apiVersion: editor.apiVersion,
-                                          kind: editor.kind,
-                                      }
-                                    : null
-                            }
-                        />
-                    )}
-                    {editor.type === "pod-shell" && (
-                        <PodShellEditor
-                            name={editor.name}
-                            namespace={editor.namespace}
-                            containerName={editor.containerName}
-                        />
-                    )}
-                </AppContentContainer>
+                <HibernateContainer hibernate={!isSelected}>
+                    <AppContentContainer isVisible={isSelected}>
+                        {editor.type === "resource" && (
+                            <ResourceEditor editorResource={editor} />
+                        )}
+                        {editor.type === "new-resource" && (
+                            <NewResourceEditor
+                                editorId={editor.id}
+                                resourceType={
+                                    editor.apiVersion && editor.kind
+                                        ? {
+                                              apiVersion: editor.apiVersion,
+                                              kind: editor.kind,
+                                          }
+                                        : null
+                                }
+                            />
+                        )}
+                        {editor.type === "pod-shell" && (
+                            <PodShellEditor
+                                name={editor.name}
+                                namespace={editor.namespace}
+                                containerName={editor.containerName}
+                            />
+                        )}
+                        {editor.type === "pod-logs" && (
+                            <PodLogsEditor
+                                name={editor.name}
+                                namespace={editor.namespace}
+                                containerName={editor.containerName}
+                            />
+                        )}
+                    </AppContentContainer>
+                </HibernateContainer>
             </ParamNamespace>
         );
     });

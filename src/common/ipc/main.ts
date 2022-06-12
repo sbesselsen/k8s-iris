@@ -34,6 +34,7 @@ export function ipcProvideSubscription<T, U>(
             `${name}:${subscriptionChannelId++}`
         );
 
+        let webContentsDidChange = false;
         let stop = () => {};
 
         ipcMain.once(`${subscriptionChannel}:start`, (e) => {
@@ -42,6 +43,13 @@ export function ipcProvideSubscription<T, U>(
 
             try {
                 const handlerResult = handler(data, (error, message) => {
+                    if (webContentsDidChange) {
+                        console.log(
+                            "Trying to send message to changed webContents"
+                        );
+                        return;
+                    }
+
                     // We have received a message from the handler.
                     if (message === undefined && error === undefined) {
                         // This is the last message. Send a termination message down the chute.
@@ -62,10 +70,12 @@ export function ipcProvideSubscription<T, U>(
             }
 
             const webContentsDestroyListener = () => {
+                webContentsDidChange = true;
                 stop();
             };
 
             const webContentsDidNavigateListener = () => {
+                webContentsDidChange = true;
                 stop();
             };
 

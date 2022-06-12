@@ -1,5 +1,6 @@
 import { ChevronDownIcon, DeleteIcon, EditIcon } from "@chakra-ui/icons";
 import { FiTerminal } from "react-icons/fi";
+import { RiTextWrap } from "react-icons/ri";
 import {
     Box,
     Button,
@@ -31,6 +32,7 @@ import {
     resourceEditor,
     isEditorForResource,
     useAppEditorsStore,
+    logsEditor,
     shellEditor,
 } from "../../context/editors";
 import { useK8sNamespaces } from "../../context/k8s-namespaces";
@@ -265,6 +267,12 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
         },
         [openEditor, object]
     );
+    const onClickLogs = useCallback(
+        (containerName: string) => {
+            openEditor(logsEditor(object, containerName));
+        },
+        [openEditor, object]
+    );
 
     if (!kind || !apiVersion || !metadata) {
         return <Box p={4}>This resource is not available.</Box>;
@@ -300,6 +308,11 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
                         object={object}
                         isDisabled={isDeleting}
                         onClick={onClickShell}
+                    />
+                    <LogsButton
+                        object={object}
+                        isDisabled={isDeleting}
+                        onClick={onClickLogs}
                     />
                     <IconButton
                         colorScheme="primary"
@@ -382,6 +395,63 @@ const ShellButton: React.FC<{
                     icon={<Icon as={FiTerminal} />}
                     aria-label="Shell"
                     title="Shell"
+                    fontWeight="normal"
+                    isDisabled={isDisabled}
+                />
+                <MenuList>
+                    {containers.map((container) => (
+                        <MenuItem
+                            key={container.name}
+                            onClick={container.onClick}
+                        >
+                            {container.name}
+                        </MenuItem>
+                    ))}
+                </MenuList>
+            </Menu>
+        );
+    }
+};
+
+const LogsButton: React.FC<{
+    object: K8sObject;
+    isDisabled?: boolean;
+    onClick?: (containerName: string) => void;
+}> = (props) => {
+    const { object, onClick, isDisabled = false } = props;
+
+    const containers = useMemo(
+        () =>
+            (object as any).spec?.containers?.map((container) => ({
+                name: container.name,
+                onClick: () => {
+                    onClick(container.name);
+                },
+            })) ?? [],
+        [object]
+    );
+
+    if (containers.length === 1) {
+        return (
+            <IconButton
+                colorScheme="primary"
+                icon={<Icon as={RiTextWrap} />}
+                aria-label="Logs"
+                title="Logs"
+                fontWeight="normal"
+                isDisabled={isDisabled}
+                onClick={containers[0].onClick}
+            />
+        );
+    } else {
+        return (
+            <Menu>
+                <MenuButton
+                    colorScheme="primary"
+                    as={IconButton}
+                    icon={<Icon as={RiTextWrap} />}
+                    aria-label="Logs"
+                    title="Logs"
                     fontWeight="normal"
                     isDisabled={isDisabled}
                 />

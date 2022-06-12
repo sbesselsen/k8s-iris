@@ -30,6 +30,13 @@ export type AppEditor =
       }
     | {
           id: string;
+          type: "pod-logs";
+          name: string;
+          containerName: string;
+          namespace: string;
+      }
+    | {
+          id: string;
           type: "new-resource";
           name: string;
           apiVersion?: string;

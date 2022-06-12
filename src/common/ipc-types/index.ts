@@ -6,6 +6,10 @@ import {
     K8sExecCommandOptions,
     K8sExecCommandResult,
     K8sExecCommandSpec,
+    K8sLogOptions,
+    K8sLogResult,
+    K8sLogSpec,
+    K8sLogWatchOptions,
     K8sObject,
     K8sObjectList,
     K8sObjectListQuery,
@@ -96,5 +100,18 @@ export type IpcCalls = {
         listApiResourceTypes(params: {
             context: string;
         }): Promise<K8sResourceTypeInfo[]>;
+        log(params: {
+            context: string;
+            spec: K8sLogSpec;
+            options: K8sLogOptions;
+        }): Promise<K8sLogResult>;
+        logWatch(
+            params: {
+                context: string;
+                spec: K8sLogSpec;
+                options: Omit<K8sLogWatchOptions, "onLogLine" | "onEnd">;
+            },
+            receive: (error: any, logLines?: []) => void
+        ): { stop: () => void };
     };
 };

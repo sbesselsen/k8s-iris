@@ -23,6 +23,7 @@ import React, {
     useMemo,
 } from "react";
 import { FiTerminal } from "react-icons/fi";
+import { RiTextWrap } from "react-icons/ri";
 import { K8sObject } from "../../../common/k8s/client";
 import {
     AppEditor,
@@ -497,10 +498,15 @@ const SidebarEditorsMenuButton: React.FC<SidebarEditorsMenuButtonProps> = (
         [onClose]
     );
 
-    const leftIcon = useMemo(
-        () => (item.type === "pod-shell" ? <Icon as={FiTerminal} /> : null),
-        [item]
-    );
+    const leftIcon = useMemo(() => {
+        if (item.type === "pod-shell") {
+            return <Icon as={FiTerminal} />;
+        }
+        if (item.type === "pod-logs") {
+            return <Icon as={RiTextWrap} />;
+        }
+        return null;
+    }, [item]);
 
     return (
         <SidebarEditorsCustomMenuButton

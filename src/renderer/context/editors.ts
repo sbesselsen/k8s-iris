@@ -39,7 +39,7 @@ export function isEditorForResource(
             editor.namespace === resourceIdentifier.namespace
         );
     }
-    if (editor.type === "pod-shell") {
+    if (editor.type === "pod-shell" || editor.type === "pod-logs") {
         return (
             resourceIdentifier.apiVersion === "v1" &&
             resourceIdentifier.kind === "Pod" &&
@@ -50,6 +50,20 @@ export function isEditorForResource(
     return false;
 }
 
+export function logsEditor(
+    resource: K8sObject,
+    containerName: string
+): AppEditor {
+    const resourceIdentifier = toK8sObjectIdentifier(resource);
+    return {
+        type: "pod-logs",
+        id: `pod-logs:${resourceIdentifier.apiVersion}:${resourceIdentifier.kind}:${resourceIdentifier.namespace}:${resourceIdentifier.name}:${containerName}`,
+        name: resourceIdentifier.name,
+        namespace: resourceIdentifier.namespace,
+        containerName,
+    };
+}
+
 export function shellEditor(
     resource: K8sObject,
     containerName: string
@@ -57,7 +71,7 @@ export function shellEditor(
     const resourceIdentifier = toK8sObjectIdentifier(resource);
     return {
         type: "pod-shell",
-        id: `pod-shell:${resourceIdentifier.apiVersion}:${resourceIdentifier.kind}:${resourceIdentifier.namespace}:${resourceIdentifier.name}`,
+        id: `pod-shell:${resourceIdentifier.apiVersion}:${resourceIdentifier.kind}:${resourceIdentifier.namespace}:${resourceIdentifier.name}:${containerName}`,
         name: resourceIdentifier.name,
         namespace: resourceIdentifier.namespace,
         containerName,
