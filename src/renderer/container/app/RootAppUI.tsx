@@ -103,6 +103,7 @@ export const RootAppUI: React.FunctionComponent = () => {
     const searchBoxRef = useRef<HTMLInputElement>();
     const contextSelectMenuRef = useRef<HTMLButtonElement>();
 
+    const ctrlKeyRef = useModifierKeyRef("Control");
     const metaKeyRef = useModifierKeyRef("Meta");
     const shiftKeyRef = useModifierKeyRef("Shift");
     useKeyListener(
@@ -120,6 +121,13 @@ export const RootAppUI: React.FunctionComponent = () => {
                     metaKeyRef.current &&
                     shiftKeyRef.current &&
                     key === "o"
+                ) {
+                    contextSelectMenuRef.current.click();
+                }
+                if (
+                    eventType === "keydown" &&
+                    ctrlKeyRef.current &&
+                    key === "r"
                 ) {
                     contextSelectMenuRef.current.click();
                 }
@@ -203,6 +211,7 @@ export const RootAppUI: React.FunctionComponent = () => {
                 }
             },
             [
+                ctrlKeyRef,
                 metaKeyRef,
                 editorsStore,
                 getAppRoute,
