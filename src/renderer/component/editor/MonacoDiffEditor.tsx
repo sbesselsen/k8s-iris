@@ -65,8 +65,11 @@ export const MonacoDiffEditor: React.FC<MonacoCodeEditorProps> = (props) => {
         const editorInstance = editor.createDiffEditor(containerRef.current, {
             theme,
             automaticLayout: true,
+            fontFamily: "JetBrainsMono",
+            fontSize: 13,
             ...editorOptions,
         });
+        editor.remeasureFonts();
         const originalModel = editor.createModel(originalValue, language);
         const modifiedModel = editor.createModel(value, language);
         editorInstance.setModel({

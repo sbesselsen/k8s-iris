@@ -56,8 +56,11 @@ export const MonacoCodeEditor: React.FC<MonacoCodeEditorProps> = (props) => {
             value: stateValue ?? "",
             theme,
             automaticLayout: true,
+            fontFamily: "JetBrainsMono",
+            fontSize: 13,
             ...optionsConst,
         });
+        editor.remeasureFonts();
         editorRef.current = editorInstance;
         editorInstance.onDidChangeModelContent(() => {
             const value = editorInstance.getModel()?.getValue();
