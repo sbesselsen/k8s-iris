@@ -6,9 +6,11 @@ import {
     VStack,
 } from "@chakra-ui/react";
 import React, {
+    createContext,
     PointerEventHandler,
     ReactElement,
     useCallback,
+    useContext,
     useEffect,
     useLayoutEffect,
     useRef,
@@ -16,6 +18,8 @@ import React, {
 } from "react";
 import { useWindowFocusValue } from "../../hook/window-focus";
 import { useWindowResizeListener } from "../../hook/window-resize";
+
+const SidebarVisibleContext = createContext(true);
 
 export type AppFrameProps = {
     search: ReactElement;
@@ -155,126 +159,143 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
     // TODO: make button offset work in Windows as well, on the other side
 
     return (
-        <VStack
-            w="100vw"
-            h="100vh"
-            bg="green"
-            alignItems="stretch"
-            spacing={0}
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-        >
-            <HStack
-                flex="0 0 30px"
-                bg={headerBackground}
-                spacing={0}
-                justifyContent="space-between"
+        <SidebarVisibleContext.Provider value={isSidebarVisible}>
+            <VStack
+                w="100vw"
+                h="100vh"
+                bg="green"
                 alignItems="stretch"
-                sx={{ WebkitAppRegion: "drag" }}
-            >
-                <Box
-                    flexGrow={0}
-                    flexShrink={10}
-                    flexBasis="250px"
-                    pl="85px"
-                    h="100%"
-                >
-                    {toolbar}
-                </Box>
-                <Box
-                    flexGrow={1}
-                    flexShrink={11}
-                    flexBasis="300px"
-                    overflow="hidden"
-                    h="100%"
-                >
-                    {title}
-                </Box>
-                <Box
-                    flexGrow={0}
-                    flexShrink={10}
-                    flexBasis="250px"
-                    overflow="hidden"
-                    textAlign="end"
-                    h="100%"
-                >
-                    {search}
-                </Box>
-            </HStack>
-            <HStack
                 spacing={0}
-                flex="1 0 0"
-                alignItems="stretch"
-                position="relative"
-                h={0}
+                onPointerMove={onPointerMove}
+                onPointerUp={onPointerUp}
             >
-                <Box
-                    w="100%"
-                    h="3px"
-                    position="absolute"
-                    bgGradient="linear(to-b, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0))"
-                    zIndex={30}
-                ></Box>
-                <Box
-                    flexGrow={0}
-                    flexShrink={0}
-                    flexBasis={isSidebarVisible ? sidebarWidth : 0}
-                    bg={sidebarBackground}
-                    overflow="hidden"
-                    ref={sidebarBoxRef}
-                    position={isSidebarFloating ? "absolute" : "relative"}
-                    top={isSidebarFloating ? 0 : "initial"}
-                    left={isSidebarFloating ? 0 : "initial"}
-                    h={isSidebarFloating ? "100%" : "initial"}
-                    w={
-                        isSidebarFloating
-                            ? isSidebarVisible
-                                ? floatingSidebarWidth
-                                : 0
-                            : "initial"
-                    }
-                    zIndex={20}
-                    transitionDuration={isSidebarFloating ? "100ms" : "200ms"}
-                    transitionTimingFunction="ease-out"
-                    transitionProperty="flex-basis, width"
-                    boxShadow={isSidebarFloating ? "lg" : "none"}
+                <HStack
+                    flex="0 0 30px"
+                    bg={headerBackground}
+                    spacing={0}
+                    justifyContent="space-between"
+                    alignItems="stretch"
+                    sx={{ WebkitAppRegion: "drag" }}
                 >
                     <Box
-                        display={isSidebarFloating ? "none" : "block"}
-                        position="absolute"
-                        w={2}
+                        flexGrow={0}
+                        flexShrink={10}
+                        flexBasis="250px"
+                        pl="85px"
                         h="100%"
-                        cursor="col-resize"
-                        onPointerDown={onVSeparatorPointerDown}
-                        top="0"
-                        right="0"
-                        ref={vSeparatorBoxRef}
-                        zIndex={1}
+                    >
+                        {toolbar}
+                    </Box>
+                    <Box
+                        flexGrow={1}
+                        flexShrink={11}
+                        flexBasis="300px"
+                        overflow="hidden"
+                        h="100%"
+                    >
+                        {title}
+                    </Box>
+                    <Box
+                        flexGrow={0}
+                        flexShrink={10}
+                        flexBasis="250px"
+                        overflow="hidden"
+                        textAlign="end"
+                        h="100%"
+                    >
+                        {search}
+                    </Box>
+                </HStack>
+                <HStack
+                    spacing={0}
+                    flex="1 0 0"
+                    alignItems="stretch"
+                    position="relative"
+                    h={0}
+                >
+                    <Box
+                        w="100%"
+                        h="3px"
+                        position="absolute"
+                        bgGradient="linear(to-b, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0))"
+                        zIndex={30}
                     ></Box>
                     <Box
+                        flexGrow={0}
+                        flexShrink={0}
+                        flexBasis={isSidebarVisible ? sidebarWidth : 0}
+                        bg={sidebarBackground}
+                        overflow="hidden"
+                        ref={sidebarBoxRef}
+                        position={isSidebarFloating ? "absolute" : "relative"}
+                        top={isSidebarFloating ? 0 : "initial"}
+                        left={isSidebarFloating ? 0 : "initial"}
+                        h={isSidebarFloating ? "100%" : "initial"}
                         w={
                             isSidebarFloating
-                                ? floatingSidebarWidth
-                                : sidebarWidth
+                                ? isSidebarVisible
+                                    ? floatingSidebarWidth
+                                    : 0
+                                : "initial"
                         }
-                        ref={sidebarContentRef}
-                        h="100%"
-                        position="absolute"
-                        right={0}
-                        overflow="hidden"
+                        zIndex={20}
+                        transitionDuration={
+                            isSidebarFloating ? "100ms" : "200ms"
+                        }
+                        transitionTimingFunction="ease-out"
+                        transitionProperty="flex-basis, width"
+                        boxShadow={isSidebarFloating ? "lg" : "none"}
                     >
-                        {sidebar}
+                        <Box
+                            display={isSidebarFloating ? "none" : "block"}
+                            position="absolute"
+                            w={2}
+                            h="100%"
+                            cursor="col-resize"
+                            onPointerDown={onVSeparatorPointerDown}
+                            top="0"
+                            right="0"
+                            ref={vSeparatorBoxRef}
+                            zIndex={1}
+                        ></Box>
+                        <Box
+                            w={
+                                isSidebarFloating
+                                    ? floatingSidebarWidth
+                                    : sidebarWidth
+                            }
+                            ref={sidebarContentRef}
+                            h="100%"
+                            position="absolute"
+                            right={0}
+                            overflow="hidden"
+                        >
+                            {sidebar}
+                        </Box>
                     </Box>
-                </Box>
-                <Box
-                    flex="1 0 0"
-                    bg={contentBackground}
-                    overflow="hidden"
-                    onClick={onClickContent}
-                >
-                    {content}
-                </Box>
-            </HStack>
-        </VStack>
+                    <Box
+                        flex="1 0 0"
+                        bg={contentBackground}
+                        overflow="hidden"
+                        onClick={onClickContent}
+                    >
+                        {content}
+                    </Box>
+                </HStack>
+            </VStack>
+        </SidebarVisibleContext.Provider>
     );
 };
+
+export function useAppContentResizeListener(f: () => void, deps: any[]) {
+    useWindowResizeListener(() => {
+        f();
+    }, deps);
+    const isSidebarVisible = useContext(SidebarVisibleContext);
+    useEffect(() => {
+        f();
+        setTimeout(() => {
+            f();
+        }, 200);
+    }, [isSidebarVisible, ...deps]);
+}

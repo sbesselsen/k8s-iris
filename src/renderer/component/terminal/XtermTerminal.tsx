@@ -3,8 +3,8 @@ import { Box, BoxProps, VStack } from "@chakra-ui/react";
 import { Terminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
-import { useWindowResizeListener } from "../../hook/window-resize";
 import { useHibernate } from "../../context/hibernate";
+import { useAppContentResizeListener } from "../main/AppFrame";
 
 export type XtermTerminalProps = BoxProps & {
     onInitializeTerminal?: (terminal: Terminal) => void;
@@ -50,7 +50,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = (props) => {
         }
     }, [containerRef, isPaused, isPausedRef]);
 
-    useWindowResizeListener(() => {
+    useAppContentResizeListener(() => {
         if (!isPausedRef.current) {
             fitAddonRef.current.fit();
         }
