@@ -263,9 +263,19 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
     ]);
     const onClickShell = useCallback(
         (containerName: string) => {
+            if (isClusterLocked) {
+                showDialog({
+                    title: "Read-only mode",
+                    type: "error",
+                    message: "This cluster is in read-only mode.",
+                    detail: "You can only open a shell after you click 'Allow changes' in the menu.",
+                    buttons: ["OK"],
+                });
+                return;
+            }
             openEditor(shellEditor(object, containerName));
         },
-        [openEditor, object]
+        [isClusterLocked, openEditor, object]
     );
     const onClickLogs = useCallback(
         (containerName: string) => {
@@ -371,7 +381,7 @@ const ShellButton: React.FC<{
                     onClick(container.name);
                 },
             })) ?? [],
-        [object]
+        [object, onClick]
     );
 
     if (containers.length === 1) {
@@ -428,7 +438,7 @@ const LogsButton: React.FC<{
                     onClick(container.name);
                 },
             })) ?? [],
-        [object]
+        [object, onClick]
     );
 
     if (containers.length === 1) {
