@@ -1,5 +1,5 @@
-import { Box, Spinner, VStack } from "@chakra-ui/react";
-import { editor, Range } from "monaco-editor";
+import { Button, HStack, ScaleFade, Spinner, VStack } from "@chakra-ui/react";
+import { editor, IDisposable, Range } from "monaco-editor";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { MonacoCodeEditor } from "../../component/editor/MonacoCodeEditor";
 import { useK8sLogWatchListener } from "../../k8s/log-watch";
@@ -10,25 +10,34 @@ export type PodLogsEditorProps = {
     containerName: string;
 };
 
-function scrollToBottomIfAllowed(
-    editor: editor.IStandaloneCodeEditor,
-    force = false
+function scrollToBottom(
+    editorInstance: editor.IStandaloneCodeEditor,
+    smooth = false
 ) {
+    const numberOfLines = editorInstance.getModel().getLineCount();
+    const position = editorInstance.getScrolledVisiblePosition({
+        column: 1,
+        lineNumber: numberOfLines,
+    });
+    const editorHeight = editorInstance.getContainerDomNode().clientHeight;
+    if (position.top > editorHeight - 50) {
+        // The bottom of the log is out of view.
+        editorInstance.revealLine(
+            numberOfLines,
+            smooth ? editor.ScrollType.Smooth : editor.ScrollType.Immediate
+        );
+    }
+}
+
+function isLastLineVisible(editor: editor.IStandaloneCodeEditor): boolean {
     const numberOfLines = editor.getModel().getLineCount();
     const position = editor.getScrolledVisiblePosition({
         column: 1,
         lineNumber: numberOfLines,
     });
     const editorHeight = editor.getContainerDomNode().clientHeight;
-    if (
-        force ||
-        (position.top > 0 &&
-            position.top > editorHeight - 50 &&
-            position.top < editorHeight + 50)
-    ) {
-        // The bottom of the log is just out of view.
-        editor.revealLineInCenter(numberOfLines);
-    }
+
+    return position.top + position.height < editorHeight;
 }
 
 export const PodLogsEditor: React.FC<PodLogsEditorProps> = (props) => {
@@ -37,23 +46,82 @@ export const PodLogsEditor: React.FC<PodLogsEditorProps> = (props) => {
     const editorRef = useRef<editor.IStandaloneCodeEditor>();
     const logLinesRef = useRef<string[]>([]);
 
+    const [showScrollToBottom, setShowScrollToBottom] = useState(false);
     const [isEnded, setEnded] = useState(false);
 
-    const configureEditor = useCallback(
-        (editor: editor.IStandaloneCodeEditor) => {
-            editorRef.current = editor;
-            if (logLinesRef.current.length > 0) {
-                editor.getModel().setValue(logLinesRef.current.join("\n"));
-                scrollToBottomIfAllowed(editor, true);
-                const postInsertLineNumber = editor.getModel().getLineCount();
-                editor.setSelection(
-                    new Range(postInsertLineNumber, 1, postInsertLineNumber, 1)
-                );
+    const onClickScrollToBottom = useCallback(() => {
+        if (editorRef.current) {
+            scrollToBottom(editorRef.current, true);
+        }
+    }, [editorRef]);
+
+    // Common function to append log lines to the editor.
+    const appendLogLines = useCallback(
+        (lines: string[]) => {
+            logLinesRef.current.push(...lines);
+
+            const editor = editorRef.current;
+            if (!editor) {
+                return;
             }
+
+            // Append the new lines.
+            const lineNumber = editor.getModel().getLineCount() + 1;
+            const prevValue = editor.getModel().getValue();
+            const stickToBottom = isLastLineVisible(editor);
+            editor.getModel().applyEdits([
+                {
+                    text: prevValue + lines.join("\n") + "\n",
+                    range: new Range(lineNumber, 1, lineNumber, 1),
+                },
+            ]);
+            if (stickToBottom) {
+                scrollToBottom(editor);
+            }
+            const postInsertLineNumber = editor.getModel().getLineCount();
+            if (!prevValue) {
+                // Clear the selection if this is the first time we are adding logs.
+                editor.setSelection(new Range(1, 1, 1, 1));
+            }
+            updateScrollToBottom();
         },
         [editorRef, logLinesRef]
     );
 
+    const updateScrollToBottomTimeoutRef = useRef<any>();
+    const updateScrollToBottom = useCallback(() => {
+        const editor = editorRef.current;
+        if (!editor) {
+            return;
+        }
+        if (updateScrollToBottomTimeoutRef.current) {
+            return;
+        }
+        updateScrollToBottomTimeoutRef.current = setTimeout(() => {
+            setShowScrollToBottom(!isLastLineVisible(editor));
+            updateScrollToBottomTimeoutRef.current = null;
+        }, 500);
+    }, [editorRef, setShowScrollToBottom, updateScrollToBottomTimeoutRef]);
+
+    const didScrollChangeHandlerRef = useRef<IDisposable>();
+    const configureEditor = useCallback(
+        (editor: editor.IStandaloneCodeEditor) => {
+            editorRef.current = editor;
+
+            // Attach a scroll handler to the editor.
+            didScrollChangeHandlerRef.current?.dispose();
+            didScrollChangeHandlerRef.current =
+                editor.onDidScrollChange(updateScrollToBottom);
+
+            // Write out our backlog of log lines.
+            if (logLinesRef.current.length > 0) {
+                appendLogLines(logLinesRef.current);
+            }
+        },
+        [appendLogLines, editorRef, logLinesRef, updateScrollToBottom]
+    );
+
+    // Empty the editor if we change to a different container.
     useEffect(() => {
         editorRef.current?.getModel().setValue("");
         logLinesRef.current = [];
@@ -66,43 +134,14 @@ export const PodLogsEditor: React.FC<PodLogsEditorProps> = (props) => {
             containerName,
         },
         {
-            onLogLines: (lines: string[]) => {
-                const isFirst = logLinesRef.current.length === 0;
-                logLinesRef.current.push(...lines);
-                const editor = editorRef.current;
-                if (editor) {
-                    // Append the new lines.
-                    const lineNumber = editor.getModel().getLineCount() + 1;
-                    const value = editor.getModel().getValue();
-                    editor.getModel().applyEdits([
-                        {
-                            text: (value ? "\n" : "") + lines.join("\n"),
-                            range: new Range(lineNumber, 1, lineNumber, 1),
-                        },
-                    ]);
-                    scrollToBottomIfAllowed(editor, isFirst);
-                    const postInsertLineNumber = editor
-                        .getModel()
-                        .getLineCount();
-                    if (isFirst) {
-                        editor.setSelection(
-                            new Range(
-                                postInsertLineNumber,
-                                1,
-                                postInsertLineNumber,
-                                1
-                            )
-                        );
-                    }
-                }
-            },
+            onLogLines: appendLogLines,
             onEnd: () => {
                 setEnded(true);
             },
             timestamps: true,
             updateCoalesceInterval: 100,
         },
-        [name, namespace, containerName, editorRef, logLinesRef, setEnded]
+        [name, namespace, containerName, appendLogLines, setEnded]
     );
 
     return (
@@ -119,7 +158,12 @@ export const PodLogsEditor: React.FC<PodLogsEditorProps> = (props) => {
                 defaultValue=""
                 configureEditor={configureEditor}
             />
-            <Box position="absolute" right={8} bottom={2} zIndex={50}>
+            <HStack position="absolute" right={8} bottom={2} zIndex={50}>
+                <ScaleFade in={showScrollToBottom}>
+                    <Button size="xs" onClick={onClickScrollToBottom}>
+                        Scroll to bottom
+                    </Button>
+                </ScaleFade>
                 {!isEnded && (
                     <Spinner
                         size="sm"
@@ -129,7 +173,7 @@ export const PodLogsEditor: React.FC<PodLogsEditorProps> = (props) => {
                         title="Live updating logs..."
                     />
                 )}
-            </Box>
+            </HStack>
         </VStack>
     );
 };
