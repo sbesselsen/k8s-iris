@@ -6,7 +6,12 @@ import {
     useConst,
     useControllableState,
 } from "@chakra-ui/react";
-import { initializeMonaco } from "./monaco-shared";
+import {
+    defaultFontFamily,
+    defaultFontSize,
+    initializeMonaco,
+    recalcFont,
+} from "./monaco-shared";
 
 export type MonacoCodeEditorProps = {
     originalValue?: string;
@@ -65,11 +70,11 @@ export const MonacoDiffEditor: React.FC<MonacoCodeEditorProps> = (props) => {
         const editorInstance = editor.createDiffEditor(containerRef.current, {
             theme,
             automaticLayout: true,
-            fontFamily: "JetBrainsMono",
-            fontSize: 13,
+            fontFamily: defaultFontFamily,
+            fontSize: defaultFontSize,
             ...editorOptions,
         });
-        editor.remeasureFonts();
+        recalcFont(optionsConst.fontFamily ?? defaultFontFamily);
         const originalModel = editor.createModel(originalValue, language);
         const modifiedModel = editor.createModel(value, language);
         editorInstance.setModel({

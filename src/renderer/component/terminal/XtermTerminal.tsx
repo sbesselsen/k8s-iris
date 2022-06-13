@@ -18,7 +18,10 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = (props) => {
     const termRef = useRef<Terminal>();
 
     useEffect(() => {
-        const term = new Terminal();
+        const term = new Terminal({
+            fontFamily: "JetBrainsMono",
+            fontSize: 13,
+        });
         const fitAddon = new FitAddon();
         term.loadAddon(fitAddon);
 

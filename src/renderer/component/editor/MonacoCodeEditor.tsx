@@ -6,7 +6,12 @@ import {
     useConst,
     useControllableState,
 } from "@chakra-ui/react";
-import { initializeMonaco } from "./monaco-shared";
+import {
+    defaultFontFamily,
+    defaultFontSize,
+    initializeMonaco,
+    recalcFont,
+} from "./monaco-shared";
 
 export type MonacoCodeEditorProps = {
     defaultValue?: string;
@@ -56,11 +61,11 @@ export const MonacoCodeEditor: React.FC<MonacoCodeEditorProps> = (props) => {
             value: stateValue ?? "",
             theme,
             automaticLayout: true,
-            fontFamily: "JetBrainsMono",
-            fontSize: 13,
+            fontFamily: defaultFontFamily,
+            fontSize: defaultFontSize,
             ...optionsConst,
         });
-        editor.remeasureFonts();
+        recalcFont(optionsConst.fontFamily ?? defaultFontFamily);
         editorRef.current = editorInstance;
         editorInstance.onDidChangeModelContent(() => {
             const value = editorInstance.getModel()?.getValue();

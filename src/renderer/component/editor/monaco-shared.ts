@@ -55,3 +55,17 @@ export function initializeMonaco() {
         },
     };
 }
+
+export function recalcFont(_family: string) {
+    // This sucks but it does the job. Maybe we could wait for window onLoad but I'm not sure that would help.
+    editor.remeasureFonts();
+    setTimeout(() => {
+        editor.remeasureFonts();
+    }, 1000);
+    setTimeout(() => {
+        editor.remeasureFonts();
+    }, 5000);
+}
+
+export const defaultFontFamily = "JetBrainsMono";
+export const defaultFontSize = 13;
