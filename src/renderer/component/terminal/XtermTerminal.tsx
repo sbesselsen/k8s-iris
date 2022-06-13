@@ -4,6 +4,7 @@ import { Terminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
 import { useWindowResizeListener } from "../../hook/window-resize";
+import { useHibernate } from "../../context/hibernate";
 
 export type XtermTerminalProps = BoxProps & {
     onInitializeTerminal?: (terminal: Terminal) => void;
@@ -40,9 +41,20 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = (props) => {
         }
     }, [onInitializeTerminal, termRef]);
 
+    const isPaused = useHibernate();
+    const isPausedRef = useRef(isPaused);
+    useEffect(() => {
+        isPausedRef.current = isPaused;
+        if (!isPaused) {
+            fitAddonRef?.current.fit();
+        }
+    }, [containerRef, isPaused, isPausedRef]);
+
     useWindowResizeListener(() => {
-        fitAddonRef.current.fit();
-    }, [containerRef]);
+        if (!isPausedRef.current) {
+            fitAddonRef.current.fit();
+        }
+    }, [containerRef, fitAddonRef, isPausedRef]);
 
     return (
         <VStack bg="black" p={2} {...boxProps} spacing={0} alignItems="stretch">
