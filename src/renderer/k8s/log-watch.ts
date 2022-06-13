@@ -60,7 +60,6 @@ export function useK8sLogWatchListener(
 
     const pauseableLogLines = useCallback(
         (lines: string[]) => {
-            console.log("pauseableLogLines", isPausedRef.current, lines.length);
             if (isPausedRef.current) {
                 pausedLogLinesRef.current.push(...lines);
             } else {
