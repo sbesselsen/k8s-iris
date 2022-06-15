@@ -68,4 +68,4 @@ export function recalcFont(_family: string) {
 }
 
 export const defaultFontFamily = "JetBrainsMono";
-export const defaultFontSize = 13;
+export const defaultFontSize = 12;
