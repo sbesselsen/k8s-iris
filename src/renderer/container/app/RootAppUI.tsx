@@ -383,6 +383,7 @@ const AppEditors: React.FC<{}> = () => {
                     createWindow({
                         route: {
                             ...getAppRoute(),
+                            isSidebarVisible: false,
                             activeEditor: editors.find(
                                 (editor) => editor.id === id
                             ),
