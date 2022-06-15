@@ -71,14 +71,13 @@ export const PodLogsEditor: React.FC<PodLogsEditorProps> = (props) => {
             const stickToBottom = isLastLineVisible(editor);
             editor.getModel().applyEdits([
                 {
-                    text: prevValue + lines.join("\n") + "\n",
+                    text: lines.join("\n") + "\n",
                     range: new Range(lineNumber, 1, lineNumber, 1),
                 },
             ]);
             if (stickToBottom) {
                 scrollToBottom(editor);
             }
-            const postInsertLineNumber = editor.getModel().getLineCount();
             if (!prevValue) {
                 // Clear the selection if this is the first time we are adding logs.
                 editor.setSelection(new Range(1, 1, 1, 1));
