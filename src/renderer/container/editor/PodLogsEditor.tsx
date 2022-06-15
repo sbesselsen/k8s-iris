@@ -159,7 +159,11 @@ export const PodLogsEditor: React.FC<PodLogsEditorProps> = (props) => {
             />
             <HStack position="absolute" right={8} bottom={2} zIndex={50}>
                 <ScaleFade in={showScrollToBottom}>
-                    <Button size="xs" onClick={onClickScrollToBottom}>
+                    <Button
+                        colorScheme="primary"
+                        size="xs"
+                        onClick={onClickScrollToBottom}
+                    >
                         Scroll to bottom
                     </Button>
                 </ScaleFade>
