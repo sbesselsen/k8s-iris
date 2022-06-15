@@ -52,7 +52,9 @@ export const ScrollBox = forwardRef<ScrollBoxProps, "div">((props, ref) => {
                     px={6}
                     pb={3}
                     justifyContent="center"
+                    pointerEvents="none"
                     ref={bottomToolbarRef}
+                    sx={{ "> *": { pointerEvents: "auto" } }}
                 >
                     {bottomToolbar}
                 </HStack>
