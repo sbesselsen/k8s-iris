@@ -11,8 +11,7 @@ export const theme = extendTheme({
             variants: {
                 large: (options: any) => {
                     return {
-                        fontFamily:
-                            '"Jetbrains Mono",SFMono-Regular,ui-monospace,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace',
+                        fontFamily: "JetBrainsMono",
                         bg:
                             options.colorMode === "dark"
                                 ? "gray.700"

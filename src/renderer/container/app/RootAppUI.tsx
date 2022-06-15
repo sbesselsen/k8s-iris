@@ -1,4 +1,12 @@
-import { Box, HStack, useBreakpointValue, VStack } from "@chakra-ui/react";
+import {
+    Box,
+    Code,
+    Heading,
+    HStack,
+    Icon,
+    useBreakpointValue,
+    VStack,
+} from "@chakra-ui/react";
 import React, {
     Fragment,
     ReactNode,
@@ -31,6 +39,7 @@ import {
 } from "../../component/main/SidebarMenu";
 import { SiKubernetes } from "react-icons/si";
 import { BsBox } from "react-icons/bs";
+import { FaBomb } from "react-icons/fa";
 import { useK8sListWatch } from "../../k8s/list-watch";
 import { useKeyListener, useModifierKeyRef } from "../../hook/keyboard";
 import { ClusterError } from "./ClusterError";
@@ -49,6 +58,7 @@ import {
 } from "../../context/editors";
 import { LazyComponent } from "../../component/main/LazyComponent";
 import { HibernateContainer } from "../../context/hibernate";
+import { ErrorBoundary } from "../../component/util/ErrorBoundary";
 
 const PodLogsEditor = React.lazy(async () => ({
     default: (await import("../editor/PodLogsEditor")).PodLogsEditor,
@@ -549,8 +559,35 @@ const AppContent: React.FC<{}> = () => {
     );
 };
 
+const AppContentError: React.FC<{ error: any }> = (props) => {
+    const { error } = props;
+    return (
+        <HStack
+            alignItems="start"
+            spacing={4}
+            mt={6}
+            ms={4}
+            me={12}
+            maxWidth="800px"
+        >
+            <Box>
+                <Icon as={FaBomb} w={10} h={10} />
+            </Box>
+            <VStack flex="1 0 0" alignItems="start">
+                <Heading size="sm">Error</Heading>
+                <Code variant="large" fontSize="sm" userSelect="text">
+                    {error.message}
+                </Code>
+            </VStack>
+        </HStack>
+    );
+};
+
 const AppContentContainer: React.FC<{ isVisible: boolean }> = (props) => {
     const { isVisible, children } = props;
+    const renderError = useCallback((error: any) => {
+        return <AppContentError error={error} />;
+    }, []);
     return (
         <VStack
             flex="1 0 0"
@@ -559,7 +596,7 @@ const AppContentContainer: React.FC<{ isVisible: boolean }> = (props) => {
             h="100%"
             display={isVisible ? "flex" : "none"}
         >
-            {children}
+            <ErrorBoundary renderError={renderError}>{children}</ErrorBoundary>
         </VStack>
     );
 };
