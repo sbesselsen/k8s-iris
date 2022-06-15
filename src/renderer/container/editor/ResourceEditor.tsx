@@ -284,6 +284,9 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
         [openEditor, object]
     );
 
+    const isLoggable = object?.apiVersion === "v1" && object.kind === "Pod";
+    const isShellable = object?.apiVersion === "v1" && object.kind === "Pod";
+
     if (!kind || !apiVersion || !metadata) {
         return <Box p={4}>This resource is not available.</Box>;
     }
@@ -314,16 +317,21 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
                     >
                         Edit
                     </Button>
-                    <ShellButton
-                        object={object}
-                        isDisabled={isDeleting}
-                        onClick={onClickShell}
-                    />
-                    <LogsButton
-                        object={object}
-                        isDisabled={isDeleting}
-                        onClick={onClickLogs}
-                    />
+                    {isShellable && (
+                        <ShellButton
+                            object={object}
+                            isDisabled={isDeleting}
+                            onClick={onClickShell}
+                        />
+                    )}
+                    {isLoggable && (
+                        <LogsButton
+                            object={object}
+                            isDisabled={isDeleting}
+                            onClick={onClickLogs}
+                        />
+                    )}
+
                     <IconButton
                         colorScheme="primary"
                         icon={<DeleteIcon />}
