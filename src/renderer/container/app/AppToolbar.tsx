@@ -1,14 +1,8 @@
 import React, { useCallback } from "react";
-import {
-    ButtonGroup,
-    HStack,
-    Icon,
-    IconButton,
-    ScaleFade,
-} from "@chakra-ui/react";
+import { ButtonGroup, HStack, Icon, IconButton } from "@chakra-ui/react";
 
 import { MdArrowBackIosNew, MdArrowForwardIos } from "react-icons/md";
-import { HiLockClosed } from "react-icons/hi";
+import { FiLock, FiUnlock } from "react-icons/fi";
 import {
     useAppRoute,
     useAppRouteHistory,
@@ -54,8 +48,8 @@ export const AppToolbar: React.FC = () => {
 
     const isLocked = useContextLock();
     const setLock = useContextLockSetter();
-    const onClickUnlock = useCallback(() => {
-        setLock(false);
+    const onClickLockButton = useCallback(() => {
+        setLock((locked) => !locked);
     }, [setLock]);
 
     return (
@@ -95,18 +89,16 @@ export const AppToolbar: React.FC = () => {
                     tabIndex={-1}
                 />
             </ButtonGroup>
-            <ScaleFade in={isLocked} unmountOnExit={true}>
-                <ButtonGroup variant="ghost" colorScheme="primary" size="sm">
-                    <IconButton
-                        onClick={onClickUnlock}
-                        icon={<Icon as={HiLockClosed} />}
-                        aria-label="Allow changes"
-                        title="Allow changes"
-                        _focus={{}}
-                        tabIndex={-1}
-                    />
-                </ButtonGroup>
-            </ScaleFade>
+            <ButtonGroup variant="ghost" colorScheme="primary" size="sm">
+                <IconButton
+                    onClick={onClickLockButton}
+                    icon={<Icon as={isLocked ? FiLock : FiUnlock} />}
+                    aria-label={isLocked ? "Allow changes" : "Lock cluster"}
+                    title={isLocked ? "Allow changes" : "Lock cluster"}
+                    _focus={{}}
+                    tabIndex={-1}
+                />
+            </ButtonGroup>
         </HStack>
     );
 };
