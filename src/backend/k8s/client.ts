@@ -958,12 +958,32 @@ export function createClient(
         options?: K8sPortForwardOptions
     ): K8sPortForwardHandler => {
         let numConnections = 0;
-        const minStatsInterval = 1000;
+        let sumBytesDown = 0;
+        let sumBytesUp = 0;
+        const minStatsIntervalMs = 1000;
+        let statsUpdateFunctions: Array<() => void> = [];
+        let socketEndFunctions: Array<() => void> = [];
+
+        const sendStats = () => {
+            statsUpdateFunctions.forEach((f) => {
+                f();
+            });
+            options?.onStats?.({
+                timestampMs: new Date().getTime(),
+                sumBytesDown,
+                sumBytesUp,
+                numConnections,
+            });
+        };
+
+        const statsInterval = setInterval(() => {
+            sendStats();
+        }, Math.max(minStatsIntervalMs, options?.statsDesiredIntervalMs ?? 0));
 
         const portForward = new PortForward(kubeConfig);
         const server = net.createServer(async (socket) => {
-            const downstreamStats = streamStats("down");
-            const upstreamStats = streamStats("up");
+            const downstreamStats = streamStats();
+            const upstreamStats = streamStats();
 
             const downstream = new PassThrough();
             const upstream = new PassThrough();
@@ -980,18 +1000,23 @@ export function createClient(
                 }
             });
 
-            const sendStats = () => {
-                options?.onStats?.({
-                    timestampMs: new Date().getTime(),
-                    sumBytesDown: downstreamStats.stats().sumWritten,
-                    sumBytesUp: upstreamStats.stats().sumWritten,
-                    numConnections,
-                });
-            };
+            let prevDownstreamBytes = 0;
+            let prevUpstreamBytes = 0;
+            const statsUpdateFunction = () => {
+                const downstreamBytes = downstreamStats.stats().sumWritten;
+                sumBytesDown += downstreamBytes - prevDownstreamBytes;
+                prevDownstreamBytes = downstreamBytes;
 
-            const interval = setInterval(() => {
-                sendStats();
-            }, Math.max(minStatsInterval, options?.statsDesiredInterval ?? 0));
+                const upstreamBytes = upstreamStats.stats().sumWritten;
+                sumBytesUp += upstreamBytes - prevUpstreamBytes;
+                prevUpstreamBytes = upstreamBytes;
+            };
+            statsUpdateFunctions.push(statsUpdateFunction);
+
+            const socketEndFunction = () => {
+                socket.end();
+            };
+            socketEndFunctions.push(socketEndFunction);
 
             socket.on("error", (err) => {
                 console.error("Socket error", err);
@@ -1000,7 +1025,12 @@ export function createClient(
             socket.on("close", () => {
                 numConnections--;
                 sendStats();
-                clearInterval(interval);
+                statsUpdateFunctions = statsUpdateFunctions.filter(
+                    (f) => f !== statsUpdateFunction
+                );
+                socketEndFunctions = socketEndFunctions.filter(
+                    (f) => f !== socketEndFunction
+                );
             });
             try {
                 await portForward.portForward(
@@ -1024,6 +1054,7 @@ export function createClient(
         });
         server.on("close", () => {
             options?.onClose?.();
+            clearInterval(statsInterval);
         });
 
         let stopped = false;
@@ -1054,6 +1085,9 @@ export function createClient(
                 stopped = true;
                 if (started) {
                     server.close();
+                    socketEndFunctions.forEach((f) => {
+                        f();
+                    });
                 }
             },
         };

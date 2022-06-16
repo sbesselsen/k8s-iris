@@ -4,7 +4,7 @@ export type StreamStatsTransform = Transform & {
     stats(): { sumWritten: number };
 };
 
-export function streamStats(name: string): StreamStatsTransform {
+export function streamStats(): StreamStatsTransform {
     let sumWritten = 0;
 
     const transform = new Transform({

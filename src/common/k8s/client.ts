@@ -149,7 +149,7 @@ export type K8sPortForwardSpec = {
 };
 
 export type K8sPortForwardOptions = {
-    statsDesiredInterval?: number;
+    statsDesiredIntervalMs?: number;
     onListen?: (info: K8sPortForwardInfo) => void;
     onStats?: (stats: K8sPortForwardStats) => void;
     onError?: (err: any) => void;
