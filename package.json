@@ -23,6 +23,7 @@
         "seedrandom": "^3.0.5"
     },
     "alias": {
+        "buffer": false,
         "process": false,
         "README_FOR_LINE_ABOVE": "work around a parcel 2.3 bug that would install a process polyfill"
     },
@@ -37,7 +38,6 @@
         "@types/react": "^17.0.45",
         "@types/react-dom": "^17.0.17",
         "@types/seedrandom": "^3.0.2",
-        "buffer": "^6.0.3",
         "concurrently": "^6.5.0",
         "electron": "^17.4.5",
         "electron-packager": "^15.5.1",
