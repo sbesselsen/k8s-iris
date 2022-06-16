@@ -89,7 +89,6 @@ const displayRules: K8sResourceDisplayRule[] = [
     {
         selector: "..containers",
         autoExpandSingleItem: true,
-        displayAs: "accordion",
     },
     {
         selector: ".status.podIPs",
