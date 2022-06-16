@@ -140,6 +140,38 @@ export type K8sLogWatch = {
     stop(): void;
 };
 
+export type K8sPortForwardSpec = {
+    namespace: string;
+    podName: string;
+    podPort: number;
+    localPort?: number;
+    localOnly?: boolean;
+};
+
+export type K8sPortForwardOptions = {
+    statsDesiredInterval?: number;
+    onListen?: (info: K8sPortForwardInfo) => void;
+    onStats?: (stats: K8sPortForwardStats) => void;
+    onError?: (err: any) => void;
+    onClose?: () => void;
+};
+
+export type K8sPortForwardInfo = {
+    localAddress: string;
+    localPort: number;
+};
+
+export type K8sPortForwardHandler = {
+    stop(): void;
+};
+
+export type K8sPortForwardStats = {
+    timestampMs: number;
+    numConnections: number;
+    sumBytesUp: number;
+    sumBytesDown: number;
+};
+
 export type K8sClient = {
     read(spec: K8sObject): Promise<K8sObject | null>;
     apply(spec: K8sObject, options?: K8sApplyOptions): Promise<K8sObject>;
@@ -163,5 +195,9 @@ export type K8sClient = {
     ): K8sObjectListWatch;
     log(spec: K8sLogSpec, options?: K8sLogOptions): Promise<K8sLogResult>;
     logWatch(spec: K8sLogSpec, options: K8sLogWatchOptions): K8sLogWatch;
+    portForward(
+        spec: K8sPortForwardSpec,
+        options?: K8sPortForwardOptions
+    ): K8sPortForwardHandler;
     listApiResourceTypes(): Promise<K8sResourceTypeInfo[]>;
 };

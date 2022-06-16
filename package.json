@@ -18,6 +18,7 @@
         "@aws-sdk/shared-ini-file-loader": "^3.80.0",
         "@kubernetes/client-node": "^0.16.1",
         "execa": "^5.0.0",
+        "get-port": "^5.1.1",
         "js-yaml": "^3.14.1",
         "matcher": "^4.0.0",
         "seedrandom": "^3.0.5"

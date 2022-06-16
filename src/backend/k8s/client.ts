@@ -1,10 +1,17 @@
 import * as k8s from "@kubernetes/client-node";
-import { KubeConfig, KubernetesObject, Log } from "@kubernetes/client-node";
+import {
+    KubeConfig,
+    KubernetesObject,
+    Log,
+    PortForward,
+} from "@kubernetes/client-node";
 import * as request from "request";
+import * as net from "net";
 import { exec as execChildProcess } from "child_process";
 import { Exec } from "@kubernetes/client-node";
-import { PassThrough } from "stream";
+import { PassThrough, pipeline } from "stream";
 import { isMatch } from "matcher";
+
 import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
@@ -35,6 +42,9 @@ import {
     K8sLogResult,
     K8sLogWatchOptions,
     K8sLogWatch,
+    K8sPortForwardSpec,
+    K8sPortForwardOptions,
+    K8sPortForwardHandler,
 } from "../../common/k8s/client";
 import {
     fetchApiList,
@@ -54,6 +64,8 @@ import { toYaml } from "../../common/util/yaml";
 import { shellOptions } from "../util/shell";
 import { bufferToArrayBuffer } from "../util/buffer";
 import { streamSplitter } from "../../common/util/stream-splitter";
+import { streamStats } from "../util/stream-stats";
+import getPort from "get-port";
 
 const defaultRemoveOptions: K8sRemoveOptions = {
     waitForCompletion: true,
@@ -941,6 +953,112 @@ export function createClient(
         return innerLogWatch(spec, { ...options, follow: true });
     };
 
+    const portForward = (
+        spec: K8sPortForwardSpec,
+        options?: K8sPortForwardOptions
+    ): K8sPortForwardHandler => {
+        let numConnections = 0;
+        const minStatsInterval = 1000;
+
+        const portForward = new PortForward(kubeConfig);
+        const server = net.createServer(async (socket) => {
+            const downstreamStats = streamStats("down");
+            const upstreamStats = streamStats("up");
+
+            const downstream = new PassThrough();
+            const upstream = new PassThrough();
+            pipeline(downstream, downstreamStats, socket, (err) => {
+                if (err) {
+                    console.error("Downstream error", err);
+                    options?.onError?.(err);
+                }
+            });
+            pipeline(socket, upstreamStats, upstream, (err) => {
+                if (err) {
+                    console.error("Upstream error", err);
+                    options?.onError?.(err);
+                }
+            });
+
+            const sendStats = () => {
+                options?.onStats?.({
+                    timestampMs: new Date().getTime(),
+                    sumBytesDown: downstreamStats.stats().sumWritten,
+                    sumBytesUp: upstreamStats.stats().sumWritten,
+                    numConnections,
+                });
+            };
+
+            const interval = setInterval(() => {
+                sendStats();
+            }, Math.max(minStatsInterval, options?.statsDesiredInterval ?? 0));
+
+            socket.on("error", (err) => {
+                console.error("Socket error", err);
+                options?.onError?.(err);
+            });
+            socket.on("close", () => {
+                numConnections--;
+                sendStats();
+                clearInterval(interval);
+            });
+            try {
+                await portForward.portForward(
+                    spec.namespace,
+                    spec.podName,
+                    [spec.podPort],
+                    downstream,
+                    null,
+                    upstream
+                );
+            } catch (e) {
+                console.error("Error initializing port forward", e);
+            }
+            numConnections++;
+            sendStats();
+        });
+        server.on("error", (err) => {
+            console.error("portForward server error", err);
+            options?.onError?.(err);
+            server.close();
+        });
+        server.on("close", () => {
+            options?.onClose?.();
+        });
+
+        let stopped = false;
+        let started = false;
+        (async () => {
+            const localPort = spec?.localPort ?? (await getPort());
+            if (stopped) {
+                return;
+            }
+            started = true;
+            server.listen(
+                localPort,
+                spec?.localOnly ?? true ? "localhost" : undefined,
+                () => {
+                    const address = server.address();
+                    const localAddress =
+                        typeof address === "string" ? address : address.address;
+                    options?.onListen?.({
+                        localPort,
+                        localAddress,
+                    });
+                }
+            );
+        })();
+
+        return {
+            stop() {
+                stopped = true;
+                if (started) {
+                    server.close();
+                }
+            },
+        };
+    };
+
     return {
         read,
         apply,
@@ -953,6 +1071,7 @@ export function createClient(
         listWatch,
         log,
         logWatch,
+        portForward,
         retryConnections,
         listApiResourceTypes,
     };
