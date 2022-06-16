@@ -9,6 +9,7 @@ import { useK8sNamespaces } from "../../context/k8s-namespaces";
 import { searchMatch } from "../../../common/util/search";
 import { useAppSearch } from "../../context/search";
 import { Timeline } from "../../component/main/Timeline";
+import { ResourceEditorLink } from "../resources/ResourceEditorLink";
 
 export const ClusterEventsOverview: React.FC = () => {
     const namespaces = useK8sNamespaces();
@@ -101,11 +102,20 @@ const EventContent: React.FC<{
                 )}{" "}
                 {event.note}
             </Selectable>
-            <Text fontSize="xs" fontWeight="bold" mt={1}>
-                {event?.regarding?.kind}:{" "}
-                {event?.metadata?.namespace && `${event.metadata.namespace}/`}
-                {event?.regarding?.name}
-            </Text>
+            {event?.regarding && (
+                <ResourceEditorLink
+                    fontSize="xs"
+                    fontWeight="bold"
+                    mt={1}
+                    display="block"
+                    editorResource={event.regarding}
+                >
+                    {event?.regarding?.kind}:{" "}
+                    {event?.metadata?.namespace &&
+                        `${event.metadata.namespace}/`}
+                    {event?.regarding?.name}
+                </ResourceEditorLink>
+            )}
         </Box>
     );
 });
