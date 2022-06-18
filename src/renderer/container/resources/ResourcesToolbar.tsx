@@ -97,7 +97,7 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
                     title: "Read-only mode",
                     type: "error",
                     message: "This cluster is in read-only mode.",
-                    detail: "You can delete after you click 'Allow changes' in the menu.",
+                    detail: "You can delete after you unlock the cluster with the lock/unlock button in the toolbar.",
                     buttons: ["OK"],
                 });
                 return;

@@ -1,5 +1,15 @@
 import React, { useCallback } from "react";
-import { ButtonGroup, HStack, Icon, IconButton } from "@chakra-ui/react";
+import {
+    ButtonGroup,
+    HStack,
+    Icon,
+    IconButton,
+    Menu,
+    MenuButton,
+    MenuItemOption,
+    MenuList,
+    MenuOptionGroup,
+} from "@chakra-ui/react";
 
 import { MdArrowBackIosNew, MdArrowForwardIos } from "react-icons/md";
 import { FiLock, FiUnlock } from "react-icons/fi";
@@ -48,9 +58,14 @@ export const AppToolbar: React.FC = () => {
 
     const isLocked = useContextLock();
     const setLock = useContextLockSetter();
-    const onClickLockButton = useCallback(() => {
-        setLock((locked) => !locked);
-    }, [setLock]);
+    const onChangeLocked = useCallback(
+        (status: string | string[]) => {
+            if (typeof status === "string") {
+                setLock(status === "locked");
+            }
+        },
+        [setLock]
+    );
 
     return (
         <HStack py={2} spacing={0}>
@@ -90,14 +105,30 @@ export const AppToolbar: React.FC = () => {
                 />
             </ButtonGroup>
             <ButtonGroup variant="ghost" colorScheme="primary" size="sm">
-                <IconButton
-                    onClick={onClickLockButton}
-                    icon={<Icon as={isLocked ? FiLock : FiUnlock} />}
-                    aria-label={isLocked ? "Allow changes" : "Lock cluster"}
-                    title={isLocked ? "Allow changes" : "Lock cluster"}
-                    _focus={{}}
-                    tabIndex={-1}
-                />
+                <Menu>
+                    <MenuButton
+                        colorScheme="primary"
+                        as={IconButton}
+                        icon={<Icon as={isLocked ? FiLock : FiUnlock} />}
+                        aria-label="Lock/unlock cluster"
+                        title="Lock/unlock cluster"
+                        fontWeight="normal"
+                    />
+                    <MenuList zIndex={50}>
+                        <MenuOptionGroup
+                            onChange={onChangeLocked}
+                            value={isLocked ? "locked" : "unlocked"}
+                            type="radio"
+                        >
+                            <MenuItemOption value="locked">
+                                Locked
+                            </MenuItemOption>
+                            <MenuItemOption value="unlocked">
+                                Unlocked
+                            </MenuItemOption>
+                        </MenuOptionGroup>
+                    </MenuList>
+                </Menu>
             </ButtonGroup>
         </HStack>
     );
