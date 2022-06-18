@@ -15,6 +15,8 @@ import {
     K8sObjectListQuery,
     K8sObjectListUpdate,
     K8sPatchOptions,
+    K8sPortForwardEntry,
+    K8sPortForwardSpec,
     K8sRemoveOptions,
     K8sRemoveStatus,
     K8sResourceTypeInfo,
@@ -113,5 +115,22 @@ export type IpcCalls = {
             },
             receive: (error: any, logLines?: []) => void
         ): { stop: () => void };
+        listPortForwards(params: {
+            context: string;
+        }): Promise<Array<K8sPortForwardEntry>>;
+        watchPortForwards(
+            params: {
+                context: string;
+            },
+            receive: (
+                error: any,
+                message?: undefined | { type: string; value: any }
+            ) => void
+        ): { stop: () => void };
+        portForward(params: {
+            context: string;
+            spec: K8sPortForwardSpec;
+        }): Promise<K8sPortForwardEntry>;
+        stopPortForward(params: { context: string; id: string }): Promise<void>;
     };
 };

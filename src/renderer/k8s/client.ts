@@ -23,6 +23,8 @@ import {
     K8sObjectListWatch,
     K8sObjectListWatcher,
     K8sPatchOptions,
+    K8sPortForwardSpec,
+    K8sPortForwardWatcher,
     K8sRemoveOptions,
 } from "../../common/k8s/client";
 import { useK8sContext } from "../context/k8s-context";
@@ -30,6 +32,7 @@ import { useIpcCall } from "../hook/ipc";
 import { unwrapError } from "../../common/ipc/shared";
 import { K8sPartialObjectListWatcherMessage } from "../../common/ipc-types";
 import { ContextLockedError, useContextLock } from "../context/context-lock";
+import { watch } from "original-fs";
 
 export function useK8sClient(kubeContext?: string): K8sClient {
     const sharedKubeContext = useK8sContext();
@@ -49,6 +52,10 @@ export function useK8sClient(kubeContext?: string): K8sClient {
     const ipcExecCommand = useIpcCall((ipc) => ipc.k8s.execCommand);
     const ipcLog = useIpcCall((ipc) => ipc.k8s.log);
     const ipcLogWatch = useIpcCall((ipc) => ipc.k8s.logWatch);
+    const ipcListPortForwards = useIpcCall((ipc) => ipc.k8s.listPortForwards);
+    const ipcWatchPortForwards = useIpcCall((ipc) => ipc.k8s.watchPortForwards);
+    const ipcPortForward = useIpcCall((ipc) => ipc.k8s.portForward);
+    const ipcStopPortForward = useIpcCall((ipc) => ipc.k8s.stopPortForward);
     const listWatchesRef = useRef<K8sObjectListWatch[]>([]);
 
     const isLocked = useContextLock();
@@ -243,6 +250,49 @@ export function useK8sClient(kubeContext?: string): K8sClient {
             };
         };
 
+        const listPortForwards = () => ipcListPortForwards({ context });
+        const portForward = (spec: K8sPortForwardSpec) =>
+            ipcPortForward({ context, spec });
+        const stopPortForward = (id: string) =>
+            ipcStopPortForward({ context, id });
+        const watchPortForwards = (
+            watcher: K8sPortForwardWatcher
+        ): { stop(): void } => {
+            const subscription = ipcWatchPortForwards(
+                { context },
+                (err, message) => {
+                    if (err) {
+                        const unwrappedError = unwrapError(err);
+                        watcher.onError(
+                            unwrappedError,
+                            (unwrappedError as any).portForwardId
+                        );
+                    }
+                    if (message) {
+                        switch (message.type) {
+                            case "change":
+                                watcher.onChange(message.value);
+                                break;
+                            case "start":
+                                watcher.onStart(message.value);
+                                break;
+                            case "stop":
+                                watcher.onStop(message.value);
+                                break;
+                            case "stats":
+                                watcher.onStats(message.value);
+                                break;
+                        }
+                    }
+                }
+            );
+            return {
+                stop() {
+                    subscription.stop();
+                },
+            };
+        };
+
         return {
             read,
             apply,
@@ -256,6 +306,10 @@ export function useK8sClient(kubeContext?: string): K8sClient {
             exec,
             execCommand,
             listApiResourceTypes,
+            listPortForwards,
+            watchPortForwards,
+            portForward,
+            stopPortForward,
         };
     }, [
         context,
@@ -270,6 +324,10 @@ export function useK8sClient(kubeContext?: string): K8sClient {
         ipcExecCommand,
         ipcLog,
         ipcLogWatch,
+        ipcListPortForwards,
+        ipcWatchPortForwards,
+        ipcPortForward,
+        ipcStopPortForward,
     ]);
 
     return client;

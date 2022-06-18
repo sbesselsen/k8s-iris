@@ -16,6 +16,7 @@ import {
     K8sObject,
     K8sObjectListQuery,
     K8sPatchOptions,
+    K8sPortForwardSpec,
     K8sRemoveOptions,
 } from "../../common/k8s/client";
 import { K8sPartialObjectListWatcher } from "../../common/ipc-types";
@@ -241,5 +242,74 @@ export const wireK8sClientIpc = (clientManager: K8sClientManager): void => {
         "k8s:client:listApiResourceTypes",
         async ({ context }: { context: string }) =>
             clientManager.clientForContext(context).listApiResourceTypes()
+    );
+    ipcHandle(
+        "k8s:client:listPortForwards",
+        async ({ context }: { context: string }) =>
+            clientManager.clientForContext(context).listPortForwards()
+    );
+    ipcProvideSubscription(
+        "k8s:client:watchPortForwards",
+        (
+            {
+                context,
+            }: {
+                context: string;
+            },
+            send
+        ) => {
+            const watch = clientManager
+                .clientForContext(context)
+                .watchPortForwards({
+                    onChange(forwards) {
+                        send(undefined, {
+                            type: "change",
+                            value: forwards,
+                        });
+                    },
+                    onStart(entry) {
+                        send(undefined, {
+                            type: "start",
+                            value: entry,
+                        });
+                    },
+                    onStop(entry) {
+                        send(undefined, {
+                            type: "stop",
+                            value: entry,
+                        });
+                    },
+                    onStats(stats) {
+                        send(undefined, {
+                            type: "stats",
+                            value: stats,
+                        });
+                    },
+                    onError(err, portForwardId) {
+                        err.portForwardId = portForwardId;
+                        send(err, undefined);
+                    },
+                });
+            return {
+                stop() {
+                    watch.stop();
+                },
+            };
+        }
+    );
+    ipcHandle(
+        "k8s:client:portForward",
+        async ({
+            context,
+            spec,
+        }: {
+            context: string;
+            spec: K8sPortForwardSpec;
+        }) => clientManager.clientForContext(context).portForward(spec)
+    );
+    ipcHandle(
+        "k8s:client:stopPortForward",
+        async ({ context, id }: { context: string; id: string }) =>
+            clientManager.clientForContext(context).stopPortForward(id)
     );
 };

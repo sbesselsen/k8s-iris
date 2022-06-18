@@ -24,6 +24,10 @@ const exec = ipcSocketOpener("k8s:client:exec");
 const execCommand = ipcInvoker("k8s:client:execCommand");
 const log = ipcInvoker("k8s:client:log");
 const logWatch = ipcSubscriber("k8s:client:logWatch");
+const listPortForwards = ipcInvoker("k8s:client:listPortForwards");
+const watchPortForwards = ipcSubscriber("k8s:client:watchPortForwards");
+const portForward = ipcInvoker("k8s:client:portForward");
+const stopPortForward = ipcInvoker("k8s:client:stopPortForward");
 const onWindowFocusChange = ipcEventSubscriber<boolean>(
     "app:window:focus-change"
 );
@@ -52,5 +56,9 @@ contextBridge.exposeInMainWorld("charm", {
         log,
         logWatch,
         listApiResourceTypes,
+        listPortForwards,
+        watchPortForwards,
+        portForward,
+        stopPortForward,
     },
 } as IpcCalls);
