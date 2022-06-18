@@ -16,7 +16,7 @@ import * as crypto from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 
-import { sleep } from "../../common/util/async";
+import { coalesce, sleep } from "../../common/util/async";
 
 import {
     K8sClient,
@@ -43,8 +43,10 @@ import {
     K8sLogWatchOptions,
     K8sLogWatch,
     K8sPortForwardSpec,
-    K8sPortForwardOptions,
-    K8sPortForwardHandler,
+    K8sPortForwardEntry,
+    K8sPortForwardStats,
+    K8sPortForwardWatcher,
+    K8sPortForwardWatch,
 } from "../../common/k8s/client";
 import {
     fetchApiList,
@@ -953,14 +955,45 @@ export function createClient(
         return innerLogWatch(spec, { ...options, follow: true });
     };
 
-    const portForward = (
-        spec: K8sPortForwardSpec,
-        options?: K8sPortForwardOptions
-    ): K8sPortForwardHandler => {
+    const portForwardStats: Record<string, K8sPortForwardStats> = {};
+    let portForwards: K8sPortForwardEntry[] = [];
+    let portForwardWatchers: K8sPortForwardWatcher[] = [];
+    let portForwardIndex = 1;
+    let portForwardHandles: Record<string, { stop(): void }> = {};
+
+    const sendPortForwardStats = coalesce(() => {
+        portForwardWatchers.forEach(({ onStats }) => onStats(portForwardStats));
+    }, 1000);
+
+    const listPortForwards = async (): Promise<Array<K8sPortForwardEntry>> => {
+        return portForwards;
+    };
+
+    const watchPortForwards = (
+        watcher: K8sPortForwardWatcher
+    ): K8sPortForwardWatch => {
+        portForwardWatchers.push(watcher);
+        return {
+            stop() {
+                portForwardWatchers = portForwardWatchers.filter(
+                    (w) => w !== watcher
+                );
+            },
+        };
+    };
+
+    const portForward = async (
+        spec: K8sPortForwardSpec
+    ): Promise<K8sPortForwardEntry> => {
+        const id = `pfwd:${portForwardIndex++}`;
+        const entry: Partial<K8sPortForwardEntry> = {
+            id,
+            spec,
+        };
+
         let numConnections = 0;
         let sumBytesDown = 0;
         let sumBytesUp = 0;
-        const minStatsIntervalMs = 1000;
         let statsUpdateFunctions: Array<() => void> = [];
         let socketEndFunctions: Array<() => void> = [];
 
@@ -968,17 +1001,18 @@ export function createClient(
             statsUpdateFunctions.forEach((f) => {
                 f();
             });
-            options?.onStats?.({
+            portForwardStats[id] = {
                 timestampMs: new Date().getTime(),
                 sumBytesDown,
                 sumBytesUp,
                 numConnections,
-            });
+            };
+            sendPortForwardStats();
         };
 
         const statsInterval = setInterval(() => {
             sendStats();
-        }, Math.max(minStatsIntervalMs, options?.statsDesiredIntervalMs ?? 0));
+        }, 200);
 
         const portForward = new PortForward(kubeConfig);
         const server = net.createServer(async (socket) => {
@@ -990,13 +1024,17 @@ export function createClient(
             pipeline(downstream, downstreamStats, socket, (err) => {
                 if (err) {
                     console.error("Downstream error", err);
-                    options?.onError?.(err);
+                    portForwardWatchers.forEach(({ onError }) =>
+                        onError(err, id)
+                    );
                 }
             });
             pipeline(socket, upstreamStats, upstream, (err) => {
                 if (err) {
                     console.error("Upstream error", err);
-                    options?.onError?.(err);
+                    portForwardWatchers.forEach(({ onError }) =>
+                        onError(err, id)
+                    );
                 }
             });
 
@@ -1020,7 +1058,7 @@ export function createClient(
 
             socket.on("error", (err) => {
                 console.error("Socket error", err);
-                options?.onError?.(err);
+                portForwardWatchers.forEach(({ onError }) => onError(err, id));
             });
             socket.on("close", () => {
                 numConnections--;
@@ -1049,48 +1087,59 @@ export function createClient(
         });
         server.on("error", (err) => {
             console.error("portForward server error", err);
-            options?.onError?.(err);
+            portForwardWatchers.forEach(({ onError }) => onError(err, id));
             server.close();
         });
         server.on("close", () => {
-            options?.onClose?.();
+            delete portForwardStats[id];
+            delete portForwardHandles[id];
+            portForwardWatchers.forEach(({ onStop }) =>
+                onStop(entry as K8sPortForwardEntry)
+            );
+            portForwards = portForwards.filter((e) => e !== entry);
+            portForwardWatchers.forEach(({ onChange }) =>
+                onChange(portForwards)
+            );
             clearInterval(statsInterval);
         });
 
-        let stopped = false;
-        let started = false;
-        (async () => {
-            const localPort = spec?.localPort ?? (await getPort());
-            if (stopped) {
-                return;
-            }
-            started = true;
+        const localPort = spec?.localPort ?? (await getPort());
+        return new Promise((resolve) => {
             server.listen(
                 localPort,
                 spec?.localOnly ?? true ? "localhost" : undefined,
                 () => {
                     const address = server.address();
-                    const localAddress =
+                    entry.localAddress =
                         typeof address === "string" ? address : address.address;
-                    options?.onListen?.({
-                        localPort,
-                        localAddress,
-                    });
+                    entry.localPort = localPort;
+                    portForwards.push(entry as K8sPortForwardEntry);
+                    portForwardStats[id] = {
+                        timestampMs: new Date().getTime(),
+                        sumBytesDown: 0,
+                        sumBytesUp: 0,
+                        numConnections: 0,
+                    };
+                    portForwardWatchers.forEach(({ onStart }) =>
+                        onStart(entry as K8sPortForwardEntry)
+                    );
+                    portForwardWatchers.forEach(({ onChange }) =>
+                        onChange(portForwards)
+                    );
+                    portForwardHandles[id] = {
+                        stop() {
+                            server.close();
+                        },
+                    };
+                    console.log("listening on", localPort);
+                    resolve(entry as K8sPortForwardEntry);
                 }
             );
-        })();
+        });
+    };
 
-        return {
-            stop() {
-                stopped = true;
-                if (started) {
-                    server.close();
-                    socketEndFunctions.forEach((f) => {
-                        f();
-                    });
-                }
-            },
-        };
+    const stopPortForward = async (id: string): Promise<void> => {
+        portForwardHandles[id]?.stop();
     };
 
     return {
@@ -1105,7 +1154,10 @@ export function createClient(
         listWatch,
         log,
         logWatch,
+        listPortForwards,
+        watchPortForwards,
         portForward,
+        stopPortForward,
         retryConnections,
         listApiResourceTypes,
     };

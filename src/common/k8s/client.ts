@@ -148,20 +148,15 @@ export type K8sPortForwardSpec = {
     localOnly?: boolean;
 };
 
-export type K8sPortForwardOptions = {
-    statsDesiredIntervalMs?: number;
-    onListen?: (info: K8sPortForwardInfo) => void;
-    onStats?: (stats: K8sPortForwardStats) => void;
-    onError?: (err: any) => void;
-    onClose?: () => void;
+export type K8sPortForwardWatcher = {
+    onStart: (entry: K8sPortForwardEntry) => void;
+    onStop: (entry: K8sPortForwardEntry) => void;
+    onChange: (forwards: K8sPortForwardEntry[]) => void;
+    onStats: (stats: Record<string, K8sPortForwardStats>) => void;
+    onError: (err: any, portForwardId: string | undefined) => void;
 };
 
-export type K8sPortForwardInfo = {
-    localAddress: string;
-    localPort: number;
-};
-
-export type K8sPortForwardHandler = {
+export type K8sPortForwardWatch = {
     stop(): void;
 };
 
@@ -170,6 +165,13 @@ export type K8sPortForwardStats = {
     numConnections: number;
     sumBytesUp: number;
     sumBytesDown: number;
+};
+
+export type K8sPortForwardEntry = {
+    id: string;
+    spec: K8sPortForwardSpec;
+    localAddress: string;
+    localPort: number;
 };
 
 export type K8sClient = {
@@ -195,9 +197,11 @@ export type K8sClient = {
     ): K8sObjectListWatch;
     log(spec: K8sLogSpec, options?: K8sLogOptions): Promise<K8sLogResult>;
     logWatch(spec: K8sLogSpec, options: K8sLogWatchOptions): K8sLogWatch;
-    portForward(
-        spec: K8sPortForwardSpec,
-        options?: K8sPortForwardOptions
-    ): K8sPortForwardHandler;
     listApiResourceTypes(): Promise<K8sResourceTypeInfo[]>;
+
+    /* Port forwarding */
+    listPortForwards(): Promise<Array<K8sPortForwardEntry>>;
+    watchPortForwards(watcher: K8sPortForwardWatcher): K8sPortForwardWatch;
+    portForward(spec: K8sPortForwardSpec): Promise<K8sPortForwardEntry>;
+    stopPortForward(id: string): Promise<void>;
 };

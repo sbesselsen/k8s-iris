@@ -17,3 +17,16 @@ export function debounce<T extends () => void>(f: T, ms: number): T {
         }, ms);
     }) as T;
 }
+
+export function coalesce<T extends () => void>(f: T, ms: number): T {
+    let timeout: any;
+    return (() => {
+        if (timeout) {
+            return;
+        }
+        timeout = setTimeout(() => {
+            f();
+            timeout = null;
+        }, ms);
+    }) as T;
+}
