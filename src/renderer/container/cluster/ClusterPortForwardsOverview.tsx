@@ -1,4 +1,9 @@
-import { ChevronDownIcon, ChevronUpIcon, DeleteIcon } from "@chakra-ui/icons";
+import {
+    ChevronDownIcon,
+    ChevronUpIcon,
+    DeleteIcon,
+    Icon,
+} from "@chakra-ui/icons";
 import {
     Badge,
     Button,
@@ -13,6 +18,7 @@ import {
     Tr,
     useBreakpointValue,
 } from "@chakra-ui/react";
+import { HiOutlineGlobeAlt } from "react-icons/hi";
 import React, {
     ChangeEvent,
     useCallback,
@@ -299,7 +305,16 @@ const PortForwardRow: React.FC<PortForwardRowProps> = (props) => {
                 <Selectable>{portForward.spec.podPort}</Selectable>
             </Td>
             <Td verticalAlign="baseline" userSelect="text">
-                <Selectable>{portForward.localPort}</Selectable>
+                <HStack>
+                    {!portForward.spec.localOnly && (
+                        <Icon
+                            as={HiOutlineGlobeAlt}
+                            aria-label="Shared on the network"
+                            title="Shared on the network"
+                        />
+                    )}
+                    <Selectable>{portForward.localPort}</Selectable>
+                </HStack>
             </Td>
             {showStats && (
                 <Td>
@@ -326,32 +341,49 @@ const PortForwardStats: React.FC<PortForwardStatsProps> = (props) => {
             </Badge>
             <Badge textTransform="none">
                 <ChevronUpIcon />
-                {displayMi(stats.bytesUpPerSecond)}Mi/s (
-                {displayMi(stats.sumBytesDown, 0)}Mi)
+                {displayBytes(stats.bytesUpPerSecond)}/s (
+                {displayBytes(stats.sumBytesUp, 0)})
             </Badge>
             <Badge textTransform="none">
                 <ChevronDownIcon />
-                {displayMi(stats.bytesDownPerSecond)}Mi/s (
-                {displayMi(stats.sumBytesDown, 0)}Mi)
+                {displayBytes(stats.bytesDownPerSecond)}/s (
+                {displayBytes(stats.sumBytesDown, 0)})
             </Badge>
         </HStack>
     );
 };
 
-function displayMi(bytes: number, fractionDigits = 2): string {
-    const mibs = bytes / 1048576;
+function displayBytes(bytes: number, fractionDigits = 2): string {
+    let mibs = bytes / 1048576;
+    let unit = "Mi";
+    let minFractionDigits = fractionDigits;
     let maxFractionDigits = fractionDigits;
     if (mibs > 10) {
         maxFractionDigits = Math.min(1, maxFractionDigits);
         if (mibs > 100) {
             maxFractionDigits = 0;
+            if (mibs > 1024) {
+                unit = "Gi";
+                mibs /= 1024;
+                minFractionDigits = 1;
+                maxFractionDigits = 1;
+                if (mibs > 10) {
+                    minFractionDigits = 0;
+                    maxFractionDigits = 0;
+                }
+            }
         }
     }
-    return mibs.toLocaleString(undefined, {
-        useGrouping: false,
-        minimumFractionDigits: fractionDigits,
-        maximumFractionDigits: maxFractionDigits,
-    });
+    return (
+        mibs.toLocaleString(undefined, {
+            useGrouping: true,
+            minimumFractionDigits: Math.min(
+                minFractionDigits,
+                maxFractionDigits
+            ),
+            maximumFractionDigits: maxFractionDigits,
+        }) + unit
+    );
 }
 
 type PortForwardsToolbarProps = {

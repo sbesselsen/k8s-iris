@@ -6,10 +6,10 @@ import {
 } from "@chakra-ui/icons";
 import { FiTerminal } from "react-icons/fi";
 import { RiTextWrap } from "react-icons/ri";
-import { MdCastConnected } from "react-icons/md";
 import {
     Box,
     Button,
+    Heading,
     HStack,
     Icon,
     IconButton,
@@ -18,13 +18,7 @@ import {
     MenuButton,
     MenuItem,
     MenuList,
-    Popover,
-    PopoverArrow,
-    PopoverBody,
-    PopoverCloseButton,
-    PopoverContent,
-    PopoverHeader,
-    PopoverTrigger,
+    Select,
     Spinner,
     Table,
     Tbody,
@@ -40,6 +34,7 @@ import React, {
     ChangeEvent,
     KeyboardEvent,
     useCallback,
+    useEffect,
     useMemo,
     useState,
 } from "react";
@@ -369,7 +364,6 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
                             onClick={onClickLogs}
                         />
                     )}
-                    <PortForwardingMenu object={object} />
                     <Box flex="1 0 0"></Box>
                     <ShowDetailsToggle
                         value={showDetails}
@@ -399,6 +393,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
                         }
                     />
                 )}
+                {object && <PortForwardingMenu object={object} />}
             </VStack>
         </ScrollBox>
     );
@@ -724,6 +719,14 @@ const PortForwardingMenu: React.FC<{ object: K8sObject }> = (props) => {
                     });
                 } catch (e) {
                     console.error("Error port forwarding", e);
+                    showDialog({
+                        title: "Error forwarding port",
+                        type: "error",
+                        message:
+                            "An error occurred while starting port forwarding.",
+                        detail: e.message,
+                        buttons: ["OK"],
+                    });
                 }
             })();
         },
@@ -780,58 +783,46 @@ const PortForwardingMenu: React.FC<{ object: K8sObject }> = (props) => {
     );
 
     return (
-        <Popover>
-            <PopoverTrigger>
-                <IconButton
-                    colorScheme="primary"
-                    icon={<Icon as={MdCastConnected} />}
-                    aria-label="Port forwarding"
-                    title="Port forwarding"
-                    fontWeight="normal"
-                />
-            </PopoverTrigger>
-            <PopoverContent>
-                <PopoverArrow />
-                <PopoverCloseButton />
-                <PopoverBody>
-                    {loading && <Spinner />}
-                    {!loading && (
-                        <Table
-                            size="sm"
-                            sx={{ tableLayout: "fixed" }}
-                            width="100%"
-                        >
-                            <Thead>
-                                <Tr>
-                                    <Th>Pod port</Th>
-                                    <Th>Local port</Th>
-                                    <Th width="30px"></Th>
-                                </Tr>
-                            </Thead>
-                            <Tbody>
-                                {availablePorts.map((port) => (
-                                    <PortForwardingRow
-                                        portForward={port.portForward}
-                                        podPort={port.port}
-                                        podPortName={port.name}
-                                        isForwardable={port.forwardable}
-                                        onAdd={onAddHandlers[port.id]}
-                                        onStop={
-                                            port.portForward
-                                                ? onStopHandlers[
-                                                      port.portForward?.id
-                                                  ]
-                                                : undefined
-                                        }
-                                        key={port.id}
-                                    />
-                                ))}
-                            </Tbody>
-                        </Table>
-                    )}
-                </PopoverBody>
-            </PopoverContent>
-        </Popover>
+        <VStack alignItems="stretch">
+            <Heading size="sm">Port forwarding</Heading>
+            {loading && <Spinner />}
+            {!loading && (
+                <Table
+                    size="sm"
+                    sx={{ tableLayout: "fixed" }}
+                    width="100%"
+                    maxWidth="600px"
+                >
+                    <Thead>
+                        <Tr>
+                            <Th whiteSpace="nowrap" ps={0}>
+                                Pod port
+                            </Th>
+                            <Th whiteSpace="nowrap">Local port</Th>
+                            <Th whiteSpace="nowrap">Mode</Th>
+                            <Th width="30px"></Th>
+                        </Tr>
+                    </Thead>
+                    <Tbody>
+                        {availablePorts.map((port) => (
+                            <PortForwardingRow
+                                portForward={port.portForward}
+                                podPort={port.port}
+                                podPortName={port.name}
+                                isForwardable={port.forwardable}
+                                onAdd={onAddHandlers[port.id]}
+                                onStop={
+                                    port.portForward
+                                        ? onStopHandlers[port.portForward?.id]
+                                        : undefined
+                                }
+                                key={port.id}
+                            />
+                        ))}
+                    </Tbody>
+                </Table>
+            )}
+        </VStack>
     );
 };
 
@@ -848,14 +839,21 @@ const PortForwardingRow: React.FC<PortForwardingRowProps> = (props) => {
         props;
 
     const [localPortString, setLocalPortString] = useState("");
+    const [modeString, setModeString] = useState("localOnly");
 
     const onClickAdd = useCallback(() => {
-        // TODO: localOnly UI
         onAdd?.(
             localPortString === "" ? undefined : parseInt(localPortString, 10),
-            true
+            modeString !== "shared"
         );
-    }, [onAdd, localPortString]);
+    }, [onAdd, localPortString, modeString]);
+
+    useEffect(() => {
+        if (portForward) {
+            setLocalPortString(String(portForward.localPort));
+            setModeString(portForward.spec.localOnly ? "localOnly" : "shared");
+        }
+    }, [portForward, setLocalPortString, setModeString]);
 
     const onClickStop = useCallback(() => {
         onStop?.();
@@ -877,27 +875,49 @@ const PortForwardingRow: React.FC<PortForwardingRowProps> = (props) => {
         [onClickAdd]
     );
 
+    const onChangeMode = useCallback(
+        (e: ChangeEvent<HTMLSelectElement>) => {
+            setModeString(e.target.value);
+        },
+        [setModeString]
+    );
+
     return (
         <Tr>
-            <Td>
-                {podPort}
-                {String(podPort) !== podPortName && ` (${podPortName})`}
+            <Td ps={0} whiteSpace="nowrap">
+                <HStack>
+                    {portForward && (
+                        <Box w="10px" h="10px" borderRadius="full" bg="green" />
+                    )}
+                    <Text>
+                        {podPort}
+                        {String(podPort) !== podPortName && ` (${podPortName})`}
+                    </Text>
+                </HStack>
             </Td>
-            <Td>
+            <Td whiteSpace="nowrap">
                 <Input
                     placeholder="auto"
+                    size="sm"
                     type="number"
                     isDisabled={!!portForward}
-                    value={
-                        portForward
-                            ? String(portForward.localPort)
-                            : localPortString
-                    }
+                    value={localPortString}
                     onKeyDown={onInputKeyPress}
                     onChange={onChangeLocalPort}
                 />
             </Td>
-            <Td px={0}>
+            <Td whiteSpace="nowrap">
+                <Select
+                    size="sm"
+                    isDisabled={!!portForward}
+                    value={modeString}
+                    onChange={onChangeMode}
+                >
+                    <option value="localOnly">Local only</option>
+                    <option value="shared">Shared</option>
+                </Select>
+            </Td>
+            <Td px={0} whiteSpace="nowrap">
                 {!portForward && isForwardable && (
                     <IconButton
                         colorScheme="primary"
