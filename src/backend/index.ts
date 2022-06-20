@@ -8,6 +8,8 @@ import { createClientManager } from "./k8s";
 import { wireK8sClientIpc } from "./k8s/ipc";
 import { createMenuManager } from "./menu";
 import { createPrefsManager } from "./prefs";
+import { createShellManager } from "./shell";
+import { wireShellIpc } from "./shell/ipc";
 import { createWindowManager, WindowParameters } from "./window";
 
 (async () => {
@@ -26,6 +28,9 @@ import { createWindowManager, WindowParameters } from "./window";
         },
     });
     const windowManager = createWindowManager();
+    const shellManager = createShellManager({
+        shellWrappers: [],
+    });
     const menuManager = createMenuManager({
         createWindow: () => {
             windowManager.createWindow();
@@ -44,6 +49,7 @@ import { createWindowManager, WindowParameters } from "./window";
     // Hook up IPC calls.
     wireCloudIpc(cloudManager);
     wireK8sClientIpc(k8sClientManager);
+    wireShellIpc(shellManager);
 
     ipcHandle("app:createWindow", (params?: WindowParameters) => {
         windowManager.createWindow(params);

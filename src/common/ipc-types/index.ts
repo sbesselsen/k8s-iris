@@ -133,4 +133,9 @@ export type IpcCalls = {
         }): Promise<K8sPortForwardEntry>;
         stopPortForward(params: { context: string; id: string }): Promise<void>;
     };
+    shell: {
+        openForContext(params: {
+            context: string;
+        }): Promise<IpcRendererSocketHooks>;
+    };
 };

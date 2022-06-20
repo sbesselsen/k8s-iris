@@ -41,6 +41,11 @@ export type AppEditor =
           name: string;
           apiVersion?: string;
           kind?: string;
+      }
+    | {
+          id: string;
+          type: "local-shell";
+          name: string;
       };
 
 export const emptyAppRoute: AppRoute = {

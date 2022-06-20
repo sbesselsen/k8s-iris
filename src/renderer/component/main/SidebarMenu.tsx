@@ -502,6 +502,9 @@ const SidebarEditorsMenuButton: React.FC<SidebarEditorsMenuButtonProps> = (
         if (item.type === "pod-shell") {
             return <Icon as={FiTerminal} />;
         }
+        if (item.type === "local-shell") {
+            return <Icon as={FiTerminal} />;
+        }
         if (item.type === "pod-logs") {
             return <Icon as={RiTextWrap} />;
         }

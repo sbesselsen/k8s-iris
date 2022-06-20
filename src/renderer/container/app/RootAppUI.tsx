@@ -78,6 +78,9 @@ const ResourceEditor = React.lazy(async () => ({
 const NewResourceEditor = React.lazy(async () => ({
     default: (await import("../editor/ResourceEditor")).NewResourceEditor,
 }));
+const LocalShellEditor = React.lazy(async () => ({
+    default: (await import("../shell/LocalShellEditor")).LocalShellEditor,
+}));
 
 const sidebarMainMenuItems: SidebarMainMenuItem[] = [
     {
@@ -639,6 +642,7 @@ const AppContentEditor: React.FC<{ editor: AppEditor; isSelected: boolean }> =
                                 containerName={editor.containerName}
                             />
                         )}
+                        {editor.type === "local-shell" && <LocalShellEditor />}
                     </AppContentContainer>
                 </HibernateContainer>
             </ParamNamespace>
