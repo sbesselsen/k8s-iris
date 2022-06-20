@@ -27,6 +27,7 @@ import {
     Th,
     Thead,
     Tr,
+    useBreakpointValue,
     useConst,
     VStack,
 } from "@chakra-ui/react";
@@ -42,6 +43,7 @@ import {
     K8sObject,
     K8sObjectIdentifier,
     K8sPortForwardEntry,
+    K8sPortForwardStats,
     K8sResourceTypeIdentifier,
 } from "../../../common/k8s/client";
 import {
@@ -72,6 +74,10 @@ import { ResourceTypeSelector } from "../resources/ResourceTypeSelector";
 import { ResourceYamlEditor } from "./ResourceYamlEditor";
 import { useEditorOpener } from "../../hook/editor-link";
 import { useK8sPortForwardsWatch } from "../../k8s/port-forward-watch";
+import {
+    PortForwardStats,
+    usePeriodStats,
+} from "../../component/k8s/PortForwardStats";
 
 export type ResourceEditorProps = {
     editorResource: K8sObjectIdentifier;
@@ -652,7 +658,16 @@ const PortForwardingMenu: React.FC<{ object: K8sObject }> = (props) => {
     const showDialog = useDialog();
     const isContextLocked = useContextLock();
 
-    const [loading, forwards, forwardsError] = useK8sPortForwardsWatch();
+    const [stats, setStats] = useState<Record<string, K8sPortForwardStats>>({});
+
+    const [loading, forwards, _forwardsError] = useK8sPortForwardsWatch(
+        {
+            onStats(stats) {
+                setStats(stats);
+            },
+        },
+        [setStats]
+    );
 
     const availablePorts = useMemo(() => {
         const ports: Array<{
@@ -782,25 +797,32 @@ const PortForwardingMenu: React.FC<{ object: K8sObject }> = (props) => {
         [forwards, stopForward]
     );
 
+    const showStats = useBreakpointValue({ base: false, lg: true });
+
     return (
         <VStack alignItems="stretch">
             <Heading size="sm">Port forwarding</Heading>
             {loading && <Spinner />}
-            {!loading && (
-                <Table
-                    size="sm"
-                    sx={{ tableLayout: "fixed" }}
-                    width="100%"
-                    maxWidth="600px"
-                >
+            {!loading && availablePorts.length === 0 && (
+                <Text fontSize="sm" color="gray">
+                    Pod exposes no ports.
+                </Text>
+            )}
+            {!loading && availablePorts.length > 0 && (
+                <Table size="sm" sx={{ tableLayout: "fixed" }} width="100%">
                     <Thead>
                         <Tr>
-                            <Th whiteSpace="nowrap" ps={0}>
+                            <Th whiteSpace="nowrap" ps={0} width="120px">
                                 Pod port
                             </Th>
-                            <Th whiteSpace="nowrap">Local port</Th>
-                            <Th whiteSpace="nowrap">Mode</Th>
+                            <Th whiteSpace="nowrap" width="120px">
+                                Local port
+                            </Th>
+                            <Th whiteSpace="nowrap" width="120px">
+                                Mode
+                            </Th>
                             <Th width="30px"></Th>
+                            <Th>{showStats && "Stats"}</Th>
                         </Tr>
                     </Thead>
                     <Tbody>
@@ -810,6 +832,8 @@ const PortForwardingMenu: React.FC<{ object: K8sObject }> = (props) => {
                                 podPort={port.port}
                                 podPortName={port.name}
                                 isForwardable={port.forwardable}
+                                allStats={stats}
+                                showStats={showStats}
                                 onAdd={onAddHandlers[port.id]}
                                 onStop={
                                     port.portForward
@@ -833,10 +857,23 @@ type PortForwardingRowProps = {
     isForwardable: boolean;
     onAdd?: (localPort: number | undefined, localOnly: boolean) => void;
     onStop?: () => void;
+    showStats?: boolean;
+    allStats?: Record<string, K8sPortForwardStats>;
 };
 const PortForwardingRow: React.FC<PortForwardingRowProps> = (props) => {
-    const { portForward, podPort, podPortName, isForwardable, onAdd, onStop } =
-        props;
+    const {
+        portForward,
+        podPort,
+        podPortName,
+        isForwardable,
+        onAdd,
+        onStop,
+        allStats,
+        showStats,
+    } = props;
+
+    const stats = portForward ? allStats?.[portForward.id] : null;
+    const periodStats = usePeriodStats(stats);
 
     const [localPortString, setLocalPortString] = useState("");
     const [modeString, setModeString] = useState("localOnly");
@@ -883,62 +920,76 @@ const PortForwardingRow: React.FC<PortForwardingRowProps> = (props) => {
     );
 
     return (
-        <Tr>
-            <Td ps={0} whiteSpace="nowrap">
-                <HStack>
-                    {portForward && (
-                        <Box w="10px" h="10px" borderRadius="full" bg="green" />
+        <>
+            <Tr>
+                <Td ps={0} whiteSpace="nowrap">
+                    <HStack>
+                        {portForward && (
+                            <Box
+                                w="10px"
+                                h="10px"
+                                borderRadius="full"
+                                bg="green"
+                                flex="0 0 auto"
+                            />
+                        )}
+                        <Text>
+                            {podPort}
+                            {String(podPort) !== podPortName &&
+                                ` (${podPortName})`}
+                        </Text>
+                    </HStack>
+                </Td>
+                <Td whiteSpace="nowrap">
+                    <Input
+                        placeholder="auto"
+                        size="sm"
+                        type="number"
+                        isDisabled={!!portForward}
+                        value={localPortString}
+                        onKeyDown={onInputKeyPress}
+                        onChange={onChangeLocalPort}
+                    />
+                </Td>
+                <Td whiteSpace="nowrap">
+                    <Select
+                        size="sm"
+                        isDisabled={!!portForward}
+                        value={modeString}
+                        onChange={onChangeMode}
+                    >
+                        <option value="localOnly">Local</option>
+                        <option value="shared">Shared</option>
+                    </Select>
+                </Td>
+                <Td px={0} whiteSpace="nowrap">
+                    {!portForward && isForwardable && (
+                        <IconButton
+                            colorScheme="primary"
+                            size="sm"
+                            icon={<Icon as={AddIcon} />}
+                            aria-label="Forward"
+                            title="Forward"
+                            onClick={onClickAdd}
+                        />
                     )}
-                    <Text>
-                        {podPort}
-                        {String(podPort) !== podPortName && ` (${podPortName})`}
-                    </Text>
-                </HStack>
-            </Td>
-            <Td whiteSpace="nowrap">
-                <Input
-                    placeholder="auto"
-                    size="sm"
-                    type="number"
-                    isDisabled={!!portForward}
-                    value={localPortString}
-                    onKeyDown={onInputKeyPress}
-                    onChange={onChangeLocalPort}
-                />
-            </Td>
-            <Td whiteSpace="nowrap">
-                <Select
-                    size="sm"
-                    isDisabled={!!portForward}
-                    value={modeString}
-                    onChange={onChangeMode}
-                >
-                    <option value="localOnly">Local only</option>
-                    <option value="shared">Shared</option>
-                </Select>
-            </Td>
-            <Td px={0} whiteSpace="nowrap">
-                {!portForward && isForwardable && (
-                    <IconButton
-                        colorScheme="primary"
-                        size="sm"
-                        icon={<Icon as={AddIcon} />}
-                        aria-label="Forward"
-                        title="Forward"
-                        onClick={onClickAdd}
-                    />
-                )}
-                {portForward && (
-                    <IconButton
-                        colorScheme="primary"
-                        size="sm"
-                        icon={<Icon as={DeleteIcon} />}
-                        aria-label="Stop"
-                        title="Stop"
-                        onClick={onClickStop}
-                    />
-                )}
-            </Td>
-        </Tr>
+                    {portForward && (
+                        <IconButton
+                            colorScheme="primary"
+                            size="sm"
+                            icon={<Icon as={DeleteIcon} />}
+                            aria-label="Stop"
+                            title="Stop"
+                            onClick={onClickStop}
+                        />
+                    )}
+                </Td>
+                <Td>
+                    {showStats && periodStats && (
+                        <PortForwardStats stats={periodStats} />
+                    )}
+                </Td>
+            </Tr>
+        </>
     );
 };
