@@ -1,7 +1,7 @@
-import { ChevronDownIcon, ChevronUpIcon } from "@chakra-ui/icons";
+import { ChevronDownIcon, ChevronUpIcon, DeleteIcon } from "@chakra-ui/icons";
 import {
     Badge,
-    Box,
+    Button,
     Checkbox,
     HStack,
     Table,
@@ -28,16 +28,17 @@ import {
 } from "../../../common/k8s/client";
 import { ScrollBox } from "../../component/main/ScrollBox";
 import { Selectable } from "../../component/main/Selectable";
+import { Toolbar } from "../../component/main/Toolbar";
 import { useK8sNamespaces } from "../../context/k8s-namespaces";
 import { useK8sClient } from "../../k8s/client";
 import { useK8sPortForwardsWatch } from "../../k8s/port-forward-watch";
 import { ResourceEditorLink } from "../resources/ResourceEditorLink";
+import { useKeyListener, useModifierKeyRef } from "../../hook/keyboard";
+import { useDialog } from "../../hook/dialog";
+import { useContextLock } from "../../context/context-lock";
 
 export const ClusterPortForwardsOverview: React.FC<{}> = () => {
     const client = useK8sClient();
-    useEffect(() => {
-        window.k8sClient = client;
-    }, [client]);
 
     const [selectedForwardIds, setSelectedForwardIds] = useState<string[]>([]);
     const [stats, setStats] = useState<Record<string, K8sPortForwardStats>>({});
@@ -96,12 +97,34 @@ export const ClusterPortForwardsOverview: React.FC<{}> = () => {
         [forwards, setSelectedForwardIds]
     );
 
+    const onClearSelection = useCallback(() => {
+        setSelectedForwardIds([]);
+    }, [setSelectedForwardIds]);
+
+    const selectedForwards = useMemo(
+        () =>
+            filteredForwards.filter((fwd) =>
+                selectedForwardIds.includes(fwd.id)
+            ),
+        [filteredForwards, selectedForwardIds]
+    );
+
     if (loading) {
         return null;
     }
 
     return (
-        <ScrollBox px={4} py={2} flex="1 0 0">
+        <ScrollBox
+            px={4}
+            py={2}
+            flex="1 0 0"
+            bottomToolbar={
+                <PortForwardsToolbar
+                    portForwards={selectedForwards}
+                    onClearSelection={onClearSelection}
+                />
+            }
+        >
             <Table
                 size="sm"
                 sx={{ tableLayout: "fixed" }}
@@ -184,6 +207,7 @@ type PeriodStats = {
     bytesUpPerSecond: number;
     sumBytesDown: number;
     sumBytesUp: number;
+    numConnections: number;
 };
 
 const PortForwardRow: React.FC<PortForwardRowProps> = (props) => {
@@ -231,6 +255,7 @@ const PortForwardRow: React.FC<PortForwardRowProps> = (props) => {
             bytesUpPerSecond,
             sumBytesDown: stats.sumBytesDown,
             sumBytesUp: stats.sumBytesUp,
+            numConnections: stats.numConnections,
         };
     }, [prevPeriodStats, stats]);
 
@@ -294,6 +319,12 @@ const PortForwardStats: React.FC<PortForwardStatsProps> = (props) => {
     return (
         <HStack spacing={2}>
             <Badge textTransform="none">
+                <Text display="inline" fontWeight="normal" me={1}>
+                    #
+                </Text>
+                {stats.numConnections}
+            </Badge>
+            <Badge textTransform="none">
                 <ChevronUpIcon />
                 {displayMi(stats.bytesUpPerSecond)}Mi/s (
                 {displayMi(stats.sumBytesDown, 0)}Mi)
@@ -309,9 +340,92 @@ const PortForwardStats: React.FC<PortForwardStatsProps> = (props) => {
 
 function displayMi(bytes: number, fractionDigits = 2): string {
     const mibs = bytes / 1048576;
+    let maxFractionDigits = fractionDigits;
+    if (mibs > 10) {
+        maxFractionDigits = Math.min(1, maxFractionDigits);
+        if (mibs > 100) {
+            maxFractionDigits = 0;
+        }
+    }
     return mibs.toLocaleString(undefined, {
         useGrouping: false,
         minimumFractionDigits: fractionDigits,
-        maximumFractionDigits: fractionDigits,
+        maximumFractionDigits: maxFractionDigits,
     });
 }
+
+type PortForwardsToolbarProps = {
+    portForwards: K8sPortForwardEntry[];
+    onClearSelection?: () => void;
+};
+
+const PortForwardsToolbar: React.FC<PortForwardsToolbarProps> = (props) => {
+    const { portForwards, onClearSelection } = props;
+
+    const isContextLocked = useContextLock();
+    const showDialog = useDialog();
+    const client = useK8sClient();
+
+    const [isDeleting, setIsDeleting] = useState(false);
+    const onClickDelete = useCallback(() => {
+        (async () => {
+            if (isContextLocked) {
+                showDialog({
+                    title: "Read-only mode",
+                    type: "error",
+                    message: "This cluster is in read-only mode.",
+                    detail: "You can stop this port forward after you unlock the cluster with the lock/unlock button in the toolbar.",
+                    buttons: ["OK"],
+                });
+                return;
+            }
+            const detail =
+                portForwards.length === 1
+                    ? `Are you sure you want to stop this port forward?`
+                    : `Are you sure you want to stop these ${portForwards.length.toLocaleString()} port forwards?`;
+            const result = await showDialog({
+                title: "Confirm deletion",
+                message: "Are you sure?",
+                detail,
+                buttons: ["Yes", "No"],
+            });
+            if (result.response === 0) {
+                setIsDeleting(true);
+                await Promise.all(
+                    portForwards.map((fwd) => client.stopPortForward(fwd.id))
+                );
+                onClearSelection?.();
+                setIsDeleting(false);
+            }
+        })();
+    }, [isContextLocked, portForwards, setIsDeleting, showDialog]);
+
+    const metaKeyRef = useModifierKeyRef("Meta");
+    useKeyListener(
+        useCallback(
+            (event, key) => {
+                if (event === "keydown" && key === "Delete") {
+                    if (portForwards?.length > 0) {
+                        onClickDelete();
+                    }
+                }
+            },
+            [onClickDelete, metaKeyRef, portForwards]
+        )
+    );
+
+    return (
+        <Toolbar>
+            {portForwards.length > 0 && (
+                <Button
+                    colorScheme="primary"
+                    leftIcon={<DeleteIcon />}
+                    onClick={onClickDelete}
+                    isLoading={isDeleting}
+                >
+                    Stop
+                </Button>
+            )}
+        </Toolbar>
+    );
+};
