@@ -1085,8 +1085,16 @@ export function createClient(
             numConnections++;
             sendStats();
         });
+
+        let rejectPromise: ((reason?: any) => void) | undefined;
+
         server.on("error", (err) => {
             console.error("portForward server error", err);
+            if (rejectPromise) {
+                // The error occurred while starting the listening process.
+                rejectPromise(err);
+                return;
+            }
             portForwardWatchers.forEach(({ onError }) => onError(err, id));
             server.close();
         });
@@ -1104,7 +1112,8 @@ export function createClient(
         });
 
         const localPort = spec?.localPort ?? (await getPort());
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
+            rejectPromise = reject;
             server.listen(
                 localPort,
                 spec?.localOnly ?? true ? "localhost" : undefined,
@@ -1131,7 +1140,7 @@ export function createClient(
                             server.close();
                         },
                     };
-                    console.log("listening on", localPort);
+                    rejectPromise = undefined;
                     resolve(entry as K8sPortForwardEntry);
                 }
             );
