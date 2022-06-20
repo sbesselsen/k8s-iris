@@ -5,6 +5,7 @@ import { useIpcCall } from "../../hook/ipc";
 import { ClusterEventsOverview } from "./ClusterEventsOverview";
 import { ClusterInfoOverview } from "./ClusterInfoOverview";
 import { ClusterNodesOverview } from "./ClusterNodesOverview";
+import { ClusterPortForwardsOverview } from "./ClusterPortForwardsOverview";
 
 export const ClusterOverview: React.FC<{}> = () => {
     const [activeTab, setActiveTab] = useAppParam("tab", "info");
@@ -28,6 +29,11 @@ export const ClusterOverview: React.FC<{}> = () => {
         { id: "info", title: "Info", content: <ClusterInfoOverview /> },
         { id: "events", title: "Events", content: <ClusterEventsOverview /> },
         { id: "nodes", title: "Nodes", content: <ClusterNodesOverview /> },
+        {
+            id: "port-forward",
+            title: "Forwarding",
+            content: <ClusterPortForwardsOverview />,
+        },
     ];
     return (
         <ContentTabs
