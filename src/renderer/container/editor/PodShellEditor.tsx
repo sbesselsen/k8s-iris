@@ -37,6 +37,7 @@ export const PodShellEditor: React.FC<PodShellEditorProps> = (props) => {
             } catch (e) {
                 // TODO: show this nicely
                 console.error(e);
+                return;
             }
             if (closed) {
                 handler.close();
@@ -47,7 +48,7 @@ export const PodShellEditor: React.FC<PodShellEditorProps> = (props) => {
                     terminal.write(new Uint8Array(stdout));
                 }
                 if (stderr) {
-                    terminal.write(new Uint8Array(stdout));
+                    terminal.write(new Uint8Array(stderr));
                 }
             });
             handler.onEnd((status) => {
