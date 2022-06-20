@@ -18,12 +18,18 @@ export type ShellManager = {
 };
 
 export function createShellManager(opts: ShellManagerOptions): ShellManager {
-    const shellForContext = async (context: string): Promise<ShellHandler> => {
+    const { shellWrappers } = opts;
+
+    const innerShellForContext = async (
+        context: string,
+        env: Record<string, string>
+    ): Promise<ShellHandler> => {
         let closeListener: (exitCode: number) => void;
 
         const child = spawn(process.env.SHELL ?? "/bin/bash", [], {
             env: {
                 TERM: "xterm-256color",
+                ...env,
             },
             rows: 30,
             cols: 80,
@@ -64,5 +70,36 @@ export function createShellManager(opts: ShellManagerOptions): ShellManager {
 
         return handler;
     };
+
+    const wrappedShellForContext = async (
+        context: string,
+        wrappers: ShellWrapper[],
+        env: Record<string, string>
+    ): Promise<ShellHandler> => {
+        if (wrappers.length === 0) {
+            return await innerShellForContext(context, env);
+        }
+        const [wrapper, ...moreWrappers] = wrappers;
+        const wrapperOutput = await wrapper(context);
+        const handler = await wrappedShellForContext(context, moreWrappers, {
+            ...env,
+            ...wrapperOutput.env,
+        });
+        let onEndListener: undefined | ((exitCode?: number) => void);
+        handler.onEnd(async (exitCode) => {
+            // Unwrap.
+            await wrapperOutput.unwrap();
+            onEndListener?.(exitCode);
+        });
+        handler.onEnd = (listener) => {
+            onEndListener = listener;
+        };
+        return handler;
+    };
+
+    const shellForContext = async (context: string): Promise<ShellHandler> => {
+        return wrappedShellForContext(context, shellWrappers, {});
+    };
+
     return { shellForContext };
 }

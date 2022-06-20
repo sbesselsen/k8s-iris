@@ -86,6 +86,7 @@ function onlyFullObject(body: KubernetesObject): K8sObject | null {
  */
 export type K8sBackendClient = K8sClient & {
     retryConnections(): void;
+    getKubeConfig(): k8s.KubeConfig;
 };
 
 export type K8sClientOptions = {
@@ -1151,6 +1152,8 @@ export function createClient(
         portForwardHandles[id]?.stop();
     };
 
+    const getKubeConfig = () => kubeConfig;
+
     return {
         read,
         apply,
@@ -1169,5 +1172,6 @@ export function createClient(
         stopPortForward,
         retryConnections,
         listApiResourceTypes,
+        getKubeConfig,
     };
 }

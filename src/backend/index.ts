@@ -6,6 +6,7 @@ import { createCloudManager } from "./cloud";
 import { wireCloudIpc } from "./cloud/ipc";
 import { createClientManager } from "./k8s";
 import { wireK8sClientIpc } from "./k8s/ipc";
+import { k8sShellWrapper } from "./k8s/shell";
 import { createMenuManager } from "./menu";
 import { createPrefsManager } from "./prefs";
 import { createShellManager } from "./shell";
@@ -29,7 +30,7 @@ import { createWindowManager, WindowParameters } from "./window";
     });
     const windowManager = createWindowManager();
     const shellManager = createShellManager({
-        shellWrappers: [],
+        shellWrappers: [k8sShellWrapper(k8sClientManager)],
     });
     const menuManager = createMenuManager({
         createWindow: () => {

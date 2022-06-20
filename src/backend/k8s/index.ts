@@ -15,6 +15,7 @@ export type K8sClientManager = {
     defaultContext(): string | undefined;
     defaultNamespaces(): string[] | undefined;
     retryConnections(): void;
+    kubeConfigForContext(context: string): k8s.KubeConfig;
 };
 
 function getKubeConfigFromDefault(): k8s.KubeConfig {
@@ -61,11 +62,14 @@ export function createClientManager(
             client.retryConnections();
         }
     };
+    const kubeConfigForContext = (context: string) =>
+        clientForContext(context).getKubeConfig();
     return {
         listContexts,
         clientForContext,
         defaultContext,
         defaultNamespaces,
         retryConnections,
+        kubeConfigForContext,
     };
 }
