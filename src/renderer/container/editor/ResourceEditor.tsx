@@ -1,23 +1,52 @@
-import { ChevronDownIcon, DeleteIcon, EditIcon } from "@chakra-ui/icons";
+import {
+    AddIcon,
+    ChevronDownIcon,
+    DeleteIcon,
+    EditIcon,
+} from "@chakra-ui/icons";
 import { FiTerminal } from "react-icons/fi";
 import { RiTextWrap } from "react-icons/ri";
+import { MdCastConnected } from "react-icons/md";
 import {
     Box,
     Button,
     HStack,
     Icon,
     IconButton,
+    Input,
     Menu,
     MenuButton,
     MenuItem,
     MenuList,
+    Popover,
+    PopoverArrow,
+    PopoverBody,
+    PopoverCloseButton,
+    PopoverContent,
+    PopoverHeader,
+    PopoverTrigger,
+    Spinner,
+    Table,
+    Tbody,
+    Td,
+    Text,
+    Th,
+    Thead,
+    Tr,
     useConst,
     VStack,
 } from "@chakra-ui/react";
-import React, { useCallback, useMemo, useState } from "react";
+import React, {
+    ChangeEvent,
+    KeyboardEvent,
+    useCallback,
+    useMemo,
+    useState,
+} from "react";
 import {
     K8sObject,
     K8sObjectIdentifier,
+    K8sPortForwardEntry,
     K8sResourceTypeIdentifier,
 } from "../../../common/k8s/client";
 import {
@@ -47,6 +76,7 @@ import { useK8sListWatch } from "../../k8s/list-watch";
 import { ResourceTypeSelector } from "../resources/ResourceTypeSelector";
 import { ResourceYamlEditor } from "./ResourceYamlEditor";
 import { useEditorOpener } from "../../hook/editor-link";
+import { useK8sPortForwardsWatch } from "../../k8s/port-forward-watch";
 
 export type ResourceEditorProps = {
     editorResource: K8sObjectIdentifier;
@@ -316,6 +346,15 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
                     >
                         Edit
                     </Button>
+                    <IconButton
+                        colorScheme="primary"
+                        icon={<DeleteIcon />}
+                        aria-label="Delete"
+                        title="Delete"
+                        onClick={onClickDelete}
+                        isLoading={isDeleting}
+                    />
+                    <Box flex="1 0 0"></Box>
                     {isShellable && (
                         <ShellButton
                             object={object}
@@ -330,15 +369,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
                             onClick={onClickLogs}
                         />
                     )}
-
-                    <IconButton
-                        colorScheme="primary"
-                        icon={<DeleteIcon />}
-                        aria-label="Delete"
-                        title="Delete"
-                        onClick={onClickDelete}
-                        isLoading={isDeleting}
-                    />
+                    <PortForwardingMenu object={object} />
                     <Box flex="1 0 0"></Box>
                     <ShowDetailsToggle
                         value={showDetails}
@@ -613,5 +644,281 @@ export const NewResourceEditor: React.FC<NewResourceEditorProps> = (props) => {
                 )}
             </VStack>
         </VStack>
+    );
+};
+
+const PortForwardingMenu: React.FC<{ object: K8sObject }> = (props) => {
+    const { object } = props;
+    if (!object || object.apiVersion !== "v1" || object.kind !== "Pod") {
+        return null;
+    }
+
+    const client = useK8sClient();
+    const showDialog = useDialog();
+    const isContextLocked = useContextLock();
+
+    const [loading, forwards, forwardsError] = useK8sPortForwardsWatch();
+
+    const availablePorts = useMemo(() => {
+        const ports: Array<{
+            id: string;
+            port: number;
+            name: string;
+            portForward: K8sPortForwardEntry | undefined;
+            forwardable: boolean;
+        }> = [];
+        const containers = (object as any).spec?.containers;
+        if (containers) {
+            for (const container of containers) {
+                if (container?.ports) {
+                    for (const port of container.ports) {
+                        if (!port) {
+                            continue;
+                        }
+                        const forwardable =
+                            !port.protocol || port.protocol === "TCP";
+                        ports.push({
+                            id: String(port.containerPort),
+                            port: port.containerPort,
+                            name: port.name ?? String(port.containerPort),
+                            portForward: forwards.find(
+                                (fwd) =>
+                                    fwd.spec.namespace ===
+                                        object.metadata.namespace &&
+                                    fwd.spec.podName === object.metadata.name &&
+                                    fwd.spec.podPort === port.containerPort
+                            ),
+                            forwardable,
+                        });
+                    }
+                }
+            }
+        }
+        return ports;
+    }, [forwards, object]);
+
+    const addForward = useCallback(
+        (
+            podPort: number,
+            localPort: number | undefined,
+            localOnly: boolean
+        ) => {
+            (async () => {
+                if (isContextLocked) {
+                    showDialog({
+                        title: "Read-only mode",
+                        type: "error",
+                        message: "This cluster is in read-only mode.",
+                        detail: "You can only port forward after you unlock the cluster with the lock/unlock button in the toolbar.",
+                        buttons: ["OK"],
+                    });
+                    return;
+                }
+                try {
+                    await client.portForward({
+                        podName: object.metadata.name,
+                        namespace: object.metadata.namespace as string,
+                        localOnly,
+                        podPort,
+                        ...(localPort !== undefined ? { localPort } : {}),
+                    });
+                } catch (e) {
+                    console.error("Error port forwarding", e);
+                }
+            })();
+        },
+        [client, isContextLocked, object, showDialog]
+    );
+
+    const stopForward = useCallback(
+        (id: string) => {
+            (async () => {
+                if (isContextLocked) {
+                    showDialog({
+                        title: "Read-only mode",
+                        type: "error",
+                        message: "This cluster is in read-only mode.",
+                        detail: "You can only stop this port forward after you unlock the cluster with the lock/unlock button in the toolbar.",
+                        buttons: ["OK"],
+                    });
+                    return;
+                }
+                try {
+                    await client.stopPortForward(id);
+                } catch (e) {
+                    console.error("Error stopping port forwarding", e);
+                }
+            })();
+        },
+        [client, isContextLocked, showDialog]
+    );
+
+    const onAddHandlers = useMemo(
+        () =>
+            Object.fromEntries(
+                availablePorts.map((port) => [
+                    port.id,
+                    (localPort: number | undefined, localOnly: boolean) => {
+                        addForward(port.port, localPort, localOnly);
+                    },
+                ])
+            ),
+        [addForward, availablePorts]
+    );
+
+    const onStopHandlers = useMemo(
+        () =>
+            Object.fromEntries(
+                forwards.map((fwd) => [
+                    fwd.id,
+                    () => {
+                        stopForward(fwd.id);
+                    },
+                ])
+            ),
+        [forwards, stopForward]
+    );
+
+    return (
+        <Popover>
+            <PopoverTrigger>
+                <IconButton
+                    colorScheme="primary"
+                    icon={<Icon as={MdCastConnected} />}
+                    aria-label="Port forwarding"
+                    title="Port forwarding"
+                    fontWeight="normal"
+                />
+            </PopoverTrigger>
+            <PopoverContent>
+                <PopoverArrow />
+                <PopoverCloseButton />
+                <PopoverBody>
+                    {loading && <Spinner />}
+                    {!loading && (
+                        <Table
+                            size="sm"
+                            sx={{ tableLayout: "fixed" }}
+                            width="100%"
+                        >
+                            <Thead>
+                                <Tr>
+                                    <Th>Pod port</Th>
+                                    <Th>Local port</Th>
+                                    <Th width="30px"></Th>
+                                </Tr>
+                            </Thead>
+                            <Tbody>
+                                {availablePorts.map((port) => (
+                                    <PortForwardingRow
+                                        portForward={port.portForward}
+                                        podPort={port.port}
+                                        podPortName={port.name}
+                                        isForwardable={port.forwardable}
+                                        onAdd={onAddHandlers[port.id]}
+                                        onStop={
+                                            port.portForward
+                                                ? onStopHandlers[
+                                                      port.portForward?.id
+                                                  ]
+                                                : undefined
+                                        }
+                                        key={port.id}
+                                    />
+                                ))}
+                            </Tbody>
+                        </Table>
+                    )}
+                </PopoverBody>
+            </PopoverContent>
+        </Popover>
+    );
+};
+
+type PortForwardingRowProps = {
+    portForward: K8sPortForwardEntry | undefined;
+    podPort: number;
+    podPortName: string;
+    isForwardable: boolean;
+    onAdd?: (localPort: number | undefined, localOnly: boolean) => void;
+    onStop?: () => void;
+};
+const PortForwardingRow: React.FC<PortForwardingRowProps> = (props) => {
+    const { portForward, podPort, podPortName, isForwardable, onAdd, onStop } =
+        props;
+
+    const [localPortString, setLocalPortString] = useState("");
+
+    const onClickAdd = useCallback(() => {
+        // TODO: localOnly UI
+        onAdd?.(
+            localPortString === "" ? undefined : parseInt(localPortString, 10),
+            true
+        );
+    }, [onAdd, localPortString]);
+
+    const onClickStop = useCallback(() => {
+        onStop?.();
+    }, [onStop]);
+
+    const onChangeLocalPort = useCallback(
+        (e: ChangeEvent<HTMLInputElement>) => {
+            setLocalPortString(e.target.value);
+        },
+        [setLocalPortString]
+    );
+
+    const onInputKeyPress = useCallback(
+        (e: KeyboardEvent) => {
+            if (e.key === "Enter" || e.key === "Return") {
+                onClickAdd();
+            }
+        },
+        [onClickAdd]
+    );
+
+    return (
+        <Tr>
+            <Td>
+                {podPort}
+                {String(podPort) !== podPortName && ` (${podPortName})`}
+            </Td>
+            <Td>
+                <Input
+                    placeholder="auto"
+                    type="number"
+                    isDisabled={!!portForward}
+                    value={
+                        portForward
+                            ? String(portForward.localPort)
+                            : localPortString
+                    }
+                    onKeyDown={onInputKeyPress}
+                    onChange={onChangeLocalPort}
+                />
+            </Td>
+            <Td px={0}>
+                {!portForward && isForwardable && (
+                    <IconButton
+                        colorScheme="primary"
+                        size="sm"
+                        icon={<Icon as={AddIcon} />}
+                        aria-label="Forward"
+                        title="Forward"
+                        onClick={onClickAdd}
+                    />
+                )}
+                {portForward && (
+                    <IconButton
+                        colorScheme="primary"
+                        size="sm"
+                        icon={<Icon as={DeleteIcon} />}
+                        aria-label="Stop"
+                        title="Stop"
+                        onClick={onClickStop}
+                    />
+                )}
+            </Td>
+        </Tr>
     );
 };
