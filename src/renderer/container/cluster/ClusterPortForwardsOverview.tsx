@@ -42,6 +42,10 @@ import { ResourceEditorLink } from "../resources/ResourceEditorLink";
 import { useKeyListener, useModifierKeyRef } from "../../hook/keyboard";
 import { useDialog } from "../../hook/dialog";
 import { useContextLock } from "../../context/context-lock";
+import {
+    PortForwardStats,
+    usePeriodStats,
+} from "../../component/k8s/PortForwardStats";
 
 export const ClusterPortForwardsOverview: React.FC<{}> = () => {
     const client = useK8sClient();
@@ -233,37 +237,7 @@ const PortForwardRow: React.FC<PortForwardRowProps> = (props) => {
         [onChangeSelect]
     );
 
-    // Calculate stats.
-    const [prevPeriodStats, setPrevPeriodStats] =
-        useState<K8sPortForwardStats>();
-    const prevStatsRef = useRef<K8sPortForwardStats>();
-    useEffect(() => {
-        if (!stats) {
-            return;
-        }
-        if (stats !== prevStatsRef.current) {
-            setPrevPeriodStats(prevStatsRef.current);
-        }
-        prevStatsRef.current = stats;
-    }, [prevStatsRef, setPrevPeriodStats, stats]);
-
-    const periodStats: PeriodStats | null = useMemo(() => {
-        if (!stats || !prevPeriodStats) {
-            return null;
-        }
-        const durationMs = stats.timestampMs - prevPeriodStats.timestampMs;
-        const bytesDown = stats.sumBytesDown - prevPeriodStats.sumBytesDown;
-        const bytesUp = stats.sumBytesUp - prevPeriodStats.sumBytesUp;
-        const bytesDownPerSecond = (bytesDown * 1000) / durationMs;
-        const bytesUpPerSecond = (bytesUp * 1000) / durationMs;
-        return {
-            bytesDownPerSecond,
-            bytesUpPerSecond,
-            sumBytesDown: stats.sumBytesDown,
-            sumBytesUp: stats.sumBytesUp,
-            numConnections: stats.numConnections,
-        };
-    }, [prevPeriodStats, stats]);
+    const periodStats = usePeriodStats(stats);
 
     const podResource: K8sObjectIdentifier = useMemo(
         () => ({
@@ -324,67 +298,6 @@ const PortForwardRow: React.FC<PortForwardRowProps> = (props) => {
         </Tr>
     );
 };
-
-type PortForwardStatsProps = {
-    stats: PeriodStats;
-};
-const PortForwardStats: React.FC<PortForwardStatsProps> = (props) => {
-    const { stats } = props;
-
-    return (
-        <HStack spacing={2}>
-            <Badge textTransform="none">
-                <Text display="inline" fontWeight="normal" me={1}>
-                    #
-                </Text>
-                {stats.numConnections}
-            </Badge>
-            <Badge textTransform="none">
-                <ChevronUpIcon />
-                {displayBytes(stats.bytesUpPerSecond)}/s (
-                {displayBytes(stats.sumBytesUp, 0)})
-            </Badge>
-            <Badge textTransform="none">
-                <ChevronDownIcon />
-                {displayBytes(stats.bytesDownPerSecond)}/s (
-                {displayBytes(stats.sumBytesDown, 0)})
-            </Badge>
-        </HStack>
-    );
-};
-
-function displayBytes(bytes: number, fractionDigits = 2): string {
-    let mibs = bytes / 1048576;
-    let unit = "Mi";
-    let minFractionDigits = fractionDigits;
-    let maxFractionDigits = fractionDigits;
-    if (mibs > 10) {
-        maxFractionDigits = Math.min(1, maxFractionDigits);
-        if (mibs > 100) {
-            maxFractionDigits = 0;
-            if (mibs > 1024) {
-                unit = "Gi";
-                mibs /= 1024;
-                minFractionDigits = 1;
-                maxFractionDigits = 1;
-                if (mibs > 10) {
-                    minFractionDigits = 0;
-                    maxFractionDigits = 0;
-                }
-            }
-        }
-    }
-    return (
-        mibs.toLocaleString(undefined, {
-            useGrouping: true,
-            minimumFractionDigits: Math.min(
-                minFractionDigits,
-                maxFractionDigits
-            ),
-            maximumFractionDigits: maxFractionDigits,
-        }) + unit
-    );
-}
 
 type PortForwardsToolbarProps = {
     portForwards: K8sPortForwardEntry[];
