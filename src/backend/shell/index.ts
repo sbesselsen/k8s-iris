@@ -27,6 +27,7 @@ export function createShellManager(opts: ShellManagerOptions): ShellManager {
         let closeListener: (exitCode: number) => void;
 
         const child = spawn(process.env.SHELL ?? "/bin/bash", [], {
+            cwd: process.env.HOME ?? "/",
             env: {
                 TERM: "xterm-256color",
                 ...env,
