@@ -27,62 +27,89 @@ store.subscribe((handles) => {
     for (const context of Object.keys(handles)) {
         if (!listWatches[context]) {
             console.log("Start tracking resource types", context);
-            // Create a new listwatch to keep the store value up-to-date.
-            listWatches[context] = handles[context].client.listWatch(
-                {
-                    apiVersion: "apiextensions.k8s.io/v1",
-                    kind: "CustomResourceDefinition",
+
+            let stopped = false;
+            // Set a temporary listWatch handle.
+            listWatches[context] = {
+                stop() {
+                    stopped = true;
                 },
-                (error, _message) => {
-                    const setErrorValue = (error: any) => {
-                        store.set((handles) => ({
-                            ...handles,
-                            [context]: {
-                                ...handles[context],
-                                value: {
-                                    isLoading: false,
-                                    error,
-                                    resourceTypes:
-                                        handles[context].value.resourceTypes,
-                                },
-                            },
-                        }));
-                    };
-                    const setResultValue = (result: K8sResourceTypeInfo[]) => {
-                        store.set((handles) => ({
-                            ...handles,
-                            [context]: {
-                                ...handles[context],
-                                value: {
-                                    isLoading: false,
-                                    error: undefined,
-                                    resourceTypes: result,
-                                },
-                            },
-                        }));
-                    };
-                    if (error) {
-                        setErrorValue(error);
-                    } else {
-                        const myListWatch = listWatches[context];
-                        // Load the resource types list.
-                        (async () => {
-                            try {
-                                const types = await handles[
-                                    context
-                                ].client.listApiResourceTypes();
-                                if (myListWatch === listWatches[context]) {
-                                    setResultValue(types);
-                                }
-                            } catch (e) {
-                                if (myListWatch === listWatches[context]) {
-                                    setErrorValue(e);
-                                }
-                            }
-                        })();
-                    }
+            };
+
+            const setErrorValue = (error: any) => {
+                store.set((handles) => ({
+                    ...handles,
+                    [context]: {
+                        ...handles[context],
+                        value: {
+                            isLoading: false,
+                            error,
+                            resourceTypes: handles[context].value.resourceTypes,
+                        },
+                    },
+                }));
+            };
+            const setResultValue = (result: K8sResourceTypeInfo[]) => {
+                store.set((handles) => ({
+                    ...handles,
+                    [context]: {
+                        ...handles[context],
+                        value: {
+                            isLoading: false,
+                            error: undefined,
+                            resourceTypes: result,
+                        },
+                    },
+                }));
+            };
+
+            (async () => {
+                let haveInitialList = false;
+                try {
+                    const types = await handles[
+                        context
+                    ].client.listApiResourceTypes();
+                    setResultValue(types);
+                    haveInitialList = true;
+                } catch (e) {}
+                if (stopped) {
+                    return;
                 }
-            );
+
+                // Create a new listwatch to keep the store value up-to-date.
+                listWatches[context] = handles[context].client.listWatch(
+                    {
+                        apiVersion: "apiextensions.k8s.io/v1",
+                        kind: "CustomResourceDefinition",
+                    },
+                    (error, message) => {
+                        if (error) {
+                            setErrorValue(error);
+                        } else {
+                            if (!message?.update && haveInitialList) {
+                                // Don't run listApiResourceTypes() after initial list result, because it would be duplication.
+                                return;
+                            }
+                            const myListWatch = listWatches[context];
+                            // Load the resource types list.
+                            (async () => {
+                                try {
+                                    const types = await handles[
+                                        context
+                                    ].client.listApiResourceTypes();
+                                    if (myListWatch === listWatches[context]) {
+                                        setResultValue(types);
+                                    }
+                                } catch (e) {
+                                    if (myListWatch === listWatches[context]) {
+                                        setErrorValue(e);
+                                    }
+                                }
+                            })();
+                        }
+                    }
+                );
+            })();
         }
     }
     for (const context of Object.keys(listWatches)) {

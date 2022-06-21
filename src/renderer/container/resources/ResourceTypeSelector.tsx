@@ -8,6 +8,8 @@ import {
     MenuGroup,
     MenuItem,
     MenuList,
+    Spinner,
+    Text,
     useControllableState,
     useDisclosure,
     useToken,
@@ -57,7 +59,7 @@ export const ResourceTypeSelector: React.FC<ResourceTypeSelectorProps> = (
         onChange: onChange as any,
     });
 
-    const [_isLoadingResourceTypes, resourceTypes, _resourceTypesError] =
+    const [isLoadingResourceTypes, resourceTypes, _resourceTypesError] =
         useK8sApiResourceTypes();
 
     const metaKeyPressedRef = useModifierKeyRef("Meta");
@@ -282,6 +284,14 @@ export const ResourceTypeSelector: React.FC<ResourceTypeSelectorProps> = (
                         autoComplete="off"
                         spellCheck="false"
                     />
+                    {isLoadingResourceTypes && (
+                        <HStack px={4}>
+                            <Spinner size="sm" />{" "}
+                            <Text color="gray" fontSize="sm">
+                                Loading...
+                            </Text>
+                        </HStack>
+                    )}
                     {groupedResourceTypes.map((group) => (
                         <MenuGroup
                             title={group.title}
