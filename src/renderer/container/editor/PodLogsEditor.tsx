@@ -177,6 +177,7 @@ export const PodLogsEditor: React.FC<PodLogsEditorProps> = (props) => {
                     padding: { top: 5 },
                     lineNumbers: "off",
                     wordWrap: "on",
+                    language: "containerLog",
                 }}
                 defaultValue=""
                 configureEditor={configureEditor}

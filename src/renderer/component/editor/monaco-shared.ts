@@ -1,4 +1,4 @@
-import { editor } from "monaco-editor";
+import { editor, languages } from "monaco-editor";
 // import JSONWorker from "url:monaco-editor/esm/vs/language/json/json.worker.js";
 // import CSSWorker from "url:monaco-editor/esm/vs/language/css/css.worker.js";
 // import HTMLWorker from "url:monaco-editor/esm/vs/language/html/html.worker.js";
@@ -13,16 +13,62 @@ export function initializeMonaco() {
     }
     initialized = true;
 
+    initializeLogLanguage();
+
     editor.defineTheme("charm", {
         base: "vs",
         inherit: true,
-        rules: [],
+        rules: [
+            {
+                token: "log-timestamp",
+                fontStyle: "italic",
+                foreground: "666666",
+            },
+            {
+                token: "log-warning",
+                foreground: "E53E3E",
+            },
+            {
+                token: "log-error",
+                foreground: "E53E3E",
+            },
+            {
+                token: "log-info",
+                foreground: "2b6cb0",
+            },
+            {
+                token: "log-notice",
+                foreground: "2b6cb0",
+            },
+        ],
         colors: {},
     });
     editor.defineTheme("charm-dark", {
         base: "vs-dark",
         inherit: true,
-        rules: [],
+        rules: [
+            {
+                token: "log-timestamp",
+                fontStyle: "italic",
+                foreground: "666666",
+            },
+            {
+                token: "log-warning",
+                foreground: "E53E3E",
+            },
+            {
+                token: "log-error",
+                foreground: "E53E3E",
+            },
+            {
+                token: "log-info",
+                foreground: "2b6cb0",
+            },
+            {
+                token: "log-notice",
+                foreground: "2b6cb0",
+            },
+        ],
         colors: {
             "editor.background": "#171923", // gray.900
         },
@@ -69,3 +115,24 @@ export function recalcFont(_family: string) {
 
 export const defaultFontFamily = "JetBrainsMono";
 export const defaultFontSize = 12;
+
+function initializeLogLanguage() {
+    // Register a new language
+    languages.register({ id: "containerLog" });
+
+    // Register a tokens provider for the language
+    languages.setMonarchTokensProvider("containerLog", {
+        tokenizer: {
+            root: [
+                [
+                    /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9\.]+[Z+][^\s]*/,
+                    "log-timestamp",
+                ],
+                [/\[[Ww][Aa][Rr][Nn]([Ii][Nn][Gg])?\]/, "log-warning"],
+                [/\[[E][Rr][Rr]([Oo][Rr])?\]/, "log-error"],
+                [/\[[Nn][Oo][Tt][Ii][Cc][Ee]\]/, "log-notice"],
+                [/\[[Ii][Nn][Ff][Oo]\]/, "log-info"],
+            ],
+        },
+    });
+}
