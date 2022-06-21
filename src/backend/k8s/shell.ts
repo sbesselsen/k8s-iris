@@ -9,6 +9,12 @@ import { ShellWrapper } from "../shell";
 export function k8sShellWrapper(clientManager: K8sClientManager): ShellWrapper {
     return async (context: string) => {
         const kubeConfig = clientManager.kubeConfigForContext(context);
+        if (!kubeConfig) {
+            // Nothing to wrap.
+            return {
+                async unwrap() {},
+            };
+        }
 
         const tempPath = path.join(
             app.getPath("temp"),

@@ -4,6 +4,7 @@ import { emptyAppRoute } from "../common/route/app-route";
 import { DialogOptions, DialogResult } from "../common/ui/dialog";
 import { createCloudManager } from "./cloud";
 import { wireCloudIpc } from "./cloud/ipc";
+import { cloudShellWrapper } from "./cloud/shell";
 import { createClientManager } from "./k8s";
 import { wireK8sClientIpc } from "./k8s/ipc";
 import { k8sShellWrapper } from "./k8s/shell";
@@ -30,7 +31,10 @@ import { createWindowManager, WindowParameters } from "./window";
     });
     const windowManager = createWindowManager();
     const shellManager = createShellManager({
-        shellWrappers: [k8sShellWrapper(k8sClientManager)],
+        shellWrappers: [
+            k8sShellWrapper(k8sClientManager),
+            cloudShellWrapper(cloudManager, k8sClientManager),
+        ],
     });
     const menuManager = createMenuManager({
         createWindow: () => {
