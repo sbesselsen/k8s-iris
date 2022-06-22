@@ -30,8 +30,14 @@ export type K8sObjectList<T extends K8sObject = K8sObject> =
         items: T[];
     };
 
+export type K8sLabelPredicate = {
+    name: string;
+    value: string | string[];
+};
+
 export type K8sObjectListQuery = K8sResourceTypeIdentifier & {
     namespaces?: string[];
+    labelSelector?: Array<K8sLabelPredicate>;
 };
 
 export type K8sPatchOptions = {

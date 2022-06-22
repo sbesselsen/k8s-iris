@@ -7,6 +7,7 @@ import {
 } from "@kubernetes/client-node";
 import * as request from "request";
 import * as net from "net";
+import * as querystring from "querystring";
 import { exec as execChildProcess } from "child_process";
 import { Exec } from "@kubernetes/client-node";
 import { PassThrough, pipeline } from "stream";
@@ -60,7 +61,7 @@ import {
     updateListObject,
 } from "../../common/k8s/util";
 import { deepEqual } from "../../common/util/deep-equal";
-import { kubeRequestOpts } from "./util";
+import { kubeRequestOpts, labelSelectorToString } from "./util";
 import { CharmPatchedExecAuth } from "./authenticator/exec";
 import { toYaml } from "../../common/util/yaml";
 import { shellOptions } from "../util/shell";
@@ -461,10 +462,18 @@ export function createClient(
                 items: [],
             };
 
+            let labelSelectorString: string | undefined;
+            const queryParams: Record<string, string> = {};
+            if (spec.labelSelector && spec.labelSelector.length > 0) {
+                labelSelectorString = labelSelectorToString(spec.labelSelector);
+                queryParams.labelSelector = labelSelectorString;
+            }
+
             const listFn = () => {
                 return new Promise((resolve, reject) => {
                     request.get(
-                        `${kubeConfig.getCurrentCluster().server}/${path}`,
+                        `${kubeConfig.getCurrentCluster().server}/${path}?` +
+                            querystring.stringify(queryParams),
                         opts,
                         (err, response, body) => {
                             if (err) {
@@ -495,7 +504,12 @@ export function createClient(
                 });
             };
 
-            informer = k8s.makeInformer(kubeConfig, `/${path}`, listFn as any);
+            informer = k8s.makeInformer(
+                kubeConfig,
+                `/${path}`,
+                listFn as any,
+                labelSelectorString
+            );
 
             informer.on("add", (obj: any) => {
                 if (!passesNamespaceCheck(obj)) {
