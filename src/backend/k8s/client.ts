@@ -360,9 +360,17 @@ export function createClient(
 
         const opts = await kubeRequestOpts(kubeConfig);
 
+        let labelSelectorString: string | undefined;
+        const queryParams: Record<string, string> = {};
+        if (spec.labelSelector && spec.labelSelector.length > 0) {
+            labelSelectorString = labelSelectorToString(spec.labelSelector);
+            queryParams.labelSelector = labelSelectorString;
+        }
+
         return new Promise((resolve, reject) => {
             request.get(
-                `${kubeConfig.getCurrentCluster().server}/${path}`,
+                `${kubeConfig.getCurrentCluster().server}/${path}?` +
+                    querystring.stringify(queryParams),
                 opts,
                 (err, _res, body) => {
                     if (err) {
