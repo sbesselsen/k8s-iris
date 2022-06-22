@@ -535,7 +535,7 @@ const AppContent: React.FC<{}> = () => {
     const editorDefs = useAppEditors();
 
     return (
-        <Suspense fallback={<Box />}>
+        <>
             {Object.entries(appComponents).map(([key, component]) => {
                 const isActive = key === menuItem && !editor;
 
@@ -558,7 +558,7 @@ const AppContent: React.FC<{}> = () => {
                     isSelected={editorDef.id === editor}
                 />
             ))}
-        </Suspense>
+        </>
     );
 };
 
@@ -599,7 +599,9 @@ const AppContentContainer: React.FC<{ isVisible: boolean }> = (props) => {
             h="100%"
             display={isVisible ? "flex" : "none"}
         >
-            <ErrorBoundary renderError={renderError}>{children}</ErrorBoundary>
+            <ErrorBoundary renderError={renderError}>
+                <Suspense fallback={<Box />}>{children}</Suspense>
+            </ErrorBoundary>
         </VStack>
     );
 };
