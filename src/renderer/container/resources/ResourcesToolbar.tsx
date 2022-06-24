@@ -1,10 +1,12 @@
-import { AddIcon, DeleteIcon, EditIcon } from "@chakra-ui/icons";
-import { Button, IconButton } from "@chakra-ui/react";
-import React, { useCallback, useState } from "react";
+import { AddIcon, DeleteIcon, EditIcon, Icon } from "@chakra-ui/icons";
+import { Box, Button, ButtonGroup, IconButton } from "@chakra-ui/react";
+import { MdOutlinePause, MdPlayArrow } from "react-icons/md";
+import React, { useCallback, useMemo, useState } from "react";
 import {
     K8sObject,
     K8sResourceTypeIdentifier,
 } from "../../../common/k8s/client";
+import { isSetLike } from "../../../common/k8s/util";
 import { Toolbar } from "../../component/main/Toolbar";
 import { useContextLock } from "../../context/context-lock";
 import {
@@ -141,6 +143,168 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
         showDialog,
     ]);
 
+    const isScalable = useMemo(
+        () => resources.every((r) => isSetLike(r) && r.kind !== "DaemonSet"),
+        [resources]
+    );
+    const isPausable = useMemo(
+        () =>
+            isScalable && resources.some((r) => (r as any)?.spec?.replicas > 0),
+        [isScalable, resources]
+    );
+    const isResumable = useMemo(
+        () =>
+            isScalable &&
+            resources.some((r) => (r as any)?.spec?.replicas === 0),
+        [isScalable, resources]
+    );
+
+    const [isPausing, setIsPausing] = useState(false);
+    const onClickPause = useCallback(async () => {
+        if (resources.length === 0) {
+            return;
+        }
+        if (isClusterLocked) {
+            showDialog({
+                title: "Read-only mode",
+                type: "error",
+                message: "This cluster is in read-only mode.",
+                detail: "You can only scale after you unlock the cluster with the lock/unlock button in the toolbar.",
+                buttons: ["OK"],
+            });
+            return;
+        }
+        const result = await showDialog({
+            title: "Are you sure?",
+            type: "question",
+            message: `Are you sure you want to pause ${
+                resources.length === 1
+                    ? resources[0].metadata.name
+                    : resources.length + " resources"
+            }?`,
+            detail: `This will effectively switch ${
+                resources.length === 1 ? "it" : "them"
+            } off and make ${
+                resources.length === 1 ? "it" : "them"
+            } unavailable.`,
+            buttons: ["Yes", "No"],
+        });
+        if (result.response === 1) {
+            return;
+        }
+        const errors: string[] = [];
+        setIsPausing(true);
+        await Promise.all(
+            resources.map(async (resource) => {
+                const originalScale = (resource as any)?.spec?.replicas ?? 1;
+                try {
+                    await client.apply({
+                        ...resource,
+                        metadata: {
+                            ...resource.metadata,
+                            annotations: {
+                                ...resource.metadata.annotations,
+                                "irisapp.dev/paused-scale":
+                                    String(originalScale),
+                            },
+                        },
+                        spec: {
+                            ...(resource as any).spec,
+                            replicas: 0,
+                        },
+                    } as K8sObject);
+                } catch (e) {
+                    errors.push(e.message);
+                }
+            })
+        );
+        setIsPausing(false);
+        if (errors.length > 0) {
+            console.error("Errors while scaling", errors);
+            showDialog({
+                title: "Error while scaling",
+                type: "error",
+                message: "An error occurred while applying the new scale:",
+                detail:
+                    errors.length === 1
+                        ? errors[0]
+                        : errors.map((e) => `- ${e}`).join("\n"),
+                buttons: ["OK"],
+            });
+        }
+    }, [client, resources, setIsPausing, showDialog]);
+
+    const [isResuming, setIsResuming] = useState(false);
+    const onClickResume = useCallback(async () => {
+        if (resources.length === 0) {
+            return;
+        }
+        if (isClusterLocked) {
+            showDialog({
+                title: "Read-only mode",
+                type: "error",
+                message: "This cluster is in read-only mode.",
+                detail: "You can only scale after you unlock the cluster with the lock/unlock button in the toolbar.",
+                buttons: ["OK"],
+            });
+            return;
+        }
+        const errors: string[] = [];
+        setIsResuming(true);
+        await Promise.all(
+            resources.map(async (resource) => {
+                let targetScale = 1;
+                if (
+                    (resource as any)?.metadata?.annotations?.[
+                        "irisapp.dev/paused-scale"
+                    ]
+                ) {
+                    const originalScale = parseInt(
+                        (resource as any).metadata.annotations[
+                            "irisapp.dev/paused-scale"
+                        ],
+                        10
+                    );
+                    if (originalScale && !isNaN(originalScale)) {
+                        targetScale = originalScale;
+                    }
+                }
+                const annotations = { ...resource.metadata.annotations };
+                delete annotations["irisapp.dev/paused-scale"];
+
+                try {
+                    await client.apply({
+                        ...resource,
+                        metadata: {
+                            ...resource.metadata,
+                            annotations,
+                        },
+                        spec: {
+                            ...(resource as any).spec,
+                            replicas: targetScale,
+                        },
+                    } as K8sObject);
+                } catch (e) {
+                    errors.push(e.message);
+                }
+            })
+        );
+        setIsResuming(false);
+        if (errors.length > 0) {
+            console.error("Errors while scaling", errors);
+            showDialog({
+                title: "Error while scaling",
+                type: "error",
+                message: "An error occurred while applying the new scale:",
+                detail:
+                    errors.length === 1
+                        ? errors[0]
+                        : errors.map((e) => `- ${e}`).join("\n"),
+                buttons: ["OK"],
+            });
+        }
+    }, [client, resources, setIsResuming, showDialog]);
+
     useKeyListener(
         useCallback(
             (event, key) => {
@@ -189,6 +353,31 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
                     onClick={onClickDelete}
                     isLoading={isDeleting}
                 />
+            )}
+            <Box flex="1 0 0" />
+            {(isPausable || isResumable) && (
+                <ButtonGroup isAttached>
+                    {isPausable && (
+                        <IconButton
+                            colorScheme="primary"
+                            icon={<Icon as={MdOutlinePause} />}
+                            aria-label="Pause"
+                            title="Pause"
+                            onClick={onClickPause}
+                            isLoading={isPausing}
+                        />
+                    )}
+                    {isResumable && (
+                        <IconButton
+                            colorScheme="primary"
+                            icon={<Icon as={MdPlayArrow} />}
+                            aria-label="Resume"
+                            title="Resume"
+                            onClick={onClickResume}
+                            isLoading={isResuming}
+                        />
+                    )}
+                </ButtonGroup>
             )}
         </Toolbar>
     );
