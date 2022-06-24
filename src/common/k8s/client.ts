@@ -185,6 +185,7 @@ export type K8sClient = {
     apply(spec: K8sObject, options?: K8sApplyOptions): Promise<K8sObject>;
     patch(spec: K8sObject, options?: K8sPatchOptions): Promise<K8sObject>;
     replace(spec: K8sObject): Promise<K8sObject>;
+    redeploy(spec: K8sObject): Promise<void>;
     exec(spec: K8sExecSpec, options?: K8sExecOptions): Promise<K8sExecHandler>;
     execCommand(
         spec: K8sExecCommandSpec,

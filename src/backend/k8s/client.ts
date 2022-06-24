@@ -290,6 +290,56 @@ export function createClient(
         return onlyFullObject(body);
     };
 
+    const redeploy = async (spec: K8sObject): Promise<void> => {
+        if (opts.readonly) {
+            throw new Error("Running in readonly mode");
+        }
+
+        const redeployableTypes: Record<string, string> = {
+            "apps/v1:Deployment": "deployment",
+            "apps/v1:StatefulSet": "statefulset",
+            "apps/v1:DaemonSet": "daemonset",
+            "apps/v1:ReplicaSet": "replicaset",
+        };
+        const fullType = spec.apiVersion + ":" + spec.kind;
+        const typeCliName = redeployableTypes[fullType];
+        if (!typeCliName) {
+            throw new Error("Cannot redeploy: invalid resource type");
+        }
+
+        const name = spec.metadata.name;
+        if (!name.match(/^[a-zA-Z0-9\-_]+$/)) {
+            throw new Error("Cannot redeploy: invalid resource name");
+        }
+        const namespace = spec.metadata.namespace;
+        if (!namespace || !namespace.match(/^[a-zA-Z0-9\-_]+$/)) {
+            throw new Error("Cannot redeploy: invalid resource namespace");
+        }
+
+        return withTempKubeConfig(
+            kubeConfig,
+            (kubeConfigPath) =>
+                new Promise((resolve, reject) => {
+                    const shellOpts = shellOptions();
+                    const process = execChildProcess(
+                        `kubectl rollout restart ${typeCliName}/${name} -n ${namespace} --kubeconfig=${kubeConfigPath}`,
+                        {
+                            shell: shellOpts.executablePath,
+                            env: shellOpts.env,
+                        },
+                        (err, _stdout, stderr) => {
+                            if (err) {
+                                reject(stderr);
+                            } else {
+                                resolve();
+                            }
+                        }
+                    );
+                    process.stdin.end();
+                })
+        );
+    };
+
     const remove = async (
         spec: K8sObject,
         options?: K8sRemoveOptions
@@ -1181,6 +1231,7 @@ export function createClient(
         apply,
         patch,
         replace,
+        redeploy,
         remove,
         exec,
         execCommand,

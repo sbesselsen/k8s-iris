@@ -32,7 +32,6 @@ import { useIpcCall } from "../hook/ipc";
 import { unwrapError } from "../../common/ipc/shared";
 import { K8sPartialObjectListWatcherMessage } from "../../common/ipc-types";
 import { ContextLockedError, useContextLock } from "../context/context-lock";
-import { watch } from "original-fs";
 
 export function useK8sClient(kubeContext?: string): K8sClient {
     const sharedKubeContext = useK8sContext();
@@ -42,6 +41,7 @@ export function useK8sClient(kubeContext?: string): K8sClient {
     const ipcApply = useIpcCall((ipc) => ipc.k8s.apply);
     const ipcPatch = useIpcCall((ipc) => ipc.k8s.patch);
     const ipcReplace = useIpcCall((ipc) => ipc.k8s.replace);
+    const ipcRedeploy = useIpcCall((ipc) => ipc.k8s.redeploy);
     const ipcRemove = useIpcCall((ipc) => ipc.k8s.remove);
     const ipcList = useIpcCall((ipc) => ipc.k8s.list);
     const ipcListWatch = useIpcCall((ipc) => ipc.k8s.listWatch);
@@ -87,6 +87,12 @@ export function useK8sClient(kubeContext?: string): K8sClient {
                 throw new ContextLockedError("Cluster is locked");
             }
             return ipcReplace({ context, spec });
+        };
+        const redeploy = (spec: K8sObject) => {
+            if (isLockedRef.current) {
+                throw new ContextLockedError("Cluster is locked");
+            }
+            return ipcRedeploy({ context, spec });
         };
         const remove = (spec: K8sObject, options?: K8sRemoveOptions) => {
             if (isLockedRef.current) {
@@ -298,6 +304,7 @@ export function useK8sClient(kubeContext?: string): K8sClient {
             apply,
             patch,
             replace,
+            redeploy,
             remove,
             list,
             listWatch,
@@ -317,6 +324,7 @@ export function useK8sClient(kubeContext?: string): K8sClient {
         ipcApply,
         ipcPatch,
         ipcReplace,
+        ipcRedeploy,
         ipcRemove,
         ipcList,
         ipcListWatch,

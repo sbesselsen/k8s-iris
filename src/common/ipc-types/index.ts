@@ -73,6 +73,7 @@ export type IpcCalls = {
             context: string;
             spec: K8sObject;
         }): Promise<K8sObject>;
+        redeploy(params: { context: string; spec: K8sObject }): Promise<void>;
         remove(params: {
             context: string;
             spec: K8sObject;

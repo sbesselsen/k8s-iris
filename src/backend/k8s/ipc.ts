@@ -70,6 +70,11 @@ export const wireK8sClientIpc = (clientManager: K8sClientManager): void => {
             clientManager.clientForContext(context).patch(spec)
     );
     ipcHandle(
+        "k8s:client:redeploy",
+        async ({ context, spec }: { context: string; spec: K8sObject }) =>
+            clientManager.clientForContext(context).redeploy(spec)
+    );
+    ipcHandle(
         "k8s:client:list",
         async ({
             context,

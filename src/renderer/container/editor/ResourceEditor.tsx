@@ -6,6 +6,7 @@ import {
 } from "@chakra-ui/icons";
 import { FiTerminal } from "react-icons/fi";
 import { RiTextWrap } from "react-icons/ri";
+import { AiOutlineReload } from "react-icons/ai";
 import {
     Badge,
     Box,
@@ -85,6 +86,7 @@ import { Selectable } from "../../component/main/Selectable";
 import { ResourceEditorLink } from "../resources/ResourceEditorLink";
 import { generateBadges, ResourceBadge } from "../../k8s/badges";
 import { formatDeveloperDateTime } from "../../util/date";
+import { isSetLike } from "../../../common/k8s/util";
 
 export type ResourceEditorProps = {
     editorResource: K8sObjectIdentifier;
@@ -320,10 +322,31 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
         },
         [openEditor, object]
     );
+    const [isRedeploying, setRedeploying] = useState(false);
+    const onClickRedeploy = useCallback(() => {
+        if (object) {
+            if (isClusterLocked) {
+                showDialog({
+                    title: "Read-only mode",
+                    type: "error",
+                    message: "This cluster is in read-only mode.",
+                    detail: "You can only redeploy after you unlock the cluster with the lock/unlock button in the toolbar.",
+                    buttons: ["OK"],
+                });
+                return;
+            }
+            (async () => {
+                setRedeploying(true);
+                client?.redeploy(object);
+                setRedeploying(false);
+            })();
+        }
+    }, [client, object, setRedeploying, showDialog, isClusterLocked]);
 
     // TODO: wire the log button and the shell button to an associated pod
     const isLoggable = object?.apiVersion === "v1" && object.kind === "Pod";
     const isShellable = object?.apiVersion === "v1" && object.kind === "Pod";
+    const isRedeployable = object && isSetLike(object);
 
     const badges: ResourceBadge[] = useMemo(
         () => (object ? generateBadges(object) : []),
@@ -381,6 +404,17 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
                             object={object}
                             isDisabled={isDeleting}
                             onClick={onClickLogs}
+                        />
+                    )}
+                    {isRedeployable && (
+                        <IconButton
+                            colorScheme="primary"
+                            icon={<Icon as={AiOutlineReload} />}
+                            aria-label="Redeploy"
+                            title="Redeploy"
+                            onClick={onClickRedeploy}
+                            isLoading={isRedeploying}
+                            isDisabled={isDeleting}
                         />
                     )}
                     <Box flex="1 0 0"></Box>
@@ -798,8 +832,16 @@ const AssociatedPodRow: React.FC<{ object: K8sObject }> = (props) => {
             </Td>
             <Td>
                 <ButtonGroup colorScheme="primary" size="xs">
-                    <ShellButton object={object} onClick={onClickShell} />
-                    <LogsButton object={object} onClick={onClickLogs} />
+                    <ShellButton
+                        object={object}
+                        isDisabled={isDeleting}
+                        onClick={onClickShell}
+                    />
+                    <LogsButton
+                        object={object}
+                        isDisabled={isDeleting}
+                        onClick={onClickLogs}
+                    />
                 </ButtonGroup>
             </Td>
         </Tr>

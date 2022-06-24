@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { K8sObject, K8sObjectListQuery } from "../../common/k8s/client";
+import { isSetLike } from "../../common/k8s/util";
 import { K8sListWatchHookOptions, useK8sListWatch } from "./list-watch";
 
 export type K8sAssociatedPodsResult = {
@@ -8,18 +9,6 @@ export type K8sAssociatedPodsResult = {
     associatedPods: K8sObject[];
     error?: any;
 };
-
-function isSetLike(object: K8sObject) {
-    if (object.apiVersion === "apps/v1") {
-        return (
-            object.kind === "Deployment" ||
-            object.kind === "StatefulSet" ||
-            object.kind === "ReplicaSet" ||
-            object.kind === "DaemonSet"
-        );
-    }
-    return false;
-}
 
 // A spec that returns zero pods.
 const emptyPodQuery: K8sObjectListQuery = {

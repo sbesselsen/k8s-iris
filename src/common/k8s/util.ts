@@ -126,3 +126,15 @@ export function parseMemory(
         (unitAdjustments[targetUnit] ?? 1)
     );
 }
+
+export function isSetLike(object: K8sObject) {
+    if (object.apiVersion === "apps/v1") {
+        return (
+            object.kind === "Deployment" ||
+            object.kind === "StatefulSet" ||
+            object.kind === "ReplicaSet" ||
+            object.kind === "DaemonSet"
+        );
+    }
+    return false;
+}
