@@ -1167,7 +1167,7 @@ const PortForwardingRow: React.FC<PortForwardingRowProps> = (props) => {
                     {!portForward && isForwardable && (
                         <IconButton
                             colorScheme="primary"
-                            size="sm"
+                            size="xs"
                             icon={<Icon as={AddIcon} />}
                             aria-label="Forward"
                             title="Forward"
@@ -1177,7 +1177,7 @@ const PortForwardingRow: React.FC<PortForwardingRowProps> = (props) => {
                     {portForward && (
                         <IconButton
                             colorScheme="primary"
-                            size="sm"
+                            size="xs"
                             icon={<Icon as={DeleteIcon} />}
                             aria-label="Stop"
                             title="Stop"
