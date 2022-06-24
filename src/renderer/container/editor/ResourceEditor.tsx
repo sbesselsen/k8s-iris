@@ -1,26 +1,45 @@
 import {
     AddIcon,
+    ArrowUpDownIcon,
     ChevronDownIcon,
     DeleteIcon,
     EditIcon,
+    RepeatIcon,
 } from "@chakra-ui/icons";
 import { FiTerminal } from "react-icons/fi";
 import { RiTextWrap } from "react-icons/ri";
-import { AiOutlineReload } from "react-icons/ai";
+import { MdOutlinePause, MdPlayArrow } from "react-icons/md";
 import {
     Badge,
     Box,
     Button,
     ButtonGroup,
+    FormControl,
+    FormLabel,
     Heading,
     HStack,
     Icon,
     IconButton,
     Input,
+    InputGroup,
     Menu,
     MenuButton,
     MenuItem,
     MenuList,
+    NumberDecrementStepper,
+    NumberIncrementStepper,
+    NumberInput,
+    NumberInputField,
+    NumberInputStepper,
+    Popover,
+    PopoverArrow,
+    PopoverBody,
+    PopoverCloseButton,
+    PopoverContent,
+    PopoverFooter,
+    PopoverHeader,
+    PopoverTrigger,
+    Portal,
     Select,
     Spinner,
     Table,
@@ -32,6 +51,7 @@ import {
     Tr,
     useBreakpointValue,
     useConst,
+    useDisclosure,
     VStack,
 } from "@chakra-ui/react";
 import React, {
@@ -75,7 +95,7 @@ import { useK8sClient } from "../../k8s/client";
 import { useK8sListWatch } from "../../k8s/list-watch";
 import { ResourceTypeSelector } from "../resources/ResourceTypeSelector";
 import { ResourceYamlEditor } from "./ResourceYamlEditor";
-import { useEditorOpener } from "../../hook/editor-link";
+import { useEditorLink, useEditorOpener } from "../../hook/editor-link";
 import { useK8sPortForwardsWatch } from "../../k8s/port-forward-watch";
 import {
     PortForwardStats,
@@ -336,9 +356,17 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
                 return;
             }
             (async () => {
-                setRedeploying(true);
-                client?.redeploy(object);
-                setRedeploying(false);
+                const result = await showDialog({
+                    title: "Are you sure?",
+                    type: "question",
+                    message: `Are you sure you want to redeploy ${object.metadata.name}?`,
+                    buttons: ["Yes", "No"],
+                });
+                if (result.response === 0) {
+                    setRedeploying(true);
+                    client?.redeploy(object);
+                    setRedeploying(false);
+                }
             })();
         }
     }, [client, object, setRedeploying, showDialog, isClusterLocked]);
@@ -347,6 +375,8 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
     const isLoggable = object?.apiVersion === "v1" && object.kind === "Pod";
     const isShellable = object?.apiVersion === "v1" && object.kind === "Pod";
     const isRedeployable = object && isSetLike(object);
+    const isScalable =
+        object && isSetLike(object) && object.kind !== "DaemonSet";
 
     const badges: ResourceBadge[] = useMemo(
         () => (object ? generateBadges(object) : []),
@@ -409,13 +439,16 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
                     {isRedeployable && (
                         <IconButton
                             colorScheme="primary"
-                            icon={<Icon as={AiOutlineReload} />}
+                            icon={<RepeatIcon />}
                             aria-label="Redeploy"
                             title="Redeploy"
                             onClick={onClickRedeploy}
                             isLoading={isRedeploying}
                             isDisabled={isDeleting}
                         />
+                    )}
+                    {isScalable && (
+                        <ScaleButton object={object} isDisabled={isDeleting} />
                     )}
                     <Box flex="1 0 0"></Box>
                     <ShowDetailsToggle
@@ -566,6 +599,303 @@ const LogsButton: React.FC<{
             </Menu>
         );
     }
+};
+
+const ScaleButton: React.FC<{
+    object: K8sObject;
+    isDisabled?: boolean;
+}> = (props) => {
+    const { object, isDisabled = false } = props;
+
+    const { isOpen, onOpen, onClose } = useDisclosure();
+
+    useEffect(() => {
+        onClose();
+    }, [object.apiVersion, object.kind, object.metadata.name, onClose]);
+
+    return (
+        <Popover isOpen={isOpen} onOpen={onOpen} onClose={onClose} isLazy>
+            <PopoverTrigger>
+                <IconButton
+                    colorScheme="primary"
+                    icon={<ArrowUpDownIcon />}
+                    aria-label="Scale"
+                    title="Scale"
+                    fontWeight="normal"
+                    isDisabled={isDisabled}
+                />
+            </PopoverTrigger>
+            <Portal>
+                <PopoverContent>
+                    <ScalePopoverContent object={object} onClose={onClose} />
+                </PopoverContent>
+            </Portal>
+        </Popover>
+    );
+};
+
+const ScalePopoverContent: React.FC<{
+    object: K8sObject;
+    onClose: () => void;
+}> = (props) => {
+    const { object, onClose } = props;
+
+    const client = useK8sClient();
+    const showDialog = useDialog();
+
+    const [isLoadingHpas, hpas, hpasError] = useK8sListWatch(
+        {
+            apiVersion: "autoscaling/v2beta2",
+            kind: "HorizontalPodAutoscaler",
+            namespaces: object.metadata.namespace
+                ? [object.metadata.namespace]
+                : [],
+        },
+        {},
+        [object.metadata.namespace]
+    );
+
+    const { openEditor: openHpaEditor } = useEditorLink(
+        hpas?.items?.[0] ?? object
+    );
+
+    const isClusterLocked = useContextLock();
+    const isAutoScaled = hpas?.items && hpas.items.length > 0;
+    const currentScale = (object as any)?.spec?.replicas ?? 0;
+    const pausedScaleNumber: number | undefined = useMemo(() => {
+        if (
+            !(object as any)?.metadata?.annotations?.[
+                "irisapp.dev/paused-scale"
+            ]
+        ) {
+            return undefined;
+        }
+        const pausedScale = parseInt(
+            (object as any).metadata.annotations["irisapp.dev/paused-scale"],
+            10
+        );
+        return pausedScale && !isNaN(pausedScale) ? pausedScale : undefined;
+    }, [object]);
+
+    const [targetScale, setTargetScale] = useState<number | undefined>();
+    useEffect(() => {
+        setTargetScale(undefined);
+    }, [object.apiVersion, object.kind, object.metadata.name, setTargetScale]);
+
+    const onChangeTargetScale = useCallback(
+        (_, value) => {
+            setTargetScale(value);
+        },
+        [setTargetScale]
+    );
+
+    const onClickOpenHpa = useCallback(() => {
+        if (isAutoScaled) {
+            openHpaEditor();
+            onClose();
+        }
+    }, [isAutoScaled, onClose, openHpaEditor]);
+
+    const scale = useCallback(
+        async (
+            targetScale: number,
+            annotations: Record<string, string | null> = {}
+        ) => {
+            if (isClusterLocked) {
+                showDialog({
+                    title: "Read-only mode",
+                    type: "error",
+                    message: "This cluster is in read-only mode.",
+                    detail: "You can only scale after you unlock the cluster with the lock/unlock button in the toolbar.",
+                    buttons: ["OK"],
+                });
+                return;
+            }
+            if (targetScale === 0) {
+                const result = await showDialog({
+                    title: "Are you sure?",
+                    type: "question",
+                    message: `Are you sure you want to scale ${object.metadata.name} down to zero?`,
+                    detail: "This will effectively switch it off and make it unavailable.",
+                    buttons: ["Yes", "No"],
+                });
+                if (result.response === 1) {
+                    return;
+                }
+            }
+            try {
+                const newAnnotations = {
+                    ...object.metadata.annotations,
+                    ...annotations,
+                };
+                for (const [k, v] of Object.entries(annotations)) {
+                    if (v === null) {
+                        delete newAnnotations[k];
+                    }
+                }
+                await client.apply({
+                    ...object,
+                    metadata: {
+                        ...object.metadata,
+                        annotations: newAnnotations,
+                    },
+                    spec: {
+                        ...(object as any).spec,
+                        replicas: targetScale,
+                    },
+                } as K8sObject);
+            } catch (e) {
+                console.error("Error while scaling", { object, e });
+                showDialog({
+                    title: "Error while scaling",
+                    type: "error",
+                    message: "An error occurred while applying the new scale:",
+                    detail: e.message,
+                    buttons: ["OK"],
+                });
+            }
+        },
+        [client, object, showDialog, targetScale]
+    );
+
+    const [isScaling, setIsScaling] = useState(false);
+    const onClickScale = useCallback(async () => {
+        if (targetScale === undefined) {
+            return;
+        }
+        setIsScaling(true);
+        await scale(targetScale, {
+            "irisapp.dev/paused-scale": null,
+        });
+        setIsScaling(false);
+    }, [scale, setIsScaling, targetScale]);
+
+    const [isPausing, setIsPausing] = useState(false);
+    const onClickPause = useCallback(async () => {
+        if (currentScale === 0) {
+            return;
+        }
+        setIsPausing(true);
+        await scale(0, {
+            "irisapp.dev/paused-scale": String(currentScale),
+        });
+        setIsPausing(false);
+    }, [scale, currentScale, setIsPausing]);
+
+    const [isResuming, setIsResuming] = useState(false);
+    const onClickResume = useCallback(async () => {
+        let targetScale = pausedScaleNumber ?? 1;
+        setIsResuming(true);
+        await scale(targetScale, {
+            "irisapp.dev/paused-scale": null,
+        });
+        setIsResuming(false);
+    }, [pausedScaleNumber, scale, setIsResuming]);
+
+    const onKeyDownTargetScale = useCallback(
+        (e: KeyboardEvent) => {
+            if (e.key === "Enter" || e.key === "Return") {
+                onClickScale();
+            }
+        },
+        [onClickScale]
+    );
+
+    return (
+        <>
+            <PopoverArrow />
+            <PopoverCloseButton />
+            <PopoverHeader>
+                <Heading size="sm">Scale</Heading>
+            </PopoverHeader>
+            <PopoverBody>
+                <VStack alignItems="stretch">
+                    {isAutoScaled && (
+                        <Text>Managed by Horizontal Pod Autoscaler.</Text>
+                    )}
+                    {!isAutoScaled && (
+                        <>
+                            <Text fontWeight="normal" fontSize="sm">
+                                Current scale: {currentScale}{" "}
+                                {currentScale === 0 &&
+                                    pausedScaleNumber !== undefined &&
+                                    ` (was: ${pausedScaleNumber})`}
+                            </Text>
+                            <FormControl>
+                                <FormLabel fontSize="sm" htmlFor="targetScale">
+                                    Target scale
+                                </FormLabel>
+                                <NumberInput
+                                    id="targetScale"
+                                    size="sm"
+                                    step={1}
+                                    min={0}
+                                    value={targetScale ?? currentScale}
+                                    onChange={onChangeTargetScale}
+                                    onKeyDown={onKeyDownTargetScale}
+                                >
+                                    <NumberInputField />
+                                    <NumberInputStepper>
+                                        <NumberIncrementStepper />
+                                        <NumberDecrementStepper />
+                                    </NumberInputStepper>
+                                </NumberInput>
+                            </FormControl>
+                        </>
+                    )}
+                </VStack>
+            </PopoverBody>
+            <PopoverFooter>
+                <HStack justifyContent="end">
+                    <Button
+                        colorScheme="primary"
+                        variant="ghost"
+                        onClick={onClose}
+                    >
+                        Cancel
+                    </Button>
+                    {!isLoadingHpas && !isAutoScaled && currentScale > 0 && (
+                        <Button
+                            colorScheme="primary"
+                            onClick={onClickPause}
+                            isLoading={isPausing}
+                            leftIcon={<Icon as={MdOutlinePause} />}
+                        >
+                            Pause
+                        </Button>
+                    )}
+                    {!isLoadingHpas && !isAutoScaled && currentScale === 0 && (
+                        <Button
+                            colorScheme="primary"
+                            onClick={onClickResume}
+                            isLoading={isResuming}
+                            leftIcon={<Icon as={MdPlayArrow} />}
+                        >
+                            Resume
+                        </Button>
+                    )}
+                    {!isLoadingHpas && !isAutoScaled && (
+                        <Button
+                            colorScheme="primary"
+                            isDisabled={
+                                targetScale === undefined ||
+                                currentScale === targetScale
+                            }
+                            onClick={onClickScale}
+                            isLoading={isScaling}
+                        >
+                            Scale
+                        </Button>
+                    )}
+                    {isAutoScaled && (
+                        <Button onClick={onClickOpenHpa} colorScheme="primary">
+                            Open HPA
+                        </Button>
+                    )}
+                </HStack>
+            </PopoverFooter>
+        </>
+    );
 };
 
 const ShowDetailsToggle: React.FC<{
