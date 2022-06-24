@@ -854,7 +854,8 @@ const PortForwardingMenu: React.FC<{ object: K8sObject }> = (props) => {
                                     fwd.spec.namespace ===
                                         object.metadata.namespace &&
                                     fwd.spec.podName === object.metadata.name &&
-                                    fwd.spec.podPort === port.containerPort
+                                    fwd.spec.podPort === port.containerPort &&
+                                    forwardable
                             ),
                             forwardable,
                         });
