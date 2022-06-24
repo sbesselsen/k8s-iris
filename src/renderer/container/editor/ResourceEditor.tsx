@@ -10,6 +10,7 @@ import {
     Badge,
     Box,
     Button,
+    ButtonGroup,
     Heading,
     HStack,
     Icon,
@@ -697,6 +698,7 @@ const AssociatedPods: React.FC<{ object: K8sObject }> = (props) => {
                                 Name
                             </Th>
                             <Th width="150px">Created</Th>
+                            <Th width="150px">Actions</Th>
                         </Tr>
                     </Thead>
                     <Tbody>
@@ -723,9 +725,36 @@ const AssociatedPodRow: React.FC<{ object: K8sObject }> = (props) => {
         [object]
     );
 
+    const isClusterLocked = useContextLock();
+    const showDialog = useDialog();
+    const openEditor = useEditorOpener();
+
+    const onClickShell = useCallback(
+        (containerName: string) => {
+            if (isClusterLocked) {
+                showDialog({
+                    title: "Read-only mode",
+                    type: "error",
+                    message: "This cluster is in read-only mode.",
+                    detail: "You can only open a shell after you unlock the cluster with the lock/unlock button in the toolbar.",
+                    buttons: ["OK"],
+                });
+                return;
+            }
+            openEditor(shellEditor(object, containerName));
+        },
+        [isClusterLocked, openEditor, object]
+    );
+    const onClickLogs = useCallback(
+        (containerName: string) => {
+            openEditor(logsEditor(object, containerName));
+        },
+        [openEditor, object]
+    );
+
     return (
         <Tr>
-            <Td ps={0} verticalAlign="baseline" userSelect="text">
+            <Td ps={0} userSelect="text">
                 <HStack p={0}>
                     <Selectable
                         display="block"
@@ -762,10 +791,16 @@ const AssociatedPodRow: React.FC<{ object: K8sObject }> = (props) => {
                     })}
                 </HStack>
             </Td>
-            <Td verticalAlign="baseline">
+            <Td>
                 <Selectable display="block" isTruncated>
                     {formatDeveloperDateTime(creationDate)}
                 </Selectable>
+            </Td>
+            <Td>
+                <ButtonGroup colorScheme="primary" size="xs">
+                    <ShellButton object={object} onClick={onClickShell} />
+                    <LogsButton object={object} onClick={onClickLogs} />
+                </ButtonGroup>
             </Td>
         </Tr>
     );
