@@ -2,6 +2,7 @@
     "name": "k8s-charm",
     "version": "0.1.0",
     "description": "",
+    "productName": "Iris",
     "main": "dist/backend/index.js",
     "scripts": {
         "start": "electron .",
