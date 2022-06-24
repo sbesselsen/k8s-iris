@@ -197,6 +197,9 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
         await Promise.all(
             resources.map(async (resource) => {
                 const originalScale = (resource as any)?.spec?.replicas ?? 1;
+                if (originalScale === 0) {
+                    return;
+                }
                 try {
                     await client.apply({
                         ...resource,
@@ -265,7 +268,7 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
                         ],
                         10
                     );
-                    if (originalScale && !isNaN(originalScale)) {
+                    if (originalScale > 0 && !isNaN(originalScale)) {
                         targetScale = originalScale;
                     }
                 }

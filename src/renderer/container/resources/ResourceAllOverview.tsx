@@ -13,13 +13,20 @@ import {
     useControllableState,
     VStack,
 } from "@chakra-ui/react";
-import React, { ChangeEvent, useCallback, useMemo, useState } from "react";
+import React, {
+    ChangeEvent,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
 import {
     K8sObject,
     K8sResourceTypeIdentifier,
     K8sResourceTypeInfo,
 } from "../../../common/k8s/client";
-import { resourceIdentifier } from "../../../common/k8s/util";
+import { objSameRef, resourceIdentifier } from "../../../common/k8s/util";
 import { resourceMatch } from "../../../common/util/search";
 import { k8sSmartCompare } from "../../../common/util/sort";
 import { ScrollBox } from "../../component/main/ScrollBox";
@@ -166,6 +173,31 @@ const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
         [namespaces, resourceTypeInfo]
     );
 
+    const selectedResourcesRef = useRef<K8sObject[]>(selectedResourcesState);
+    useEffect(() => {
+        selectedResourcesRef.current = selectedResourcesState;
+    }, [selectedResourcesRef, selectedResourcesState]);
+    useEffect(() => {
+        // Update the selected resources when the resources themselves change.
+        const newSelectedResources: K8sObject[] = [];
+        let hasUpdate = false;
+        for (const resource of selectedResourcesRef.current) {
+            const freshResource = resources?.items.find((r) =>
+                objSameRef(r, resource)
+            );
+            if (freshResource) {
+                newSelectedResources.push(freshResource);
+            }
+            if (freshResource === resource) {
+                continue;
+            }
+            hasUpdate = true;
+        }
+        if (hasUpdate) {
+            setSelectedResources(newSelectedResources);
+        }
+    }, [resources, selectedResourcesRef, setSelectedResources]);
+
     const { query } = useAppSearch();
 
     const filteredResources = useMemo(() => {
@@ -287,13 +319,13 @@ const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
                             <Checkbox
                                 colorScheme="gray"
                                 isIndeterminate={
-                                    selectedResourcesState.length > 0 &&
-                                    selectedResourcesState.length <
+                                    selectedResourceIdentifiers.length > 0 &&
+                                    selectedResourceIdentifiers.length <
                                         sortedKeyedResources.length
                                 }
                                 isChecked={
-                                    selectedResourcesState.length > 0 &&
-                                    selectedResourcesState.length ===
+                                    selectedResourceIdentifiers.length > 0 &&
+                                    selectedResourceIdentifiers.length ===
                                         sortedKeyedResources.length
                                 }
                                 onChange={onChangeSelectAll}

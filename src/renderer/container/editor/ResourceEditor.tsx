@@ -674,7 +674,7 @@ const ScalePopoverContent: React.FC<{
             (object as any).metadata.annotations["irisapp.dev/paused-scale"],
             10
         );
-        return pausedScale && !isNaN(pausedScale) ? pausedScale : undefined;
+        return pausedScale > 0 && !isNaN(pausedScale) ? pausedScale : undefined;
     }, [object]);
 
     const [targetScale, setTargetScale] = useState<number | undefined>();
