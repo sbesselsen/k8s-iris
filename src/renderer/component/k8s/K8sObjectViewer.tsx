@@ -19,6 +19,7 @@ import {
 } from "@chakra-ui/react";
 import React, { createContext, useCallback, useContext, useMemo } from "react";
 import { K8sObject } from "../../../common/k8s/client";
+import { ResourceBadge } from "../../k8s/badges";
 import { Datetime } from "../main/Datetime";
 import { Defer } from "../main/Defer";
 import { Selectable } from "../main/Selectable";
@@ -468,10 +469,12 @@ export type K8sObjectHeadingProps = BoxProps & {
     apiVersion: string | undefined;
     kind: string | undefined;
     metadata: K8sObject["metadata"];
+    badges?: ResourceBadge[];
 };
 
 export const K8sObjectHeading: React.FC<K8sObjectHeadingProps> = (props) => {
-    const { apiVersion, kind, metadata, ...boxProps } = props;
+    const { apiVersion, kind, metadata, badges, ...boxProps } = props;
+
     return (
         <VStack alignItems="start" {...boxProps}>
             <Heading fontSize="md" fontWeight="semibold">
@@ -487,6 +490,25 @@ export const K8sObjectHeading: React.FC<K8sObjectHeadingProps> = (props) => {
             <HStack alignItems="baseline">
                 {apiVersion && <Badge>{apiVersion}</Badge>}
                 {metadata?.namespace && <Badge>{metadata?.namespace}</Badge>}
+                {badges?.map((badge) => {
+                    const { id, text, variant, details, badgeProps } = badge;
+                    const colorScheme = {
+                        positive: "green",
+                        negative: "red",
+                        changing: "orange",
+                        other: "gray",
+                    }[variant ?? "other"];
+                    return (
+                        <Badge
+                            key={id}
+                            colorScheme={colorScheme}
+                            title={details ?? text}
+                            {...badgeProps}
+                        >
+                            {text}
+                        </Badge>
+                    );
+                })}
             </HStack>
         </VStack>
     );

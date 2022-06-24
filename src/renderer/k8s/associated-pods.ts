@@ -34,7 +34,7 @@ const emptyPodQuery: K8sObjectListQuery = {
 
 export function useK8sAssociatedPods(
     object: K8sObject | null | undefined,
-    options: K8sListWatchHookOptions,
+    options?: K8sListWatchHookOptions,
     deps?: any[]
 ): K8sAssociatedPodsResult {
     const kind = object?.kind;
@@ -99,7 +99,7 @@ export function useK8sAssociatedPods(
 
     const [isLoading, resources, resourceError] = useK8sListWatch(
         spec,
-        options,
+        options ?? {},
         [spec, ...(deps ?? [])]
     );
 
