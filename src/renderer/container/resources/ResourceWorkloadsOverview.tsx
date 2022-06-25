@@ -91,6 +91,10 @@ const GroupedResourcesOverview: React.FC<GroupedResourcesOverviewProps> = (
     const groupContentBg = useColorModeValue("white", "gray.900");
     const headingColor = useColorModeValue("primary.500", "primary.400");
 
+    const namespaces = useK8sNamespaces();
+    const showNamespace =
+        namespaces.mode === "all" || namespaces.selected.length > 1;
+
     return (
         <VStack alignItems="stretch" spacing={4}>
             {sortedGroups.map((group) => (
@@ -161,6 +165,7 @@ const GroupedResourcesOverview: React.FC<GroupedResourcesOverviewProps> = (
                                         )}
                                         {!resourcesInfo.isLoading && (
                                             <WorkloadResourceList
+                                                showNamespace={showNamespace}
                                                 resources={
                                                     resourcesInfo.resources
                                                 }
@@ -179,10 +184,11 @@ const GroupedResourcesOverview: React.FC<GroupedResourcesOverviewProps> = (
 
 type WorkloadResourceListProps = {
     resources: K8sObject[];
+    showNamespace: boolean;
 };
 
 const WorkloadResourceList: React.FC<WorkloadResourceListProps> = (props) => {
-    const { resources } = props;
+    const { resources, showNamespace } = props;
 
     const sortedKeyedResources = useMemo(
         () =>
@@ -198,7 +204,6 @@ const WorkloadResourceList: React.FC<WorkloadResourceListProps> = (props) => {
     );
 
     // TODO!
-    const showNamespace = false;
     const selectedResourceIdentifiers: string[] = [];
 
     const onChangeSelectAll = useCallback(
