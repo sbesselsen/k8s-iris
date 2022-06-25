@@ -4,6 +4,7 @@ import { ContentTabs } from "../../component/main/ContentTabs";
 import { useAppParam } from "../../context/param";
 import { useIpcCall } from "../../hook/ipc";
 import { ResourceAllOverview } from "./ResourceAllOverview";
+import { ResourceWorkloadsOverview } from "./ResourceWorkloadsOverview";
 
 export const ResourcesOverview: React.FC<{}> = () => {
     const [activeTab, setActiveTab] = useAppParam("tab", "all");
@@ -25,7 +26,11 @@ export const ResourcesOverview: React.FC<{}> = () => {
 
     const tabs = [
         { id: "all", title: "All", content: <ResourceAllOverview /> },
-        { id: "workloads", title: "Workloads", content: <Box /> },
+        {
+            id: "workloads",
+            title: "Workloads",
+            content: <ResourceWorkloadsOverview />,
+        },
     ];
     return (
         <ContentTabs
