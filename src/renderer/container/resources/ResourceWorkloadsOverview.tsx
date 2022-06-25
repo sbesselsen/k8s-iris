@@ -7,36 +7,31 @@ import {
     Table,
     Tbody,
     Td,
+    Text,
     Th,
     Thead,
     Tr,
     useColorModeValue,
     VStack,
 } from "@chakra-ui/react";
-import React, {
-    ChangeEvent,
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-} from "react";
-import {
-    K8sObject,
-    K8sResourceTypeIdentifier,
-} from "../../../common/k8s/client";
-import { AppNamespacesSelection } from "../../../common/route/app-route";
+import React, { ChangeEvent, useCallback, useMemo } from "react";
+import { K8sObject, K8sObjectListQuery } from "../../../common/k8s/client";
 import { k8sSmartCompare } from "../../../common/util/sort";
 import { ScrollBox } from "../../component/main/ScrollBox";
 import { Selectable } from "../../component/main/Selectable";
 import { useK8sNamespaces } from "../../context/k8s-namespaces";
 import { generateBadges, ResourceBadge } from "../../k8s/badges";
-import { K8sListWatchHookOptions, useK8sListWatch } from "../../k8s/list-watch";
+import {
+    K8sListWatchHookOptions,
+    useK8sListWatches,
+} from "../../k8s/list-watch";
 import { formatDeveloperDateTime } from "../../util/date";
 import { ResourceEditorLink } from "./ResourceEditorLink";
 
 export const ResourceWorkloadsOverview: React.FC<{}> = () => {
     const resources = useCombinedWorkloadResourcesInfo();
+
+    console.log("render");
 
     const groupedResources = useMemo(
         () => groupWorkloadResources(resources),
@@ -154,23 +149,34 @@ const GroupedResourcesOverview: React.FC<GroupedResourcesOverviewProps> = (
                         {Object.entries(resourceTypeHeadings).map(
                             ([k, title]) => {
                                 const resourcesInfo = group.resources[k];
-                                if (resourcesInfo.resources.length === 0) {
-                                    return;
-                                }
                                 return (
                                     <VStack key={k} alignItems="stretch">
                                         <Heading fontSize="sm">{title}</Heading>
                                         {resourcesInfo.isLoading && (
-                                            <Spinner ps={4} />
+                                            <Spinner size="sm" ps={4} />
                                         )}
-                                        {!resourcesInfo.isLoading && (
-                                            <WorkloadResourceList
-                                                showNamespace={showNamespace}
-                                                resources={
-                                                    resourcesInfo.resources
-                                                }
-                                            />
-                                        )}
+                                        {!resourcesInfo.isLoading &&
+                                            resourcesInfo.resources.length >
+                                                0 && (
+                                                <WorkloadResourceList
+                                                    showNamespace={
+                                                        showNamespace
+                                                    }
+                                                    resources={
+                                                        resourcesInfo.resources
+                                                    }
+                                                />
+                                            )}
+                                        {!resourcesInfo.isLoading &&
+                                            resourcesInfo.resources.length ===
+                                                0 && (
+                                                <Text
+                                                    textColor="gray"
+                                                    fontSize="sm"
+                                                >
+                                                    None
+                                                </Text>
+                                            )}
                                     </VStack>
                                 );
                             }
@@ -187,86 +193,102 @@ type WorkloadResourceListProps = {
     showNamespace: boolean;
 };
 
-const WorkloadResourceList: React.FC<WorkloadResourceListProps> = (props) => {
-    const { resources, showNamespace } = props;
-
-    const sortedKeyedResources = useMemo(
-        () =>
-            [...resources]
-                .sort((a, b) =>
-                    k8sSmartCompare(a.metadata.name, b.metadata.name)
-                )
-                .map((resource) => ({
-                    resource,
-                    key: `${resource.apiVersion}:${resource.kind}:${resource.metadata.namespace}:${resource.metadata.name}`,
-                })),
-        [resources]
-    );
-
-    // TODO!
-    const selectedResourceIdentifiers: string[] = [];
-
-    const onChangeSelectAll = useCallback(
-        (e: ChangeEvent<HTMLInputElement>) => {},
-        []
-    );
-    const onSelectHandlers = useMemo(
-        () =>
-            Object.fromEntries(
-                sortedKeyedResources.map((r) => [
-                    r.key,
-                    (selected: boolean) => {
-                        // TODO
-                    },
-                ])
-            ),
-        [sortedKeyedResources]
-    );
-
-    return (
-        <Table
-            size="sm"
-            sx={{ tableLayout: "fixed" }}
-            width="100%"
-            maxWidth="1000px"
-        >
-            <Thead>
-                <Tr>
-                    <Th ps={2} width="40px">
-                        <Checkbox
-                            colorScheme="gray"
-                            isIndeterminate={
-                                selectedResourceIdentifiers.length > 0 &&
-                                selectedResourceIdentifiers.length <
-                                    sortedKeyedResources.length
-                            }
-                            isChecked={
-                                selectedResourceIdentifiers.length > 0 &&
-                                selectedResourceIdentifiers.length ===
-                                    sortedKeyedResources.length
-                            }
-                            onChange={onChangeSelectAll}
-                        />
-                    </Th>
-                    <Th ps={0}>Name</Th>
-                    {showNamespace && <Th width="150px">Namespace</Th>}
-                    <Th width="150px">Created</Th>
-                </Tr>
-            </Thead>
-            <Tbody>
-                {sortedKeyedResources.map(({ key, resource }, index) => (
-                    <WorkloadResourceRow
-                        resource={resource}
-                        showNamespace={showNamespace}
-                        key={key}
-                        isSelected={selectedResourceIdentifiers.includes(key)}
-                        onChangeSelect={onSelectHandlers[key]}
-                    />
-                ))}
-            </Tbody>
-        </Table>
-    );
+let counter = 0;
+window.resetCounter = () => {
+    counter = 0;
 };
+window.getCounter = () => counter;
+window.getAndResetCounter = () => {
+    const c = counter;
+    counter = 0;
+    return c;
+};
+
+const WorkloadResourceList: React.FC<WorkloadResourceListProps> = React.memo(
+    (props) => {
+        const { resources, showNamespace } = props;
+        counter++;
+
+        const sortedKeyedResources = useMemo(
+            () =>
+                [...resources]
+                    .sort((a, b) =>
+                        k8sSmartCompare(a.metadata.name, b.metadata.name)
+                    )
+                    .map((resource) => ({
+                        resource,
+                        key: `${resource.apiVersion}:${resource.kind}:${resource.metadata.namespace}:${resource.metadata.name}`,
+                    })),
+            [resources]
+        );
+
+        // TODO!
+        const selectedResourceIdentifiers: string[] = [];
+
+        const onChangeSelectAll = useCallback(
+            (e: ChangeEvent<HTMLInputElement>) => {},
+            []
+        );
+        const onSelectHandlers = useMemo(
+            () =>
+                Object.fromEntries(
+                    sortedKeyedResources.map((r) => [
+                        r.key,
+                        (selected: boolean) => {
+                            // TODO
+                        },
+                    ])
+                ),
+            [sortedKeyedResources]
+        );
+
+        return (
+            <Table
+                size="sm"
+                sx={{ tableLayout: "fixed" }}
+                width="100%"
+                maxWidth="1000px"
+            >
+                <Thead>
+                    <Tr>
+                        <Th ps={2} width="40px">
+                            <Checkbox
+                                colorScheme="gray"
+                                isIndeterminate={
+                                    selectedResourceIdentifiers.length > 0 &&
+                                    selectedResourceIdentifiers.length <
+                                        sortedKeyedResources.length
+                                }
+                                isChecked={
+                                    selectedResourceIdentifiers.length > 0 &&
+                                    selectedResourceIdentifiers.length ===
+                                        sortedKeyedResources.length
+                                }
+                                onChange={onChangeSelectAll}
+                            />
+                        </Th>
+                        <Th ps={0}>Name</Th>
+                        {showNamespace && <Th width="150px">Namespace</Th>}
+                        <Th width="150px">Created</Th>
+                    </Tr>
+                </Thead>
+                <Tbody>
+                    {sortedKeyedResources.map(({ key, resource }, index) => (
+                        <WorkloadResourceRow
+                            resource={resource}
+                            showNamespace={showNamespace}
+                            key={key}
+                            isSelected={selectedResourceIdentifiers.includes(
+                                key
+                            )}
+                            onChangeSelect={onSelectHandlers[key]}
+                        />
+                    ))}
+                </Tbody>
+            </Table>
+        );
+    }
+);
 
 type WorkloadResourceRowProps = {
     resource: K8sObject;
@@ -486,7 +508,7 @@ function helmGroupResources(
     for (const helmGroup of Object.values(helmGroups)) {
         for (const ingress of helmGroup.resources["ingresses"]?.resources ??
             []) {
-            for (const tls of (ingress as any).spec?.tls) {
+            for (const tls of (ingress as any).spec?.tls ?? []) {
                 if (tls.secretName) {
                     groupsBySecretId[
                         ingress.metadata.namespace + ":" + tls.secretName
@@ -556,105 +578,59 @@ function useCombinedWorkloadResourcesInfo(): Record<
         [namespaces.mode]
     );
 
-    const deployments = useWorkloadResourceInfo(
-        {
+    const defaultSpecItems: Partial<K8sObjectListQuery> =
+        namespaces.mode === "all" ? {} : { namespaces: namespaces.selected };
+    const specs = {
+        deployments: {
             apiVersion: "apps/v1",
             kind: "Deployment",
+            ...defaultSpecItems,
         },
-        namespaces,
-        listWatchOptions
-    );
-    const statefulSets = useWorkloadResourceInfo(
-        {
+        statefulSets: {
             apiVersion: "apps/v1",
             kind: "StatefulSet",
+            ...defaultSpecItems,
         },
-        namespaces,
-        listWatchOptions
-    );
-    const daemonSets = useWorkloadResourceInfo(
-        {
+        daemonSets: {
             apiVersion: "apps/v1",
             kind: "DaemonSet",
+            ...defaultSpecItems,
         },
-        namespaces,
-        listWatchOptions
-    );
-    const services = useWorkloadResourceInfo(
-        {
+        services: {
             apiVersion: "v1",
             kind: "Service",
+            ...defaultSpecItems,
         },
-        namespaces,
-        listWatchOptions
-    );
-    const configMaps = useWorkloadResourceInfo(
-        {
+        configMaps: {
             apiVersion: "v1",
             kind: "ConfigMap",
+            ...defaultSpecItems,
         },
-        namespaces,
-        listWatchOptions
-    );
-    const secrets = useWorkloadResourceInfo(
-        {
+        secrets: {
             apiVersion: "v1",
             kind: "Secret",
+            ...defaultSpecItems,
         },
-        namespaces,
-        listWatchOptions
-    );
-    const ingresses = useWorkloadResourceInfo(
-        {
+        ingresses: {
             apiVersion: "networking.k8s.io/v1",
             kind: "Ingress",
+            ...defaultSpecItems,
         },
-        namespaces,
-        listWatchOptions
-    );
-    return useMemo(
-        () => ({
-            deployments,
-            statefulSets,
-            daemonSets,
-            services,
-            configMaps,
-            secrets,
-            ingresses,
-        }),
-        [
-            deployments,
-            statefulSets,
-            daemonSets,
-            services,
-            configMaps,
-            secrets,
-            ingresses,
-        ]
-    );
-}
+    };
 
-function useWorkloadResourceInfo(
-    resourceType: K8sResourceTypeIdentifier,
-    namespaces: AppNamespacesSelection,
-    listWatchOptions: K8sListWatchHookOptions
-): WorkloadResourceInfo {
-    const [isLoading, result, error] = useK8sListWatch(
-        {
-            ...resourceType,
-            ...(namespaces.mode === "all"
-                ? {}
-                : { namespaces: namespaces.selected }),
-        },
-        listWatchOptions,
-        [namespaces]
-    );
+    const results = useK8sListWatches(specs, listWatchOptions, [namespaces]);
     return useMemo(
-        () => ({
-            isLoading,
-            error,
-            resources: result?.items ?? [],
-        }),
-        [isLoading, error, result]
+        () =>
+            Object.fromEntries(
+                Object.entries(results).map(([k, result]) => [
+                    k,
+                    {
+                        isLoading: result[0],
+                        resources: result[1]?.items ?? [],
+                        error: result[2],
+                    },
+                ])
+            ),
+        [results]
     );
 }
