@@ -207,7 +207,7 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
                             ...resource.metadata,
                             annotations: {
                                 ...resource.metadata.annotations,
-                                "irisapp.dev/paused-scale":
+                                "irisapp.dev/original-replicas":
                                     String(originalScale),
                             },
                         },
@@ -259,12 +259,12 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
                 let targetScale = 1;
                 if (
                     (resource as any)?.metadata?.annotations?.[
-                        "irisapp.dev/paused-scale"
+                        "irisapp.dev/original-replicas"
                     ]
                 ) {
                     const originalScale = parseInt(
                         (resource as any).metadata.annotations[
-                            "irisapp.dev/paused-scale"
+                            "irisapp.dev/original-replicas"
                         ],
                         10
                     );
@@ -273,7 +273,7 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
                     }
                 }
                 const annotations = { ...resource.metadata.annotations };
-                delete annotations["irisapp.dev/paused-scale"];
+                delete annotations["irisapp.dev/original-replicas"];
 
                 try {
                     await client.apply({

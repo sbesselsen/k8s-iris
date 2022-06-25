@@ -665,13 +665,15 @@ const ScalePopoverContent: React.FC<{
     const pausedScaleNumber: number | undefined = useMemo(() => {
         if (
             !(object as any)?.metadata?.annotations?.[
-                "irisapp.dev/paused-scale"
+                "irisapp.dev/original-replicas"
             ]
         ) {
             return undefined;
         }
         const pausedScale = parseInt(
-            (object as any).metadata.annotations["irisapp.dev/paused-scale"],
+            (object as any).metadata.annotations[
+                "irisapp.dev/original-replicas"
+            ],
             10
         );
         return pausedScale > 0 && !isNaN(pausedScale) ? pausedScale : undefined;
@@ -765,7 +767,7 @@ const ScalePopoverContent: React.FC<{
         }
         setIsScaling(true);
         await scale(targetScale, {
-            "irisapp.dev/paused-scale": null,
+            "irisapp.dev/original-replicas": null,
         });
         setIsScaling(false);
     }, [scale, setIsScaling, targetScale]);
@@ -777,7 +779,7 @@ const ScalePopoverContent: React.FC<{
         }
         setIsPausing(true);
         await scale(0, {
-            "irisapp.dev/paused-scale": String(currentScale),
+            "irisapp.dev/original-replicas": String(currentScale),
         });
         setIsPausing(false);
     }, [scale, currentScale, setIsPausing]);
@@ -787,7 +789,7 @@ const ScalePopoverContent: React.FC<{
         let targetScale = pausedScaleNumber ?? 1;
         setIsResuming(true);
         await scale(targetScale, {
-            "irisapp.dev/paused-scale": null,
+            "irisapp.dev/original-replicas": null,
         });
         setIsResuming(false);
     }, [pausedScaleNumber, scale, setIsResuming]);
