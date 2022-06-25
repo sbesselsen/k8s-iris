@@ -7,7 +7,7 @@ import { ResourceAllOverview } from "./ResourceAllOverview";
 import { ResourceWorkloadsOverview } from "./ResourceWorkloadsOverview";
 
 export const ResourcesOverview: React.FC<{}> = () => {
-    const [activeTab, setActiveTab] = useAppParam("tab", "all");
+    const [activeTab, setActiveTab] = useAppParam("tab", "workloads");
 
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
 
@@ -25,12 +25,12 @@ export const ResourcesOverview: React.FC<{}> = () => {
     );
 
     const tabs = [
-        { id: "all", title: "All", content: <ResourceAllOverview /> },
         {
             id: "workloads",
             title: "Workloads",
             content: <ResourceWorkloadsOverview />,
         },
+        { id: "all", title: "All", content: <ResourceAllOverview /> },
     ];
     return (
         <ContentTabs

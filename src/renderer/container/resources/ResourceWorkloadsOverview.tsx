@@ -1,11 +1,5 @@
 import {
-    Accordion,
-    AccordionButton,
-    AccordionIcon,
-    AccordionItem,
-    AccordionPanel,
     Badge,
-    Box,
     Checkbox,
     Heading,
     HStack,
@@ -16,6 +10,7 @@ import {
     Th,
     Thead,
     Tr,
+    useColorModeValue,
     VStack,
 } from "@chakra-ui/react";
 import React, {
@@ -91,114 +86,94 @@ const GroupedResourcesOverview: React.FC<GroupedResourcesOverviewProps> = (
         }
         return sortedGroups;
     }, [groups]);
-    const [groupIdsOpened, setGroupIdsOpened] = useState<
-        Record<string, boolean>
-    >({});
-    const indexes = useMemo(
-        () =>
-            sortedGroups
-                .map((group, index) => {
-                    const id = group.id;
-                    return groupIdsOpened[id] !== false ? index : null;
-                })
-                .filter((i) => i !== null) as number[],
-        [sortedGroups, groupIdsOpened]
-    );
 
-    const onChangeIndexes = useCallback(
-        (indexes: number[]) => {
-            setGroupIdsOpened((ids) => {
-                const newIds = { ...ids };
-                const openIndexesSet = new Set(indexes);
-                for (let i = 0; i < sortedGroups.length; i++) {
-                    if (!openIndexesSet.has(i)) {
-                        newIds[sortedGroups[i].id] = false;
-                    } else {
-                        delete newIds[sortedGroups[i].id];
-                    }
-                }
-                return newIds;
-            });
-        },
-        [sortedGroups, setGroupIdsOpened]
-    );
+    const groupEdgeBg = useColorModeValue("gray.100", "gray.700");
+    const groupContentBg = useColorModeValue("white", "gray.900");
+    const headingColor = useColorModeValue("primary.500", "primary.400");
 
     return (
-        <Accordion allowMultiple index={indexes} onChange={onChangeIndexes}>
+        <VStack alignItems="stretch" spacing={4}>
             {sortedGroups.map((group) => (
-                <AccordionItem key={group.id}>
-                    <AccordionButton ps={0}>
-                        <Heading
-                            fontSize="xs"
-                            fontWeight="semibold"
-                            textColor="primary.500"
-                            textTransform="uppercase"
-                        >
-                            <AccordionIcon />
-                            {group.title}
-                        </Heading>
-                    </AccordionButton>
-                    <AccordionPanel ps={0}>
-                        <VStack alignItems="stretch">
-                            {group.badges.length > 0 && (
-                                <HStack>
-                                    {group.badges.map((badge) => {
-                                        const {
-                                            id,
-                                            text,
-                                            variant,
-                                            details,
-                                            badgeProps,
-                                        } = badge;
-                                        const colorScheme = {
-                                            positive: "green",
-                                            negative: "red",
-                                            changing: "orange",
-                                            other: "gray",
-                                        }[variant ?? "other"];
-                                        return (
-                                            <Badge
-                                                key={id}
-                                                colorScheme={colorScheme}
-                                                title={details ?? text}
-                                                {...badgeProps}
-                                            >
-                                                {text}
-                                            </Badge>
-                                        );
-                                    })}
-                                </HStack>
-                            )}
-                            {Object.entries(resourceTypeHeadings).map(
-                                ([k, title]) => {
-                                    const resourcesInfo = group.resources[k];
-                                    if (resourcesInfo.resources.length === 0) {
-                                        return;
-                                    }
+                <VStack
+                    key={group.id}
+                    bg={groupEdgeBg}
+                    alignItems="stretch"
+                    borderRadius={12}
+                    p={2}
+                    maxWidth="1000px"
+                >
+                    <Heading
+                        fontSize="xs"
+                        ps={4}
+                        fontWeight="semibold"
+                        textColor={headingColor}
+                        textTransform="uppercase"
+                    >
+                        {group.title}
+                    </Heading>
+                    <VStack
+                        alignItems="stretch"
+                        bg={groupContentBg}
+                        borderRadius={6}
+                        spacing={4}
+                        p={4}
+                    >
+                        {group.badges.length > 0 && (
+                            <HStack>
+                                {group.badges.map((badge) => {
+                                    const {
+                                        id,
+                                        text,
+                                        variant,
+                                        details,
+                                        badgeProps,
+                                    } = badge;
+                                    const colorScheme = {
+                                        positive: "green",
+                                        negative: "red",
+                                        changing: "orange",
+                                        other: "gray",
+                                    }[variant ?? "other"];
                                     return (
-                                        <VStack key={k} alignItems="stretch">
-                                            <Heading fontSize="sm">
-                                                {title}
-                                            </Heading>
-                                            {resourcesInfo.isLoading && (
-                                                <Spinner ps={4} />
-                                            )}
-                                            {!resourcesInfo.isLoading && (
-                                                <WorkloadResourceList
-                                                    resources={
-                                                        resourcesInfo.resources
-                                                    }
-                                                />
-                                            )}
-                                        </VStack>
+                                        <Badge
+                                            key={id}
+                                            colorScheme={colorScheme}
+                                            title={details ?? text}
+                                            {...badgeProps}
+                                        >
+                                            {text}
+                                        </Badge>
                                     );
+                                })}
+                            </HStack>
+                        )}
+                        {Object.entries(resourceTypeHeadings).map(
+                            ([k, title]) => {
+                                const resourcesInfo = group.resources[k];
+                                if (resourcesInfo.resources.length === 0) {
+                                    return;
                                 }
-                            )}
-                        </VStack>
-                    </AccordionPanel>
-                </AccordionItem>
+                                return (
+                                    <VStack key={k} alignItems="stretch">
+                                        <Heading fontSize="sm">{title}</Heading>
+                                        {resourcesInfo.isLoading && (
+                                            <Spinner ps={4} />
+                                        )}
+                                        {!resourcesInfo.isLoading && (
+                                            <WorkloadResourceList
+                                                resources={
+                                                    resourcesInfo.resources
+                                                }
+                                            />
+                                        )}
+                                    </VStack>
+                                );
+                            }
+                        )}
+                    </VStack>
+                </VStack>
             ))}
-        </Accordion>
+        </VStack>
     );
 };
 
