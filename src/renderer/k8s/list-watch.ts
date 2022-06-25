@@ -369,7 +369,7 @@ export function useK8sListWatchesListener<T extends K8sObject = K8sObject>(
     const keysWithInitialMessageRef = useRef<Set<string>>(new Set());
     useEffect(() => {
         keysWithInitialMessageRef.current.clear();
-    }, [keysWithInitialMessageRef, specKeysString]);
+    }, [keysWithInitialMessageRef, specKeysString, ...deps]);
     const coalescedOnUpdate = useCallback(
         (messages: Record<string, K8sObjectListWatcherMessage<T>>) => {
             const boundedUpdateCoalesceInterval = Math.max(
