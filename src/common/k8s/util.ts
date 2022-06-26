@@ -22,6 +22,43 @@ export function objSameRef(
     );
 }
 
+export function objSameVersion(obj1: K8sObject, obj2: K8sObject): boolean {
+    return (
+        objSameRef(obj1, obj2) &&
+        (obj1 as any).metadata.resourceVersion &&
+        (obj1 as any).metadata.resourceVersion ===
+            (obj2 as any).metadata.resourceVersion
+    );
+}
+
+/**
+ * Create a new list but use the objects from oldList if they are of the same version.
+ *
+ * If all objects are the same version, the old list is returned (regardless of order).
+ */
+export function updateResourceListByVersion(
+    oldList: K8sObject[],
+    newList: K8sObject[]
+): K8sObject[] {
+    const oldResourcesByKey = Object.fromEntries(
+        oldList.map((resource) => [
+            `${resource.apiVersion}:${resource.kind}:${resource.metadata.namespace}:${resource.metadata.name}`,
+            resource,
+        ])
+    );
+    let hasChanges = false;
+    const newCombinedList = newList.map((resource) => {
+        const key = `${resource.apiVersion}:${resource.kind}:${resource.metadata.namespace}:${resource.metadata.name}`;
+        const oldResource = oldResourcesByKey[key];
+        if (oldResource && objSameVersion(resource, oldResource)) {
+            return oldResource;
+        }
+        hasChanges = true;
+        return resource;
+    });
+    return hasChanges ? newCombinedList : oldList;
+}
+
 export function resourceIdentifier(
     obj: K8sObject | K8sObjectIdentifier
 ): string {
