@@ -1,6 +1,10 @@
+import { ChevronDownIcon } from "@chakra-ui/icons";
 import {
     Badge,
+    Box,
+    Button,
     Checkbox,
+    Collapse,
     Heading,
     HStack,
     Spinner,
@@ -14,13 +18,22 @@ import {
     useColorModeValue,
     VStack,
 } from "@chakra-ui/react";
-import React, { ChangeEvent, useCallback, useMemo } from "react";
+import React, { ChangeEvent, useCallback, useEffect, useMemo } from "react";
 import { K8sObject, K8sObjectListQuery } from "../../../common/k8s/client";
 import { updateResourceListByVersion } from "../../../common/k8s/util";
 import { k8sSmartCompare } from "../../../common/util/sort";
+import { LazyComponent } from "../../component/main/LazyComponent";
 import { ScrollBox } from "../../component/main/ScrollBox";
 import { Selectable } from "../../component/main/Selectable";
 import { useK8sNamespaces } from "../../context/k8s-namespaces";
+import { useAppParam } from "../../context/param";
+import {
+    useAppRoute,
+    useAppRouteGetter,
+    useAppRouteSetter,
+} from "../../context/route";
+import { useIpcCall } from "../../hook/ipc";
+import { useModifierKeyRef } from "../../hook/keyboard";
 import { generateBadges, ResourceBadge } from "../../k8s/badges";
 import {
     K8sListWatchesListenerOptions,
@@ -33,10 +46,12 @@ import { ResourceEditorLink } from "./ResourceEditorLink";
 type WorkloadsStore = {
     groups: Record<string, WorkloadResourceGroup>;
     groupSubResources: Record<string, K8sObject[]>;
+    expandedGroups: Set<string>;
     allResourcesByType: Record<
         string,
         { isLoading: boolean; resources: K8sObject[]; error: undefined | any }
     >;
+    showNamespace: boolean;
 };
 
 type WorkloadResourceGroup = {
@@ -56,15 +71,22 @@ const resourceTypes: Record<string, { title: string }> = {
     secrets: { title: "Secrets" },
 };
 
-const { useStore, useStoreValue } = create<WorkloadsStore>({
+const storeEmptyState: WorkloadsStore = {
     groups: {},
     groupSubResources: {},
+    expandedGroups: new Set(),
     allResourcesByType: Object.fromEntries(
         Object.keys(resourceTypes).map((k) => [
             k,
             { isLoading: true, resources: [], error: undefined },
         ])
     ),
+    showNamespace: false,
+};
+
+const { useStore, useStoreValue, store } = create(storeEmptyState);
+store.subscribe((value) => {
+    console.log("store", { isEmpty: value === storeEmptyState, value });
 });
 
 export const ResourceWorkloadsOverview: React.FC<{}> = () => {
@@ -89,6 +111,14 @@ function useMonitorWorkloads() {
     const namespaces = useK8sNamespaces();
 
     const store = useStore();
+
+    useEffect(() => {
+        store.set({
+            ...storeEmptyState,
+            showNamespace:
+                namespaces.mode === "all" || namespaces.selected.length > 1,
+        });
+    }, [namespaces, store]);
 
     const listWatchOptions: K8sListWatchesListenerOptions = useMemo(
         () => ({
@@ -229,7 +259,7 @@ function useMonitorWorkloads() {
 }
 
 function computeGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
-    return [
+    const allGroups = [
         ...computeHelmGroups(resources),
         {
             id: "_",
@@ -238,6 +268,21 @@ function computeGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
             contains: () => true,
         },
     ];
+    let remainingResources: K8sObject[] = resources;
+    const necessaryGroups = allGroups.filter((group) => {
+        const newRemainingResources: K8sObject[] = [];
+        let groupIsNonEmpty = false;
+        for (const resource of remainingResources) {
+            if (group.contains(resource)) {
+                groupIsNonEmpty = true;
+            } else {
+                newRemainingResources.push(resource);
+            }
+        }
+        remainingResources = newRemainingResources;
+        return groupIsNonEmpty;
+    });
+    return necessaryGroups;
 }
 
 function computeHelmGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
@@ -342,9 +387,6 @@ function computeHelmGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
 
 const GroupedResourcesOverview: React.FC<{}> = (props) => {
     const groups = useStoreValue((value) => value.groups);
-    let isAnythingLoading = useStoreValue((value) =>
-        Object.values(value.allResourcesByType).some((r) => r.isLoading)
-    );
 
     const sortedGroups = useMemo(() => {
         let otherGroup: WorkloadResourceGroup | undefined;
@@ -364,38 +406,63 @@ const GroupedResourcesOverview: React.FC<{}> = (props) => {
         return sortedGroups;
     }, [groups]);
 
-    const namespaces = useK8sNamespaces();
-    const showNamespace =
-        namespaces.mode === "all" || namespaces.selected.length > 1;
-
     return (
-        <VStack alignItems="stretch" spacing={4}>
-            {isAnythingLoading && <Spinner />}
-            {!isAnythingLoading &&
-                sortedGroups.map((group) => (
-                    <WorkloadGroup
-                        showNamespace={showNamespace}
-                        groupId={group.id}
-                        key={group.id}
-                    />
-                ))}
+        <VStack alignItems="stretch" spacing={2}>
+            {sortedGroups.map((group) => (
+                <WorkloadGroup groupId={group.id} key={group.id} />
+            ))}
         </VStack>
     );
 };
 
 const WorkloadGroup: React.FC<{
     groupId: string;
-    showNamespace: boolean;
 }> = (props) => {
-    const { groupId, showNamespace } = props;
+    const { groupId } = props;
 
     const group = useStoreValue((value) => value.groups[groupId], [groupId]);
+    const showNamespace = useStoreValue((value) => value.showNamespace);
 
     const groupEdgeBg = useColorModeValue("gray.100", "gray.700");
     const groupContentBg = useColorModeValue("white", "gray.900");
     const headingColor = useColorModeValue("primary.500", "primary.400");
 
-    console.log("render group", group);
+    const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
+    const getAppRoute = useAppRouteGetter();
+    const setAppRoute = useAppRouteSetter();
+    const metaKeyRef = useModifierKeyRef("Meta");
+
+    const expandedParamName = "workloadGroupsExpanded";
+    const isExpanded = useAppRoute(
+        (route) =>
+            ((route.params?.[expandedParamName] ?? []) as string[]).includes(
+                groupId
+            ),
+        [groupId]
+    );
+    const toggleExpanded = useCallback(() => {
+        const route = getAppRoute();
+        const expandedIds = (route.params?.[expandedParamName] ??
+            []) as string[];
+        const prevExpanded = expandedIds.includes(groupId);
+        const newExpandedIds = prevExpanded
+            ? expandedIds.filter((id) => id !== groupId)
+            : [...expandedIds, groupId];
+        const newRoute = {
+            ...route,
+            params: {
+                ...route.params,
+                [expandedParamName]: newExpandedIds,
+            },
+        };
+        if (metaKeyRef.current) {
+            createWindow({
+                route: newRoute,
+            });
+        } else {
+            setAppRoute(() => newRoute, true);
+        }
+    }, [createWindow, groupId, isExpanded, metaKeyRef, setAppRoute]);
 
     return (
         <VStack
@@ -406,56 +473,81 @@ const WorkloadGroup: React.FC<{
             p={2}
             maxWidth="1000px"
         >
-            <Heading
-                fontSize="xs"
-                ps={4}
-                fontWeight="semibold"
-                textColor={headingColor}
-                textTransform="uppercase"
-            >
-                {group.title}
-            </Heading>
-            <VStack
-                alignItems="stretch"
-                bg={groupContentBg}
-                borderRadius={6}
-                spacing={4}
-                p={4}
-            >
-                {group.badges.length > 0 && (
-                    <HStack>
-                        {group.badges.map((badge) => {
-                            const { id, text, variant, details, badgeProps } =
-                                badge;
-                            const colorScheme = {
-                                positive: "green",
-                                negative: "red",
-                                changing: "orange",
-                                other: "gray",
-                            }[variant ?? "other"];
-                            return (
-                                <Badge
-                                    key={id}
-                                    colorScheme={colorScheme}
-                                    title={details ?? text}
-                                    {...badgeProps}
-                                >
-                                    {text}
-                                </Badge>
-                            );
-                        })}
-                    </HStack>
-                )}
-                {Object.entries(resourceTypes).map(([k, { title }]) => (
-                    <WorkloadResourceSection
-                        key={k}
-                        typeKey={k}
-                        title={title}
-                        showNamespace={showNamespace}
-                        groupId={group.id}
-                    />
-                ))}
-            </VStack>
+            <Box>
+                <Button
+                    w="100%"
+                    px={4}
+                    py={2}
+                    bg="transparent"
+                    h="auto"
+                    justifyContent="start"
+                    fontSize="xs"
+                    fontWeight="semibold"
+                    textColor={headingColor}
+                    textTransform="uppercase"
+                    onClick={toggleExpanded}
+                    leftIcon={
+                        <ChevronDownIcon
+                            transition="500ms transform"
+                            transform={
+                                isExpanded ? "rotate(0deg)" : "rotate(180deg)"
+                            }
+                        />
+                    }
+                >
+                    {group.title}
+                </Button>
+            </Box>
+            <Collapse animateOpacity in={isExpanded}>
+                <LazyComponent isActive={isExpanded}>
+                    <VStack
+                        alignItems="stretch"
+                        bg={groupContentBg}
+                        borderRadius={6}
+                        spacing={4}
+                        p={4}
+                    >
+                        {group.badges.length > 0 && (
+                            <HStack>
+                                {group.badges.map((badge) => {
+                                    const {
+                                        id,
+                                        text,
+                                        variant,
+                                        details,
+                                        badgeProps,
+                                    } = badge;
+                                    const colorScheme = {
+                                        positive: "green",
+                                        negative: "red",
+                                        changing: "orange",
+                                        other: "gray",
+                                    }[variant ?? "other"];
+                                    return (
+                                        <Badge
+                                            key={id}
+                                            colorScheme={colorScheme}
+                                            title={details ?? text}
+                                            {...badgeProps}
+                                        >
+                                            {text}
+                                        </Badge>
+                                    );
+                                })}
+                            </HStack>
+                        )}
+                        {Object.entries(resourceTypes).map(([k, { title }]) => (
+                            <WorkloadResourceSection
+                                key={k}
+                                typeKey={k}
+                                title={title}
+                                showNamespace={showNamespace}
+                                groupId={group.id}
+                            />
+                        ))}
+                    </VStack>
+                </LazyComponent>
+            </Collapse>
         </VStack>
     );
 };
@@ -521,7 +613,6 @@ type WorkloadResourceListProps = {
 
 const WorkloadResourceList: React.FC<WorkloadResourceListProps> = (props) => {
     const { resources, showNamespace } = props;
-    counter++;
 
     const sortedKeyedResources = useMemo(
         () =>
@@ -543,6 +634,7 @@ const WorkloadResourceList: React.FC<WorkloadResourceListProps> = (props) => {
         (e: ChangeEvent<HTMLInputElement>) => {},
         []
     );
+    // TODO!
     const onSelectHandlers = useMemo(
         () =>
             Object.fromEntries(
@@ -553,7 +645,7 @@ const WorkloadResourceList: React.FC<WorkloadResourceListProps> = (props) => {
                     },
                 ])
             ),
-        [sortedKeyedResources]
+        []
     );
 
     return (
@@ -587,7 +679,7 @@ const WorkloadResourceList: React.FC<WorkloadResourceListProps> = (props) => {
                 </Tr>
             </Thead>
             <Tbody>
-                {sortedKeyedResources.map(({ key, resource }, index) => (
+                {sortedKeyedResources.map(({ key, resource }) => (
                     <WorkloadResourceRow
                         resource={resource}
                         showNamespace={showNamespace}
@@ -610,6 +702,7 @@ type WorkloadResourceRowProps = {
 
 const WorkloadResourceRow: React.FC<WorkloadResourceRowProps> = (props) => {
     const { resource, isSelected, onChangeSelect, showNamespace } = props;
+    counter++;
 
     const creationDate = new Date((resource as any).metadata.creationTimestamp);
     const isDeleting = Boolean((resource as any).metadata.deletionTimestamp);
@@ -686,10 +779,4 @@ const WorkloadResourceRow: React.FC<WorkloadResourceRowProps> = (props) => {
             </Td>
         </Tr>
     );
-};
-
-type WorkloadResourceInfo = {
-    isLoading: boolean;
-    resources: K8sObject[];
-    error: any | undefined;
 };
