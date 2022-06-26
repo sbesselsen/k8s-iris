@@ -44,6 +44,7 @@ import {
 import { formatDeveloperDateTime } from "../../util/date";
 import { create } from "../../util/state";
 import { ResourceEditorLink } from "./ResourceEditorLink";
+import { ResourcesToolbar } from "./ResourcesToolbar";
 
 type WorkloadsStore = {
     groups: Record<string, WorkloadResourceGroup>;
@@ -97,10 +98,45 @@ export const ResourceWorkloadsOverview: React.FC<{}> = () => {
     // console.log("render root", groups);
 
     return (
-        <ScrollBox px={4} py={2} flex="1 0 0">
+        <ScrollBox
+            px={4}
+            py={2}
+            flex="1 0 0"
+            bottomToolbar={<ResourceWorkloadsToolbar />}
+        >
             <WorkloadsMonitor />
             <GroupedResourcesOverview />
         </ScrollBox>
+    );
+};
+
+export const ResourceWorkloadsToolbar: React.FC<{}> = () => {
+    const store = useStore();
+
+    const onClearSelection = useCallback(() => {
+        store.set((value) => ({ ...value, selectedResourceKeys: new Set() }));
+    }, [store]);
+
+    const selectedResourceKeys = useStoreValue(
+        (value) => value.selectedResourceKeys
+    );
+    const resourcesByType = useStoreValue((value) => value.allResourcesByType);
+    const selectedResources = useMemo(() => {
+        const output: K8sObject[] = [];
+        for (const { resources } of Object.values(resourcesByType)) {
+            const selectedTypeResources = resources.filter((resource) =>
+                selectedResourceKeys.has(toK8sObjectIdentifierString(resource))
+            );
+            output.push(...selectedTypeResources);
+        }
+        return output;
+    }, [resourcesByType, selectedResourceKeys]);
+
+    return (
+        <ResourcesToolbar
+            resources={selectedResources}
+            onClearSelection={onClearSelection}
+        />
     );
 };
 
@@ -173,7 +209,6 @@ function useMonitorWorkloads() {
                     const newSelectedResourceKeys = new Set(
                         oldValue.selectedResourceKeys
                     );
-                    console.log(newSelectedResourceKeys);
                     const availableResourceKeys: Set<string> = new Set();
                     const newGroupSubResources: Record<string, K8sObject[]> =
                         {};

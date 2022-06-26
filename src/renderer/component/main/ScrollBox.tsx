@@ -19,7 +19,7 @@ export const ScrollBox = forwardRef<ScrollBoxProps, "div">((props, ref) => {
     const [bottomToolbarSpace, setBottomToolbarSpace] = useState(100);
     const updateBottomToolbarSpace = useCallback(() => {
         setBottomToolbarSpace((space) =>
-            Math.max(space, bottomToolbarRef.current?.offsetHeight)
+            Math.max(space, bottomToolbarRef.current?.offsetHeight ?? 0)
         );
     }, [bottomToolbarRef, setBottomToolbarSpace]);
 
