@@ -127,6 +127,10 @@ export async function fetchApiResourceList(
                         );
                         resolve(resources);
                     } catch (e) {
+                        if (String(body).match(/service\s+unavailable/i)) {
+                            // Looks like the handler may be turned off.
+                            resolve([]);
+                        }
                         reject(e);
                     }
                 }
