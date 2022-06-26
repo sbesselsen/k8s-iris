@@ -46,7 +46,7 @@ export function updateResourceListByVersion(
             resource,
         ])
     );
-    let hasChanges = false;
+    let hasChanges = oldList.length !== newList.length;
     const newCombinedList = newList.map((resource) => {
         const key = `${resource.apiVersion}:${resource.kind}:${resource.metadata.namespace}:${resource.metadata.name}`;
         const oldResource = oldResourcesByKey[key];
@@ -84,6 +84,18 @@ export function toK8sObjectIdentifier(
         };
     }
     return obj;
+}
+
+export function toK8sObjectIdentifierString(
+    obj: K8sObject | K8sObjectIdentifier
+): string {
+    const identifier = toK8sObjectIdentifier(obj);
+    return [
+        identifier.apiVersion,
+        identifier.kind,
+        identifier.namespace ?? "",
+        identifier.name,
+    ].join(":");
 }
 
 export function addListObject<T extends K8sObject = K8sObject>(
