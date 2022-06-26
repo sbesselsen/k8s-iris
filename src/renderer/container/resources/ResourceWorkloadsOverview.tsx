@@ -20,7 +20,10 @@ import {
 } from "@chakra-ui/react";
 import React, { ChangeEvent, useCallback, useEffect, useMemo } from "react";
 import { K8sObject, K8sObjectListQuery } from "../../../common/k8s/client";
-import { updateResourceListByVersion } from "../../../common/k8s/util";
+import {
+    toK8sObjectIdentifierString,
+    updateResourceListByVersion,
+} from "../../../common/k8s/util";
 import { k8sSmartCompare } from "../../../common/util/sort";
 import { LazyComponent } from "../../component/main/LazyComponent";
 import { ScrollBox } from "../../component/main/ScrollBox";
@@ -49,6 +52,7 @@ type WorkloadsStore = {
         string,
         { isLoading: boolean; resources: K8sObject[]; error: undefined | any }
     >;
+    selectedResourceKeys: Set<string>;
     showNamespace: boolean;
 };
 
@@ -79,13 +83,14 @@ const storeEmptyState: WorkloadsStore = {
             { isLoading: true, resources: [], error: undefined },
         ])
     ),
+    selectedResourceKeys: new Set(),
     showNamespace: false,
 };
 
 const { useStore, useStoreValue, store } = create(storeEmptyState);
-// store.subscribe((value) => {
-//     console.log("store", { isEmpty: value === storeEmptyState, value });
-// });
+store.subscribe((value) => {
+    console.log("store", { isEmpty: value === storeEmptyState, value });
+});
 
 export const ResourceWorkloadsOverview: React.FC<{}> = () => {
     const groups = useStoreValue((value) => value.groups);
@@ -165,12 +170,20 @@ function useMonitorWorkloads() {
                     newValue.groups = newGroups;
 
                     // Now group the updated resources with the new groups.
+                    const newSelectedResourceKeys = new Set(
+                        oldValue.selectedResourceKeys
+                    );
+                    console.log(newSelectedResourceKeys);
+                    const availableResourceKeys: Set<string> = new Set();
                     const newGroupSubResources: Record<string, K8sObject[]> =
                         {};
                     for (const [type, typeResources] of Object.entries(
                         newValue.allResourcesByType
                     )) {
                         for (const resource of typeResources.resources) {
+                            availableResourceKeys.add(
+                                toK8sObjectIdentifierString(resource)
+                            );
                             const group = orderedGroups.find((group) =>
                                 group.contains(resource)
                             );
@@ -185,6 +198,14 @@ function useMonitorWorkloads() {
                             );
                         }
                     }
+                    for (const key of [...newSelectedResourceKeys]) {
+                        if (!availableResourceKeys.has(key)) {
+                            // Remove selected item when it disappears.
+                            newSelectedResourceKeys.delete(key);
+                        }
+                    }
+                    newValue.selectedResourceKeys = newSelectedResourceKeys;
+
                     newValue.groupSubResources = Object.fromEntries(
                         Object.entries(newGroupSubResources).map(
                             ([key, resources]) => {
@@ -692,6 +713,7 @@ type WorkloadResourceListProps = {
 const WorkloadResourceList: React.FC<WorkloadResourceListProps> = (props) => {
     const { resources, showNamespace } = props;
 
+    const store = useStore();
     const sortedKeyedResources = useMemo(
         () =>
             [...resources]
@@ -705,25 +727,48 @@ const WorkloadResourceList: React.FC<WorkloadResourceListProps> = (props) => {
         [resources]
     );
 
-    // TODO!
-    const selectedResourceIdentifiers: string[] = [];
+    const resourceKeysSet = useMemo(
+        () => new Set(resources.map((r) => toK8sObjectIdentifierString(r))),
+        [resources]
+    );
+
+    const numListedResourcesSelected = useStoreValue(
+        (value) =>
+            [...value.selectedResourceKeys].filter((key) =>
+                resourceKeysSet.has(key)
+            ).length,
+        [resourceKeysSet]
+    );
+    const allResourcesSelected =
+        numListedResourcesSelected > 0 &&
+        numListedResourcesSelected === resources.length;
+    const someResourcesSelected =
+        numListedResourcesSelected > 0 &&
+        numListedResourcesSelected < resources.length;
 
     const onChangeSelectAll = useCallback(
-        (e: ChangeEvent<HTMLInputElement>) => {},
-        []
-    );
-    // TODO!
-    const onSelectHandlers = useMemo(
-        () =>
-            Object.fromEntries(
-                sortedKeyedResources.map((r) => [
-                    r.key,
-                    (selected: boolean) => {
-                        // TODO
-                    },
-                ])
-            ),
-        []
+        (e: ChangeEvent<HTMLInputElement>) => {
+            const checked = e.target.checked;
+            store.set((value) => {
+                const newSelectedResourceKeys = new Set(
+                    value.selectedResourceKeys
+                );
+                if (checked) {
+                    for (const key of resourceKeysSet) {
+                        newSelectedResourceKeys.add(key);
+                    }
+                } else {
+                    for (const key of resourceKeysSet) {
+                        newSelectedResourceKeys.delete(key);
+                    }
+                }
+                return {
+                    ...value,
+                    selectedResourceKeys: newSelectedResourceKeys,
+                };
+            });
+        },
+        [resourceKeysSet, store]
     );
 
     return (
@@ -738,16 +783,8 @@ const WorkloadResourceList: React.FC<WorkloadResourceListProps> = (props) => {
                     <Th ps={2} width="40px">
                         <Checkbox
                             colorScheme="gray"
-                            isIndeterminate={
-                                selectedResourceIdentifiers.length > 0 &&
-                                selectedResourceIdentifiers.length <
-                                    sortedKeyedResources.length
-                            }
-                            isChecked={
-                                selectedResourceIdentifiers.length > 0 &&
-                                selectedResourceIdentifiers.length ===
-                                    sortedKeyedResources.length
-                            }
+                            isIndeterminate={someResourcesSelected}
+                            isChecked={allResourcesSelected}
                             onChange={onChangeSelectAll}
                         />
                     </Th>
@@ -762,8 +799,6 @@ const WorkloadResourceList: React.FC<WorkloadResourceListProps> = (props) => {
                         resource={resource}
                         showNamespace={showNamespace}
                         key={key}
-                        isSelected={selectedResourceIdentifiers.includes(key)}
-                        onChangeSelect={onSelectHandlers[key]}
                     />
                 ))}
             </Tbody>
@@ -774,21 +809,51 @@ const WorkloadResourceList: React.FC<WorkloadResourceListProps> = (props) => {
 type WorkloadResourceRowProps = {
     resource: K8sObject;
     showNamespace: boolean;
-    isSelected?: boolean;
-    onChangeSelect?: (selected: boolean) => void;
 };
 
 const WorkloadResourceRow: React.FC<WorkloadResourceRowProps> = (props) => {
-    const { resource, isSelected, onChangeSelect, showNamespace } = props;
+    const { resource, showNamespace } = props;
 
+    const store = useStore();
     const creationDate = new Date((resource as any).metadata.creationTimestamp);
     const isDeleting = Boolean((resource as any).metadata.deletionTimestamp);
 
+    const resourceKey = useMemo(
+        () => toK8sObjectIdentifierString(resource),
+        [resource]
+    );
+    const isSelected = useStoreValue(
+        (value) => value.selectedResourceKeys.has(resourceKey),
+        [resourceKey]
+    );
     const onChange = useCallback(
         (e: ChangeEvent<HTMLInputElement>) => {
-            onChangeSelect?.(e.target.checked);
+            const selected = e.target.checked;
+            store.set((value) => {
+                const prevSelected =
+                    value.selectedResourceKeys.has(resourceKey);
+                let newSelectedResourceKeys = value.selectedResourceKeys;
+                if (selected && !prevSelected) {
+                    newSelectedResourceKeys = new Set(
+                        value.selectedResourceKeys
+                    );
+                    newSelectedResourceKeys.add(resourceKey);
+                } else {
+                    newSelectedResourceKeys = new Set(
+                        value.selectedResourceKeys
+                    );
+                    newSelectedResourceKeys.delete(resourceKey);
+                }
+                if (newSelectedResourceKeys !== value.selectedResourceKeys) {
+                    return {
+                        ...value,
+                        selectedResourceKeys: newSelectedResourceKeys,
+                    };
+                }
+                return value;
+            });
         },
-        [onChangeSelect]
+        [resourceKey, store]
     );
 
     const badges: ResourceBadge[] = useMemo(
