@@ -11,7 +11,6 @@ import {
     Table,
     Tbody,
     Td,
-    Text,
     Th,
     Thead,
     Tr,
@@ -19,9 +18,13 @@ import {
     VStack,
 } from "@chakra-ui/react";
 import React, { ChangeEvent, useCallback, useEffect, useMemo } from "react";
-import { K8sObject, K8sObjectListQuery } from "../../../common/k8s/client";
 import {
-    toK8sObjectIdentifierString,
+    K8sObject,
+    K8sObjectIdentifier,
+    K8sObjectListQuery,
+} from "../../../common/k8s/client";
+import {
+    toK8sObjectIdentifier,
     updateResourceListByVersion,
 } from "../../../common/k8s/util";
 import { k8sSmartCompare } from "../../../common/util/sort";
@@ -89,9 +92,9 @@ const storeEmptyState: WorkloadsStore = {
 };
 
 const { useStore, useStoreValue, store } = create(storeEmptyState);
-store.subscribe((value) => {
-    console.log("store", { isEmpty: value === storeEmptyState, value });
-});
+// store.subscribe((value) => {
+//     console.log("store", value });
+// });
 
 export const ResourceWorkloadsOverview: React.FC<{}> = () => {
     const groups = useStoreValue((value) => value.groups);
@@ -324,7 +327,7 @@ function computeGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
             badges: [],
             contains: (resource: K8sObject) =>
                 !!resource.metadata.name.match(/^sh\.helm\.release\./),
-            sortOrder: 1,
+            sortOrder: 101,
         },
         {
             id: "kube-stuff",
@@ -335,7 +338,7 @@ function computeGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
                     "kubernetes.io/service-account.name"
                 ] === "default" ||
                 resource.metadata.name === "kube-root-ca.crt",
-            sortOrder: 2,
+            sortOrder: 102,
         },
         {
             id: "service-account-tokens",
@@ -345,11 +348,11 @@ function computeGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
                 !!resource.metadata.annotations?.[
                     "kubernetes.io/service-account.name"
                 ],
-            sortOrder: 3,
+            sortOrder: 103,
         },
         {
             id: "_",
-            title: "More",
+            title: "Uncategorized",
             badges: [],
             contains: () => true,
             sortOrder: 100,
@@ -527,28 +530,18 @@ function computeHelmGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
 const GroupedResourcesOverview: React.FC<{}> = (props) => {
     const groups = useStoreValue((value) => value.groups);
 
-    const sortedGroups = useMemo(() => {
-        let otherGroup: WorkloadResourceGroup | undefined;
-        const namedGroups = Object.values(groups).filter((g) => {
-            if (g.id === "_") {
-                otherGroup = g;
-                return false;
-            }
-            return true;
-        });
-        const sortedGroups = namedGroups.sort((a, b) => {
-            let aSortOrder = a.sortOrder ?? 0;
-            let bSortOrder = b.sortOrder ?? 0;
-            if (aSortOrder !== bSortOrder) {
-                return aSortOrder - bSortOrder;
-            }
-            return k8sSmartCompare(a.title, b.title);
-        });
-        if (otherGroup) {
-            sortedGroups.push(otherGroup);
-        }
-        return sortedGroups;
-    }, [groups]);
+    const sortedGroups = useMemo(
+        () =>
+            Object.values(groups).sort((a, b) => {
+                let aSortOrder = a.sortOrder ?? 0;
+                let bSortOrder = b.sortOrder ?? 0;
+                if (aSortOrder !== bSortOrder) {
+                    return aSortOrder - bSortOrder;
+                }
+                return k8sSmartCompare(a.title, b.title);
+            }),
+        [groups]
+    );
 
     return (
         <VStack alignItems="stretch" spacing={2}>
@@ -721,21 +714,20 @@ const WorkloadResourceSection: React.FC<WorkloadResourceSectionProps> = (
         [groupId, typeKey]
     );
 
+    if (isLoading) {
+        return <Spinner size="sm" ps={4} />;
+    }
+    if (resources.length === 0) {
+        return null;
+    }
+
     return (
         <VStack alignItems="stretch">
             <Heading fontSize="sm">{title}</Heading>
-            {isLoading && <Spinner size="sm" ps={4} />}
-            {!isLoading && resources.length > 0 && (
-                <WorkloadResourceList
-                    showNamespace={showNamespace}
-                    resources={resources}
-                />
-            )}
-            {!isLoading && resources.length === 0 && (
-                <Text textColor="gray" fontSize="sm">
-                    None
-                </Text>
-            )}
+            <WorkloadResourceList
+                showNamespace={showNamespace}
+                resources={resources}
+            />
         </VStack>
     );
 };
@@ -823,7 +815,9 @@ const WorkloadResourceList: React.FC<WorkloadResourceListProps> = (props) => {
                             onChange={onChangeSelectAll}
                         />
                     </Th>
-                    <Th ps={0}>Name</Th>
+                    <Th ps={0} whiteSpace="nowrap">
+                        Name
+                    </Th>
                     {showNamespace && <Th width="150px">Namespace</Th>}
                     <Th width="150px">Created</Th>
                 </Tr>
@@ -957,3 +951,19 @@ const WorkloadResourceRow: React.FC<WorkloadResourceRowProps> = (props) => {
         </Tr>
     );
 };
+
+/**
+ * This is a copy of toK8sObjectIdentifierString() in common/k8s/util.ts.
+ * Parcel craps out when I import it.
+ */
+function toK8sObjectIdentifierString(
+    obj: K8sObject | K8sObjectIdentifier
+): string {
+    const identifier = toK8sObjectIdentifier(obj);
+    return [
+        identifier.apiVersion,
+        identifier.kind,
+        identifier.namespace ?? "",
+        identifier.name,
+    ].join(":");
+}
