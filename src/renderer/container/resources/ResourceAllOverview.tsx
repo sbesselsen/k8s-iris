@@ -108,6 +108,45 @@ export const ResourceAllOverview: React.FC = () => {
     );
 };
 
+export const ResourceTypeOverview: React.FC<{
+    resourceType: K8sResourceTypeIdentifier;
+}> = (props) => {
+    const { resourceType } = props;
+
+    // TODO: we should put this in an appParam but we can't because it would not fit
+    // Think of something, I guess?
+    const [selectedResources, onChangeSelectedResources] = useState<
+        K8sObject[]
+    >([]);
+
+    const onClearSelection = useCallback(() => {
+        onChangeSelectedResources([]);
+    }, [onChangeSelectedResources]);
+
+    return (
+        <VStack flex="1 0 0" spacing={0} alignItems="stretch">
+            <ScrollBox
+                px={4}
+                py={2}
+                flex="1 0 0"
+                bottomToolbar={
+                    <ResourcesToolbar
+                        resourceType={resourceType}
+                        resources={selectedResources}
+                        onClearSelection={onClearSelection}
+                    />
+                }
+            >
+                <ResourceList
+                    resourceType={resourceType}
+                    selectedResources={selectedResources}
+                    onChangeSelectedResources={onChangeSelectedResources}
+                />
+            </ScrollBox>
+        </VStack>
+    );
+};
+
 type ResourceListProps = {
     resourceType: K8sResourceTypeIdentifier;
     defaultSelectedResources?: K8sObject[];

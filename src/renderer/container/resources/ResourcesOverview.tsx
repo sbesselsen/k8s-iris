@@ -3,8 +3,16 @@ import React, { useCallback } from "react";
 import { ContentTabs } from "../../component/main/ContentTabs";
 import { useAppParam } from "../../context/param";
 import { useIpcCall } from "../../hook/ipc";
-import { ResourceAllOverview } from "./ResourceAllOverview";
+import {
+    ResourceAllOverview,
+    ResourceTypeOverview,
+} from "./ResourceAllOverview";
 import { ResourceWorkloadsOverview } from "./ResourceWorkloadsOverview";
+
+const namespaceResourceType = {
+    apiVersion: "v1",
+    kind: "Namespace",
+};
 
 export const ResourcesOverview: React.FC<{}> = () => {
     const [activeTab, setActiveTab] = useAppParam("tab", "workloads");
@@ -30,7 +38,14 @@ export const ResourcesOverview: React.FC<{}> = () => {
             title: "Workloads",
             content: <ResourceWorkloadsOverview />,
         },
-        { id: "all", title: "All", content: <ResourceAllOverview /> },
+        {
+            id: "namespaces",
+            title: "Namespaces",
+            content: (
+                <ResourceTypeOverview resourceType={namespaceResourceType} />
+            ),
+        },
+        { id: "all", title: "By type", content: <ResourceAllOverview /> },
     ];
     return (
         <ContentTabs

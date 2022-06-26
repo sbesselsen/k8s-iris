@@ -97,6 +97,7 @@ export const ContentTabs: React.FC<ContentTabsProps> = (props) => {
                             _focus={{}}
                             fontWeight="normal"
                             textColor={tabTextColor}
+                            whiteSpace="nowrap"
                             _focusVisible={{
                                 boxShadow: focusBoxShadow,
                             }}
