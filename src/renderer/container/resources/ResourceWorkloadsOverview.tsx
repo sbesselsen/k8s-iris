@@ -11,6 +11,7 @@ import {
     Table,
     Tbody,
     Td,
+    Text,
     Th,
     Thead,
     Tr,
@@ -529,6 +530,9 @@ function computeHelmGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
 
 const GroupedResourcesOverview: React.FC<{}> = (props) => {
     const groups = useStoreValue((value) => value.groups);
+    const isAnythingLoading = useStoreValue((value) =>
+        Object.values(value.allResourcesByType).some((r) => r.isLoading)
+    );
 
     const sortedGroups = useMemo(
         () =>
@@ -548,6 +552,16 @@ const GroupedResourcesOverview: React.FC<{}> = (props) => {
             {sortedGroups.map((group) => (
                 <WorkloadGroup groupId={group.id} key={group.id} />
             ))}
+            {sortedGroups.length === 0 && !isAnythingLoading && (
+                <Box>
+                    <Text color="gray">No workloads selected.</Text>
+                </Box>
+            )}
+            {isAnythingLoading && (
+                <HStack justifyContent="center" py={10}>
+                    <Spinner />
+                </HStack>
+            )}
         </VStack>
     );
 };
@@ -714,20 +728,24 @@ const WorkloadResourceSection: React.FC<WorkloadResourceSectionProps> = (
         [groupId, typeKey]
     );
 
-    if (isLoading) {
-        return <Spinner size="sm" ps={4} />;
-    }
-    if (resources.length === 0) {
+    if (!isLoading && resources.length === 0) {
         return null;
     }
 
     return (
         <VStack alignItems="stretch">
             <Heading fontSize="sm">{title}</Heading>
-            <WorkloadResourceList
-                showNamespace={showNamespace}
-                resources={resources}
-            />
+            {isLoading && (
+                <Box>
+                    <Spinner color="gray" size="sm" />
+                </Box>
+            )}
+            {!isLoading && (
+                <WorkloadResourceList
+                    showNamespace={showNamespace}
+                    resources={resources}
+                />
+            )}
         </VStack>
     );
 };
