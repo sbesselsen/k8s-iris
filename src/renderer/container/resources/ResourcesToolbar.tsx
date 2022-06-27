@@ -357,30 +357,32 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
                     isLoading={isDeleting}
                 />
             )}
-            <Box flex="1 0 0" />
             {(isPausable || isResumable) && (
-                <ButtonGroup isAttached>
-                    {isPausable && (
-                        <IconButton
-                            colorScheme="primary"
-                            icon={<Icon as={MdOutlinePause} />}
-                            aria-label="Pause"
-                            title="Pause"
-                            onClick={onClickPause}
-                            isLoading={isPausing}
-                        />
-                    )}
-                    {isResumable && (
-                        <IconButton
-                            colorScheme="primary"
-                            icon={<Icon as={MdPlayArrow} />}
-                            aria-label="Resume"
-                            title="Resume"
-                            onClick={onClickResume}
-                            isLoading={isResuming}
-                        />
-                    )}
-                </ButtonGroup>
+                <>
+                    <Box flex="1 0 0" />
+                    <ButtonGroup isAttached>
+                        {isPausable && (
+                            <IconButton
+                                colorScheme="primary"
+                                icon={<Icon as={MdOutlinePause} />}
+                                aria-label="Pause"
+                                title="Pause"
+                                onClick={onClickPause}
+                                isLoading={isPausing}
+                            />
+                        )}
+                        {isResumable && (
+                            <IconButton
+                                colorScheme="primary"
+                                icon={<Icon as={MdPlayArrow} />}
+                                aria-label="Resume"
+                                title="Resume"
+                                onClick={onClickResume}
+                                isLoading={isResuming}
+                            />
+                        )}
+                    </ButtonGroup>
+                </>
             )}
         </Toolbar>
     );
