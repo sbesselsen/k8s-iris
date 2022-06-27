@@ -12,6 +12,7 @@ export function shellOptions(): {
                 "/bin",
                 "/usr/sbin",
                 "/sbin",
+                "/opt/homebrew/bin",
             ]
                 .filter((x) => x)
                 .join(":"),
