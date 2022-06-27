@@ -458,6 +458,22 @@ export function createClient(
         let stopped = false;
         let informer: k8s.Informer<T> | undefined;
 
+        if (spec.namespaces && spec.namespaces.length === 0) {
+            console.log(
+                "ListWatch: no namespaces provided, returning static empty list"
+            );
+            watcher(undefined, {
+                list: {
+                    apiVersion: spec.apiVersion,
+                    kind: spec.kind,
+                    items: [],
+                },
+            });
+            return {
+                stop() {},
+            };
+        }
+
         const retrySignal = async () => {
             // Send a retry signal after a certain number of seconds, or when retryConnections is called; whichever comes first.
             return new Promise<void>((resolve) => {
@@ -627,30 +643,43 @@ export function createClient(
                 // TODO: make this configurable or handlable somehow?
                 // Restart informer after 5sec.
                 (async () => {
-                    await retrySignal();
-                    if (stopped) {
+                    while (!stopped) {
+                        await retrySignal();
+                        if (stopped) {
+                            console.log(
+                                "Informer stopped after retry signal",
+                                kubeConfig.getCurrentContext(),
+                                spec.kind
+                            );
+                            return;
+                        }
                         console.log(
-                            "Informer stopped after retry signal",
+                            "Informer restarting",
                             kubeConfig.getCurrentContext(),
                             spec.kind
                         );
-                        return;
-                    }
-                    console.log(
-                        "Informer restarting",
-                        kubeConfig.getCurrentContext(),
-                        spec.kind
-                    );
 
-                    await informer.start();
-                    console.log(
-                        "Informer restarted",
-                        kubeConfig.getCurrentContext(),
-                        spec.kind
-                    );
-                    watcher(undefined, {
-                        list,
-                    });
+                        try {
+                            await informer?.start();
+                        } catch (e) {
+                            console.error(
+                                "Informer restart error",
+                                kubeConfig.getCurrentContext(),
+                                spec.kind,
+                                e
+                            );
+                            continue;
+                        }
+                        console.log(
+                            "Informer restarted",
+                            kubeConfig.getCurrentContext(),
+                            spec.kind
+                        );
+                        watcher(undefined, {
+                            list,
+                        });
+                        break;
+                    }
                 })();
             });
 
