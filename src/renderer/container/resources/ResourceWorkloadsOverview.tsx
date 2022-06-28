@@ -595,9 +595,11 @@ const WorkloadGroup: React.FC<{
                     onClick={toggleExpanded}
                     leftIcon={
                         <ChevronDownIcon
-                            transition="500ms transform"
+                            transition="300ms transform"
+                            w="1rem"
+                            h="1rem"
                             transform={
-                                isExpanded ? "rotate(0deg)" : "rotate(180deg)"
+                                isExpanded ? "rotate(-180deg)" : "rotate(0deg)"
                             }
                         />
                     }
