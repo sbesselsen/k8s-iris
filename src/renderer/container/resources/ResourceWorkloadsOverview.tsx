@@ -64,7 +64,6 @@ type WorkloadsStore = {
 type WorkloadResourceGroup = {
     id: string;
     title: string;
-    badges: ResourceBadge[];
     contains: (resource: K8sObject) => boolean;
     sortOrder?: number;
 };
@@ -325,7 +324,6 @@ function computeGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
         {
             id: "helm-release-data",
             title: "Helm release data",
-            badges: [],
             contains: (resource: K8sObject) =>
                 !!resource.metadata.name.match(/^sh\.helm\.release\./),
             sortOrder: 101,
@@ -333,7 +331,6 @@ function computeGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
         {
             id: "kube-stuff",
             title: "Kubernetes stuff",
-            badges: [],
             contains: (resource: K8sObject) =>
                 resource.metadata.annotations?.[
                     "kubernetes.io/service-account.name"
@@ -344,7 +341,6 @@ function computeGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
         {
             id: "service-account-tokens",
             title: "Service account tokens",
-            badges: [],
             contains: (resource: K8sObject) =>
                 !!resource.metadata.annotations?.[
                     "kubernetes.io/service-account.name"
@@ -354,7 +350,6 @@ function computeGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
         {
             id: "_",
             title: "Uncategorized",
-            badges: [],
             contains: () => true,
             sortOrder: 100,
         },
@@ -382,8 +377,6 @@ function computeHelmGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
         {
             instance: string;
             namespace: string;
-            chart?: string;
-            chartVersion?: string;
         }
     > = {};
     const namespacesByInstance: Record<string, Record<string, string>> = {};
@@ -407,16 +400,6 @@ function computeHelmGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
             if (!groupInfo[groupId]) {
                 groupInfo[groupId] = { instance, namespace };
             }
-            if (resource.metadata.labels?.["helm.sh/chart"]) {
-                const chart = resource.metadata.labels?.["helm.sh/chart"];
-                const match = chart.match(/^(.*)-(v?[0-9\.]+)$/);
-                if (match) {
-                    groupInfo[groupId].chart = match[1];
-                    groupInfo[groupId].chartVersion = match[2];
-                } else if (!groupInfo[groupId].chart) {
-                    groupInfo[groupId].chart = chart;
-                }
-            }
             return groupId;
         }
         if (
@@ -436,17 +419,6 @@ function computeHelmGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
 
             if (!groupInfo[groupId]) {
                 groupInfo[groupId] = { instance, namespace };
-            }
-
-            if (resource.metadata.labels?.["helm.sh/chart"]) {
-                const chart = resource.metadata.labels?.["helm.sh/chart"];
-                const match = chart.match(/^(.*)-(v?[0-9\.]+)$/);
-                if (match) {
-                    groupInfo[groupId].chart = match[1];
-                    groupInfo[groupId].chartVersion = match[2];
-                } else if (!groupInfo[groupId].chart) {
-                    groupInfo[groupId].chart = chart;
-                }
             }
             return groupId;
         }
@@ -496,31 +468,15 @@ function computeHelmGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
 
     return Object.entries(groupInfo).map(([id, info]) => {
         let title = info.instance;
-        let badges: ResourceBadge[] = [];
-        if (info.chart && info.chart !== info.instance) {
-            title += ` (${info.chart})`;
-        }
         if (
             namespacesByInstance[info.instance] &&
             Object.values(namespacesByInstance[info.instance]).length > 1
         ) {
             title += ` (${info.namespace})`;
         }
-        if (info.chart) {
-            let text = `Chart: ${info.chart}`;
-            if (info.chartVersion) {
-                text += " " + info.chartVersion;
-            }
-            badges.push({
-                id: "chart",
-                text,
-                variant: "other",
-            });
-        }
         return {
             id,
             title,
-            badges,
             contains(resource) {
                 return findHelmGroup(resource) === id;
             },
@@ -658,35 +614,6 @@ const WorkloadGroup: React.FC<{
                         spacing={4}
                         p={4}
                     >
-                        {/* {group.badges.length > 0 && (
-                            <HStack>
-                                {group.badges.map((badge) => {
-                                    const {
-                                        id,
-                                        text,
-                                        variant,
-                                        details,
-                                        badgeProps,
-                                    } = badge;
-                                    const colorScheme = {
-                                        positive: "green",
-                                        negative: "red",
-                                        changing: "orange",
-                                        other: "gray",
-                                    }[variant ?? "other"];
-                                    return (
-                                        <Badge
-                                            key={id}
-                                            colorScheme={colorScheme}
-                                            title={details ?? text}
-                                            {...badgeProps}
-                                        >
-                                            {text}
-                                        </Badge>
-                                    );
-                                })}
-                            </HStack>
-                        )} */}
                         {Object.entries(resourceTypes).map(([k, { title }]) => (
                             <WorkloadResourceSection
                                 key={k}
