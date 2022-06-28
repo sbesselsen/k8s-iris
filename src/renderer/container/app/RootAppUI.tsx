@@ -503,8 +503,13 @@ const AppNamespaces: React.FC<{
             const oldRoute = getAppRoute();
             let menuItem = oldRoute.menuItem;
             let menuTab = oldRoute.menuTab;
-            if (singleNamespaceClicked && menuItem !== "resources") {
+            let activeEditor = oldRoute.activeEditor;
+            if (
+                singleNamespaceClicked &&
+                (menuItem !== "resources" || activeEditor)
+            ) {
                 // If the user clicks a single namespace, open the workloads overview.
+                activeEditor = null;
                 menuItem = "resources";
                 menuTab = { ...menuTab, [menuItem]: "workloads" };
             }
@@ -513,6 +518,7 @@ const AppNamespaces: React.FC<{
                 createWindow({
                     route: {
                         ...oldRoute,
+                        activeEditor,
                         menuItem,
                         menuTab,
                         namespaces,
@@ -520,7 +526,13 @@ const AppNamespaces: React.FC<{
                 });
             } else {
                 return setAppRoute(
-                    () => ({ ...oldRoute, menuItem, menuTab, namespaces }),
+                    () => ({
+                        ...oldRoute,
+                        activeEditor,
+                        menuItem,
+                        menuTab,
+                        namespaces,
+                    }),
                     !singleNamespaceClicked
                 );
             }
