@@ -59,13 +59,15 @@ type WorkloadsStore = {
     >;
     selectedResourceKeys: Set<string>;
     showNamespace: boolean;
+    shouldDefaultExpandGroups: boolean;
 };
 
 type WorkloadResourceGroup = {
     id: string;
     title: string;
     contains: (resource: K8sObject) => boolean;
-    sortOrder?: number;
+    shouldDefaultExpand: boolean;
+    sortOrder: number;
 };
 
 const resourceTypes: Record<string, { title: string }> = {
@@ -89,6 +91,7 @@ const storeEmptyState: WorkloadsStore = {
     ),
     selectedResourceKeys: new Set(),
     showNamespace: false,
+    shouldDefaultExpandGroups: false,
 };
 
 const { useStore, useStoreValue, store } = create(storeEmptyState);
@@ -97,9 +100,6 @@ const { useStore, useStoreValue, store } = create(storeEmptyState);
 // });
 
 export const ResourceWorkloadsOverview: React.FC<{}> = () => {
-    const groups = useStoreValue((value) => value.groups);
-    // console.log("render root", groups);
-
     return (
         <ScrollBox
             px={4}
@@ -157,6 +157,9 @@ function useMonitorWorkloads() {
     useEffect(() => {
         store.set({
             ...storeEmptyState,
+            shouldDefaultExpandGroups:
+                namespaces.mode === "selected" &&
+                namespaces.selected.length === 1,
             showNamespace:
                 namespaces.mode === "all" || namespaces.selected.length > 1,
         });
@@ -327,6 +330,7 @@ function computeGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
             contains: (resource: K8sObject) =>
                 !!resource.metadata.name.match(/^sh\.helm\.release\./),
             sortOrder: 101,
+            shouldDefaultExpand: false,
         },
         {
             id: "kube-stuff",
@@ -337,6 +341,7 @@ function computeGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
                 ] === "default" ||
                 resource.metadata.name === "kube-root-ca.crt",
             sortOrder: 102,
+            shouldDefaultExpand: false,
         },
         {
             id: "service-account-tokens",
@@ -346,12 +351,14 @@ function computeGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
                     "kubernetes.io/service-account.name"
                 ],
             sortOrder: 103,
+            shouldDefaultExpand: false,
         },
         {
             id: "_",
             title: "Uncategorized",
             contains: () => true,
             sortOrder: 100,
+            shouldDefaultExpand: true,
         },
     ];
     let remainingResources: K8sObject[] = resources;
@@ -480,11 +487,13 @@ function computeHelmGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
             contains(resource) {
                 return findHelmGroup(resource) === id;
             },
+            sortOrder: 0,
+            shouldDefaultExpand: true,
         };
     });
 }
 
-const GroupedResourcesOverview: React.FC<{}> = (props) => {
+const GroupedResourcesOverview: React.FC<{}> = () => {
     const groups = useStoreValue((value) => value.groups);
     const isAnythingLoading = useStoreValue((value) =>
         Object.values(value.allResourcesByType).some((r) => r.isLoading)
@@ -527,6 +536,9 @@ const WorkloadGroup: React.FC<{
 }> = (props) => {
     const { groupId } = props;
 
+    const shouldDefaultExpandGroups = useStoreValue(
+        (value) => value.shouldDefaultExpandGroups
+    );
     const group = useStoreValue((value) => value.groups[groupId], [groupId]);
     const showNamespace = useStoreValue((value) => value.showNamespace);
 
@@ -534,42 +546,74 @@ const WorkloadGroup: React.FC<{
     const groupContentBg = useColorModeValue("white", "gray.900");
     const headingColor = useColorModeValue("primary.500", "primary.400");
 
+    const store = useStore();
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
     const getAppRoute = useAppRouteGetter();
     const setAppRoute = useAppRouteSetter();
     const metaKeyRef = useModifierKeyRef("Meta");
 
     const expandedParamName = "workloadGroupsExpanded";
+
+    const shouldDefaultExpand =
+        shouldDefaultExpandGroups && group.shouldDefaultExpand;
     const isExpanded = useAppRoute(
         (route) =>
-            ((route.params?.[expandedParamName] ?? []) as string[]).includes(
-                groupId
-            ),
-        [groupId]
+            (route.params?.[expandedParamName] as any)?.[groupId] ??
+            shouldDefaultExpand,
+        [groupId, shouldDefaultExpand]
     );
     const toggleExpanded = useCallback(() => {
         const route = getAppRoute();
-        const expandedIds = (route.params?.[expandedParamName] ??
-            []) as string[];
-        const prevExpanded = expandedIds.includes(groupId);
-        const newExpandedIds = prevExpanded
-            ? expandedIds.filter((id) => id !== groupId)
-            : [...expandedIds, groupId];
-        const newRoute = {
-            ...route,
-            params: {
-                ...route.params,
-                [expandedParamName]: newExpandedIds,
-            },
-        };
+        const expanded = (route.params?.[expandedParamName] ?? {}) as Record<
+            string,
+            boolean
+        >;
+        const prevExpanded = expanded[groupId] ?? false;
+        const newExpanded = { ...expanded, [groupId]: !prevExpanded };
+
+        const storeValue = store.get();
+        if (storeValue.shouldDefaultExpandGroups) {
+            // Disable auto-expanding, but first explicitly expand all currently auto-expanded groups.
+            for (const group of Object.values(storeValue.groups).filter(
+                (g) => g.shouldDefaultExpand && g.id !== groupId
+            )) {
+                newExpanded[group.id] = true;
+            }
+            store.set((v) => ({ ...v, shouldDefaultExpandGroups: false }));
+        }
+
         if (metaKeyRef.current) {
+            // Show a new window with only this group expanded.
             createWindow({
-                route: newRoute,
+                route: {
+                    ...route,
+                    params: {
+                        ...route.params,
+                        [expandedParamName]: {
+                            ...Object.fromEntries(
+                                Object.values(storeValue.groups).map((g) => [
+                                    g.id,
+                                    false,
+                                ])
+                            ),
+                            [groupId]: true,
+                        },
+                    },
+                },
             });
         } else {
-            setAppRoute(() => newRoute, true);
+            setAppRoute(
+                (route) => ({
+                    ...route,
+                    params: {
+                        ...route.params,
+                        [expandedParamName]: newExpanded,
+                    },
+                }),
+                true
+            );
         }
-    }, [createWindow, groupId, isExpanded, metaKeyRef, setAppRoute]);
+    }, [createWindow, groupId, metaKeyRef, setAppRoute, store]);
 
     return (
         <VStack
