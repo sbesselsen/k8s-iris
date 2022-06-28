@@ -212,11 +212,12 @@ export function createClient(
             throw new Error("Running in readonly mode");
         }
 
+        const shellOpts = await shellOptions();
+
         return withTempKubeConfig(
             kubeConfig,
             (kubeConfigPath) =>
                 new Promise((resolve, reject) => {
-                    const shellOpts = shellOptions();
                     const process = execChildProcess(
                         `kubectl apply --kubeconfig=${kubeConfigPath} -f -`,
                         {
@@ -316,11 +317,12 @@ export function createClient(
             throw new Error("Cannot redeploy: invalid resource namespace");
         }
 
+        const shellOpts = await shellOptions();
+
         return withTempKubeConfig(
             kubeConfig,
             (kubeConfigPath) =>
                 new Promise((resolve, reject) => {
-                    const shellOpts = shellOptions();
                     const process = execChildProcess(
                         `kubectl rollout restart ${typeCliName}/${name} -n ${namespace} --kubeconfig=${kubeConfigPath}`,
                         {

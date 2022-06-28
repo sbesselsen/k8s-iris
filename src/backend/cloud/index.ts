@@ -157,7 +157,7 @@ async function awsEksLoginForContext(
     }
 
     const [profileName] = awsProfileEntry;
-    const shellOpts = shellOptions();
+    const shellOpts = await shellOptions();
 
     return new Promise((resolve, reject) => {
         exec(

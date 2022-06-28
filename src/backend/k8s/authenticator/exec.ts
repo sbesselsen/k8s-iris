@@ -93,7 +93,7 @@ export class CharmPatchedExecAuth {
         if (!exec.command) {
             throw new Error("No command was specified for exec authProvider!");
         }
-        const shellOpts = shellOptions();
+        const shellOpts = await shellOptions();
         let opts: execa.Options = {
             shell: shellOpts.executablePath,
         };

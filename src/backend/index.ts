@@ -12,10 +12,17 @@ import { createMenuManager } from "./menu";
 import { createPrefsManager } from "./prefs";
 import { createShellManager } from "./shell";
 import { wireShellIpc } from "./shell/ipc";
+import { shellOptions } from "./util/shell";
 import { createWindowManager, WindowParameters } from "./window";
 
 (async () => {
     await app.whenReady();
+
+    (async () => {
+        // Warm up shell options.
+        const opts = await shellOptions();
+        console.log("Shell options: ", opts);
+    })();
 
     const prefsManager = createPrefsManager();
     const k8sClientManager = createClientManager({
