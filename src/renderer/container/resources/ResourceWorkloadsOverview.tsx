@@ -23,6 +23,7 @@ import {
     K8sObject,
     K8sObjectIdentifier,
     K8sObjectListQuery,
+    K8sResourceTypeIdentifier,
 } from "../../../common/k8s/client";
 import {
     toK8sObjectIdentifier,
@@ -41,6 +42,7 @@ import {
 import { useIpcCall } from "../../hook/ipc";
 import { useModifierKeyRef } from "../../hook/keyboard";
 import { generateBadges, ResourceBadge } from "../../k8s/badges";
+import { generateResourceColumns, ResourceColumn } from "../../k8s/columns";
 import {
     K8sListWatchesListenerOptions,
     useK8sListWatchesListener,
@@ -789,6 +791,30 @@ const WorkloadResourceList: React.FC<WorkloadResourceListProps> = (props) => {
         [resourceKeysSet, store]
     );
 
+    // TODO: make all this into a nice hook or whatever
+    const resourceTypesString = [
+        ...new Set(resources.map((r) => `${r.apiVersion}:${r.kind}`)),
+    ]
+        .sort()
+        .join(",");
+
+    // Bit weird but it prevents unnecessary rerenders of the columns and, well, why not.
+    const resourceTypes: K8sResourceTypeIdentifier[] = useMemo(
+        () =>
+            resourceTypesString.split(",").map((t) => {
+                const [apiVersion, kind] = t.split(":");
+                return { apiVersion, kind };
+            }),
+        [resourceTypesString]
+    );
+
+    const customColumns = useMemo(
+        () => resourceTypes.flatMap((type) => generateResourceColumns(type)),
+        [resourceTypes]
+    );
+
+    // TODO: show/hide type columns as space becomes available
+
     return (
         <Table
             size="sm"
@@ -809,6 +835,14 @@ const WorkloadResourceList: React.FC<WorkloadResourceListProps> = (props) => {
                     <Th ps={0} whiteSpace="nowrap">
                         Name
                     </Th>
+                    {customColumns.map((col) => (
+                        <Th
+                            key={col.id}
+                            width={40 * (col.widthUnits + 1) + "px"}
+                        >
+                            {col.header}
+                        </Th>
+                    ))}
                     {showNamespace && <Th width="150px">Namespace</Th>}
                     <Th width="150px">Created</Th>
                 </Tr>
@@ -818,6 +852,7 @@ const WorkloadResourceList: React.FC<WorkloadResourceListProps> = (props) => {
                     <WorkloadResourceRow
                         resource={resource}
                         showNamespace={showNamespace}
+                        customColumns={customColumns}
                         key={key}
                     />
                 ))}
@@ -829,10 +864,11 @@ const WorkloadResourceList: React.FC<WorkloadResourceListProps> = (props) => {
 type WorkloadResourceRowProps = {
     resource: K8sObject;
     showNamespace: boolean;
+    customColumns: ResourceColumn[];
 };
 
 const WorkloadResourceRow: React.FC<WorkloadResourceRowProps> = (props) => {
-    const { resource, showNamespace } = props;
+    const { resource, showNamespace, customColumns } = props;
 
     const store = useStore();
     const creationDate = new Date((resource as any).metadata.creationTimestamp);
@@ -927,6 +963,11 @@ const WorkloadResourceRow: React.FC<WorkloadResourceRowProps> = (props) => {
                     })}
                 </HStack>
             </Td>
+            {customColumns.map((col) => (
+                <Td verticalAlign="baseline" key={col.id}>
+                    {col.valueFor(resource)}
+                </Td>
+            ))}
             {showNamespace && (
                 <Td verticalAlign="baseline">
                     <Selectable display="block" isTruncated>

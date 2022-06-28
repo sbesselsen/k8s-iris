@@ -1,4 +1,9 @@
-import { K8sObject, K8sObjectIdentifier, K8sObjectList } from "./client";
+import {
+    K8sObject,
+    K8sObjectIdentifier,
+    K8sObjectList,
+    K8sResourceTypeIdentifier,
+} from "./client";
 
 export function objSameRef(
     obj1: K8sObject,
@@ -176,7 +181,7 @@ export function parseMemory(
     );
 }
 
-export function isSetLike(object: K8sObject) {
+export function isSetLike(object: K8sResourceTypeIdentifier) {
     if (object.apiVersion === "apps/v1") {
         return (
             object.kind === "Deployment" ||
