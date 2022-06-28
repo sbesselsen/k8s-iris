@@ -148,7 +148,7 @@ export type SidebarNamespacesMenuProps = {
     selection: AppNamespacesSelection;
     onChangeSelection: (
         selection: AppNamespacesSelection,
-        requestNewWindow?: boolean
+        options: { requestNewWindow: boolean; singleNamespaceClicked: boolean }
     ) => void;
 };
 
@@ -163,19 +163,32 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
     } = props;
 
     const opacity = useWindowFocusValue(1.0, 0.5);
+    const metaKeyRef = useModifierKeyRef("Meta");
 
     const onClickAll = useCallback(() => {
-        onChangeSelection({
-            ...selection,
-            mode: "all",
-        });
-    }, [selection, onChangeSelection]);
+        onChangeSelection(
+            {
+                ...selection,
+                mode: "all",
+            },
+            {
+                requestNewWindow: metaKeyRef.current,
+                singleNamespaceClicked: false,
+            }
+        );
+    }, [metaKeyRef, selection, onChangeSelection]);
     const onClickSelected = useCallback(() => {
-        onChangeSelection({
-            ...selection,
-            mode: "selected",
-        });
-    }, [selection, onChangeSelection]);
+        onChangeSelection(
+            {
+                ...selection,
+                mode: "selected",
+            },
+            {
+                requestNewWindow: metaKeyRef.current,
+                singleNamespaceClicked: false,
+            }
+        );
+    }, [metaKeyRef, selection, onChangeSelection]);
 
     const itemTextColor = useColorModeValue("primary.900", "white");
 
@@ -206,19 +219,23 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
 
     const onChangeSelectedNamespaces = useCallback(
         (namespaces: string[]) => {
-            onChangeSelection({
-                ...selection,
-                mode: "selected",
-                selected: updateNamespacesSelect(
-                    namespaces,
-                    shiftKeyRef.current
-                ),
-            });
+            onChangeSelection(
+                {
+                    ...selection,
+                    mode: "selected",
+                    selected: updateNamespacesSelect(
+                        namespaces,
+                        shiftKeyRef.current
+                    ),
+                },
+                {
+                    requestNewWindow: metaKeyRef.current,
+                    singleNamespaceClicked: false,
+                }
+            );
         },
-        [onChangeSelection, selection, updateNamespacesSelect]
+        [metaKeyRef, onChangeSelection, selection, updateNamespacesSelect]
     );
-
-    const metaKeyRef = useModifierKeyRef("Meta");
 
     const onClickSingleNamespace = useMemo(
         () =>
@@ -234,7 +251,10 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                                 mode: "selected",
                                 selected: [namespace.metadata.name],
                             },
-                            metaKeyRef.current
+                            {
+                                requestNewWindow: metaKeyRef.current,
+                                singleNamespaceClicked: true,
+                            }
                         );
                     },
                 ])

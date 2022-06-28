@@ -1,6 +1,10 @@
 import React, { useCallback } from "react";
 import { ContentTabs } from "../../component/main/ContentTabs";
-import { useAppParam } from "../../context/param";
+import {
+    useAppRoute,
+    useAppRouteGetter,
+    useAppRouteSetter,
+} from "../../context/route";
 import { useIpcCall } from "../../hook/ipc";
 import { ClusterEventsOverview } from "./ClusterEventsOverview";
 import { ClusterInfoOverview } from "./ClusterInfoOverview";
@@ -8,21 +12,52 @@ import { ClusterNodesOverview } from "./ClusterNodesOverview";
 import { ClusterPortForwardsOverview } from "./ClusterPortForwardsOverview";
 
 export const ClusterOverview: React.FC<{}> = () => {
-    const [activeTab, setActiveTab] = useAppParam("tab", "info");
+    const activeTab = useAppRoute(
+        (route) =>
+            (route.menuItem ? route.menuTab[route.menuItem] : null) ?? "info"
+    );
+    const getAppRoute = useAppRouteGetter();
+    const setAppRoute = useAppRouteSetter();
+    const setActiveTab = useCallback(
+        (menuTab: string) => {
+            setAppRoute((route) => {
+                if (route.menuItem) {
+                    return {
+                        ...route,
+                        menuTab: {
+                            ...route.menuTab,
+                            [route.menuItem]: menuTab,
+                        },
+                    };
+                }
+                return route;
+            });
+        },
+        [setAppRoute]
+    );
 
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
 
     const onChangeTabSelection = useCallback(
         (id: string, requestNewWindow: boolean = false) => {
             if (requestNewWindow) {
-                createWindow({
-                    route: setActiveTab.asRoute(id),
-                });
+                const oldRoute = getAppRoute();
+                if (oldRoute.menuItem) {
+                    createWindow({
+                        route: {
+                            ...oldRoute,
+                            menuTab: {
+                                ...oldRoute.menuTab,
+                                [oldRoute.menuItem]: id,
+                            },
+                        },
+                    });
+                }
             } else {
                 setActiveTab(id);
             }
         },
-        [createWindow, setActiveTab]
+        [createWindow, getAppRoute, setActiveTab]
     );
 
     const tabs = [

@@ -16,6 +16,9 @@ export const AppHashParamsSyncProvider: React.FC = ({ children }) => {
             if (route.menuItem) {
                 appRoute.menuItem = route.menuItem;
             }
+            if (route.menuTab) {
+                appRoute.menuTab = route.menuTab;
+            }
             if (route.params) {
                 appRoute.params = route.params;
             }

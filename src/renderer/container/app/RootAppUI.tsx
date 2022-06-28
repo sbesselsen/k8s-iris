@@ -356,7 +356,11 @@ const AppMainMenu: React.FC<{}> = () => {
 
     const onChangeMenuItemSelection = useCallback(
         (menuItem: string, requestNewWindow: boolean = false) => {
-            const newRoute = { ...getAppRoute(), menuItem, activeEditor: null };
+            const newRoute = {
+                ...getAppRoute(),
+                menuItem,
+                activeEditor: null,
+            };
             if (requestNewWindow) {
                 createWindow({
                     route: newRoute,
@@ -490,24 +494,34 @@ const AppNamespaces: React.FC<{
     const onChangeNamespacesSelection = useCallback(
         (
             namespaces: AppNamespacesSelection,
-            requestNewWindow: boolean = false
+            options: {
+                requestNewWindow: boolean;
+                singleNamespaceClicked: boolean;
+            }
         ) => {
+            const { requestNewWindow, singleNamespaceClicked } = options;
+            const oldRoute = getAppRoute();
+            let menuItem = oldRoute.menuItem;
+            let menuTab = oldRoute.menuTab;
+            if (singleNamespaceClicked && menuItem !== "resources") {
+                // If the user clicks a single namespace, open the workloads overview.
+                menuItem = "resources";
+                menuTab = { ...menuTab, [menuItem]: "workloads" };
+            }
+
             if (requestNewWindow) {
                 createWindow({
                     route: {
-                        ...getAppRoute(),
+                        ...oldRoute,
+                        menuItem,
+                        menuTab,
                         namespaces,
                     },
                 });
             } else {
-                const oldRoute = getAppRoute();
-                const createHistoryItem =
-                    namespaces.mode !== oldRoute.namespaces.mode ||
-                    (namespaces.mode === "selected" &&
-                        namespaces.selected.length === 1);
                 return setAppRoute(
-                    () => ({ ...oldRoute, namespaces }),
-                    !createHistoryItem
+                    () => ({ ...oldRoute, menuItem, menuTab, namespaces }),
+                    !singleNamespaceClicked
                 );
             }
         },
