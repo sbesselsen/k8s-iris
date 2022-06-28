@@ -200,7 +200,7 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
 
     const updateNamespacesSelect = useMultiSelectUpdater(
         namespaceNames,
-        selection.selected
+        selection.mode === "all" ? namespaceNames : selection.selected
     );
     const shiftKeyRef = useModifierKeyRef("Shift");
 
@@ -208,6 +208,7 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
         (namespaces: string[]) => {
             onChangeSelection({
                 ...selection,
+                mode: "selected",
                 selected: updateNamespacesSelect(
                     namespaces,
                     shiftKeyRef.current
@@ -230,6 +231,7 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                         onChangeSelection(
                             {
                                 ...selection,
+                                mode: "selected",
                                 selected: [namespace.metadata.name],
                             },
                             metaKeyRef.current
@@ -241,6 +243,11 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
     );
 
     const focusShadow = useToken("shadows", "outline");
+
+    const selectedNamespaces = useMemo(
+        () => (selection.mode === "all" ? namespaceNames : selection.selected),
+        [namespaceNames, selection]
+    );
 
     const buildMenuItem = (namespace: K8sObject) => {
         const name = namespace.metadata.name;
@@ -339,17 +346,15 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                 sx={{ scrollbarGutter: "stable" }}
                 opacity={opacity}
             >
-                <Collapse in={selection.mode === "selected"}>
-                    <CheckboxGroup
-                        colorScheme="primary"
-                        value={selection.selected ?? []}
-                        onChange={onChangeSelectedNamespaces}
-                    >
-                        <VStack alignItems="start" spacing={2} pt={1} pb={4}>
-                            {filteredNamespaces.map(buildMenuItem)}
-                        </VStack>
-                    </CheckboxGroup>
-                </Collapse>
+                <CheckboxGroup
+                    colorScheme="primary"
+                    value={selectedNamespaces}
+                    onChange={onChangeSelectedNamespaces}
+                >
+                    <VStack alignItems="start" spacing={2} pt={1} pb={4}>
+                        {filteredNamespaces.map(buildMenuItem)}
+                    </VStack>
+                </CheckboxGroup>
             </Box>
         </VStack>
     );
