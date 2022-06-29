@@ -570,7 +570,7 @@ const WorkloadGroup: React.FC<{
             string,
             boolean
         >;
-        const prevExpanded = expanded[groupId] ?? false;
+        const prevExpanded = expanded[groupId] ?? shouldDefaultExpand;
         const newExpanded = { ...expanded, [groupId]: !prevExpanded };
 
         const storeValue = store.get();
@@ -615,7 +615,14 @@ const WorkloadGroup: React.FC<{
                 true
             );
         }
-    }, [createWindow, groupId, metaKeyRef, setAppRoute, store]);
+    }, [
+        createWindow,
+        groupId,
+        metaKeyRef,
+        setAppRoute,
+        shouldDefaultExpand,
+        store,
+    ]);
 
     return (
         <VStack
