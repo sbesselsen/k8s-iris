@@ -33,10 +33,7 @@ export async function shellOptions(): Promise<{
 async function loadShellPath(): Promise<string[]> {
     return new Promise((resolve, reject) => {
         exec(
-            "echo $PATH",
-            {
-                shell: process.env.SHELL ?? "/bin/sh",
-            },
+            `${process.env.SHELL ?? "/bin/sh"} -i -c "echo $PATH"`,
             (error, stdout, stderr) => {
                 if (error) {
                     console.error(`Error discovering path`, error);
