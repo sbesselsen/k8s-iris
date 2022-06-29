@@ -9,6 +9,7 @@ import {
     HStack,
     Spinner,
     Table,
+    TableCellProps,
     Tbody,
     Td,
     Text,
@@ -42,7 +43,12 @@ import {
 import { useIpcCall } from "../../hook/ipc";
 import { useModifierKeyRef } from "../../hook/keyboard";
 import { generateBadges, ResourceBadge } from "../../k8s/badges";
-import { generateResourceDetails, ResourceDetail } from "../../k8s/details";
+import {
+    generateResourceDetails,
+    isResourceBox,
+    isResourceColumn,
+    ResourceDetail,
+} from "../../k8s/details";
 import {
     K8sListWatchesListenerOptions,
     useK8sListWatchesListener,
@@ -819,6 +825,10 @@ const WorkloadResourceList: React.FC<WorkloadResourceListProps> = (props) => {
         () => resourceTypes.flatMap((type) => generateResourceDetails(type)),
         [resourceTypes]
     );
+    const customColumns = useMemo(
+        () => customDetails.filter(isResourceColumn),
+        [customDetails]
+    );
 
     // TODO: show/hide type columns as space becomes available
 
@@ -842,7 +852,7 @@ const WorkloadResourceList: React.FC<WorkloadResourceListProps> = (props) => {
                     <Th ps={0} whiteSpace="nowrap">
                         Name
                     </Th>
-                    {customDetails.map((col) => (
+                    {customColumns.map((col) => (
                         <Th
                             key={col.id}
                             width={40 * (col.widthUnits + 1) + "px"}
@@ -924,70 +934,112 @@ const WorkloadResourceRow: React.FC<WorkloadResourceRowProps> = (props) => {
         [resource]
     );
 
+    const customBoxes = useMemo(
+        () =>
+            customDetails
+                .filter(isResourceBox)
+                .map((box) => ({ ...box, value: box.valueFor(resource) }))
+                .filter((v) => !!v.value),
+        [customDetails, resource]
+    );
+    const hasCustomBoxes = customBoxes.length > 0;
+    const commonTdProps: TableCellProps = useMemo(() => {
+        return {
+            ...(hasCustomBoxes ? { borderBottom: "none" } : {}),
+        };
+    }, [hasCustomBoxes]);
+    const customColumns = customDetails.filter(isResourceColumn);
+
     return (
-        <Tr>
-            <Td ps={2} verticalAlign="baseline">
-                <Checkbox
-                    colorScheme="primary"
-                    isChecked={isSelected}
-                    onChange={onChange}
-                />
-            </Td>
-            <Td ps={0} verticalAlign="baseline" userSelect="text">
-                <HStack p={0}>
-                    <Selectable
-                        display="block"
-                        cursor="inherit"
-                        textColor={isDeleting ? "gray.500" : ""}
-                        isTruncated
-                    >
-                        <ResourceEditorLink
-                            userSelect="text"
-                            editorResource={resource}
+        <>
+            <Tr>
+                <Td {...commonTdProps} ps={2} verticalAlign="baseline">
+                    <Checkbox
+                        colorScheme="primary"
+                        isChecked={isSelected}
+                        onChange={onChange}
+                    />
+                </Td>
+                <Td
+                    {...commonTdProps}
+                    ps={0}
+                    verticalAlign="baseline"
+                    userSelect="text"
+                >
+                    <HStack p={0}>
+                        <Selectable
+                            display="block"
+                            cursor="inherit"
+                            textColor={isDeleting ? "gray.500" : ""}
+                            isTruncated
                         >
-                            {resource.metadata.name}
-                        </ResourceEditorLink>
-                    </Selectable>
-                    {badges.map((badge) => {
-                        const { id, text, variant, details, badgeProps } =
-                            badge;
-                        const colorScheme = {
-                            positive: "green",
-                            negative: "red",
-                            changing: "orange",
-                            other: "gray",
-                        }[variant ?? "other"];
-                        return (
-                            <Badge
-                                key={id}
-                                colorScheme={colorScheme}
-                                title={details ?? text}
-                                {...badgeProps}
+                            <ResourceEditorLink
+                                userSelect="text"
+                                editorResource={resource}
                             >
-                                {text}
-                            </Badge>
-                        );
-                    })}
-                </HStack>
-            </Td>
-            {customDetails.map((col) => (
-                <Td verticalAlign="baseline" key={col.id}>
-                    {col.valueFor(resource)}
+                                {resource.metadata.name}
+                            </ResourceEditorLink>
+                        </Selectable>
+                        {badges.map((badge) => {
+                            const { id, text, variant, details, badgeProps } =
+                                badge;
+                            const colorScheme = {
+                                positive: "green",
+                                negative: "red",
+                                changing: "orange",
+                                other: "gray",
+                            }[variant ?? "other"];
+                            return (
+                                <Badge
+                                    key={id}
+                                    colorScheme={colorScheme}
+                                    title={details ?? text}
+                                    {...badgeProps}
+                                >
+                                    {text}
+                                </Badge>
+                            );
+                        })}
+                    </HStack>
                 </Td>
-            ))}
-            {showNamespace && (
-                <Td verticalAlign="baseline">
+                {customColumns.map((col) => (
+                    <Td
+                        {...commonTdProps}
+                        verticalAlign="baseline"
+                        key={col.id}
+                    >
+                        {col.valueFor(resource)}
+                    </Td>
+                ))}
+                {showNamespace && (
+                    <Td {...commonTdProps} verticalAlign="baseline">
+                        <Selectable display="block" isTruncated>
+                            {resource.metadata.namespace}
+                        </Selectable>
+                    </Td>
+                )}
+                <Td {...commonTdProps} verticalAlign="baseline">
                     <Selectable display="block" isTruncated>
-                        {resource.metadata.namespace}
+                        {formatDeveloperDateTime(creationDate)}
                     </Selectable>
                 </Td>
-            )}
-            <Td verticalAlign="baseline">
-                <Selectable display="block" isTruncated>
-                    {formatDeveloperDateTime(creationDate)}
-                </Selectable>
-            </Td>
-        </Tr>
+            </Tr>
+
+            {customBoxes.map((box) => (
+                <Tr key={box.id}>
+                    <Td></Td>
+                    <Td
+                        ps={0}
+                        pt={0}
+                        colSpan={
+                            2 + (showNamespace ? 1 : 0) + customColumns.length
+                        }
+                    >
+                        {box.value}
+                    </Td>
+                </Tr>
+            ))}
+        </>
     );
 };
 

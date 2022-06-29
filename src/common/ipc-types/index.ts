@@ -46,6 +46,7 @@ export type IpcCalls = {
             stop: () => void;
         };
         showDialog(options: DialogOptions): Promise<DialogResult>;
+        openUrlInBrowser(params: { url: string }): Promise<void>;
     };
     cloud: {
         augmentK8sContexts(
