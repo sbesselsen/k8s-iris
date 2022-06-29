@@ -42,7 +42,7 @@ import {
 import { useIpcCall } from "../../hook/ipc";
 import { useModifierKeyRef } from "../../hook/keyboard";
 import { generateBadges, ResourceBadge } from "../../k8s/badges";
-import { generateResourceColumns, ResourceColumn } from "../../k8s/columns";
+import { generateResourceDetails, ResourceDetail } from "../../k8s/details";
 import {
     K8sListWatchesListenerOptions,
     useK8sListWatchesListener,
@@ -815,8 +815,8 @@ const WorkloadResourceList: React.FC<WorkloadResourceListProps> = (props) => {
         [resourceTypesString]
     );
 
-    const customColumns = useMemo(
-        () => resourceTypes.flatMap((type) => generateResourceColumns(type)),
+    const customDetails = useMemo(
+        () => resourceTypes.flatMap((type) => generateResourceDetails(type)),
         [resourceTypes]
     );
 
@@ -842,7 +842,7 @@ const WorkloadResourceList: React.FC<WorkloadResourceListProps> = (props) => {
                     <Th ps={0} whiteSpace="nowrap">
                         Name
                     </Th>
-                    {customColumns.map((col) => (
+                    {customDetails.map((col) => (
                         <Th
                             key={col.id}
                             width={40 * (col.widthUnits + 1) + "px"}
@@ -859,7 +859,7 @@ const WorkloadResourceList: React.FC<WorkloadResourceListProps> = (props) => {
                     <WorkloadResourceRow
                         resource={resource}
                         showNamespace={showNamespace}
-                        customColumns={customColumns}
+                        customDetails={customDetails}
                         key={key}
                     />
                 ))}
@@ -871,11 +871,11 @@ const WorkloadResourceList: React.FC<WorkloadResourceListProps> = (props) => {
 type WorkloadResourceRowProps = {
     resource: K8sObject;
     showNamespace: boolean;
-    customColumns: ResourceColumn[];
+    customDetails: ResourceDetail[];
 };
 
 const WorkloadResourceRow: React.FC<WorkloadResourceRowProps> = (props) => {
-    const { resource, showNamespace, customColumns } = props;
+    const { resource, showNamespace, customDetails } = props;
 
     const store = useStore();
     const creationDate = new Date((resource as any).metadata.creationTimestamp);
@@ -970,7 +970,7 @@ const WorkloadResourceRow: React.FC<WorkloadResourceRowProps> = (props) => {
                     })}
                 </HStack>
             </Td>
-            {customColumns.map((col) => (
+            {customDetails.map((col) => (
                 <Td verticalAlign="baseline" key={col.id}>
                     {col.valueFor(resource)}
                 </Td>

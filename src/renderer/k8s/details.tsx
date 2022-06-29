@@ -4,7 +4,7 @@ import { K8sObject, K8sResourceTypeIdentifier } from "../../common/k8s/client";
 import { isSetLike } from "../../common/k8s/util";
 import { AppTooltip } from "../component/main/AppTooltip";
 
-export type ResourceColumn = {
+export type ResourceDetail = {
     id: string;
     header: ReactNode;
     widthUnits: number;
@@ -12,16 +12,16 @@ export type ResourceColumn = {
     importance?: number;
 };
 
-export function generateResourceColumns(
+export function generateResourceDetails(
     resourceType: K8sResourceTypeIdentifier
-): ResourceColumn[] {
-    return [generateSetSizeColumns].flatMap((f) => f(resourceType));
+): ResourceDetail[] {
+    return [generateSetSizeDetails].flatMap((f) => f(resourceType));
 }
 
-function generateSetSizeColumns(
+function generateSetSizeDetails(
     resourceType: K8sResourceTypeIdentifier
-): ResourceColumn[] {
-    const output: ResourceColumn[] = [];
+): ResourceDetail[] {
+    const output: ResourceDetail[] = [];
     if (isSetLike(resourceType)) {
         output.push({
             id: "resource-set-scale",
