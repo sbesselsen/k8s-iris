@@ -39,6 +39,7 @@ import { useModifierKeyRef } from "../../hook/keyboard";
 import { useMultiSelectUpdater } from "../../hook/multi-select";
 import { useK8sApiResourceTypes } from "../../k8s/api-resources";
 import { generateBadges, ResourceBadge } from "../../k8s/badges";
+import { generateResourceColumns, ResourceColumn } from "../../k8s/columns";
 import { useK8sListWatch } from "../../k8s/list-watch";
 import { formatDeveloperDateTime } from "../../util/date";
 import { ResourceEditorLink } from "./ResourceEditorLink";
@@ -344,6 +345,10 @@ const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
         [setSelectedResourceIdentifiers, sortedKeyedResources]
     );
 
+    const customColumns = generateResourceColumns(resourceTypeInfo);
+
+    // TODO: show/hide type columns as space becomes available
+
     return (
         <Box>
             <Table
@@ -371,6 +376,14 @@ const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
                             />
                         </Th>
                         <Th ps={0}>Name</Th>
+                        {customColumns.map((col) => (
+                            <Th
+                                key={col.id}
+                                width={40 * (col.widthUnits + 1) + "px"}
+                            >
+                                {col.header}
+                            </Th>
+                        ))}
                         {showNamespace && <Th width="150px">Namespace</Th>}
                         <Th width="150px">Created</Th>
                     </Tr>
@@ -380,6 +393,7 @@ const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
                         <ResourceRow
                             resource={resource}
                             showNamespace={showNamespace}
+                            customColumns={customColumns}
                             key={key}
                             isSelected={selectedResourceIdentifiers.includes(
                                 key
@@ -396,12 +410,19 @@ const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
 type ResourceRowProps = {
     resource: K8sObject;
     showNamespace: boolean;
+    customColumns: ResourceColumn[];
     isSelected?: boolean;
     onChangeSelect?: (selected: boolean) => void;
 };
 
 const ResourceRow: React.FC<ResourceRowProps> = (props) => {
-    const { resource, isSelected, onChangeSelect, showNamespace } = props;
+    const {
+        resource,
+        isSelected,
+        onChangeSelect,
+        showNamespace,
+        customColumns,
+    } = props;
 
     const creationDate = new Date((resource as any).metadata.creationTimestamp);
     const isDeleting = Boolean((resource as any).metadata.deletionTimestamp);
@@ -464,6 +485,11 @@ const ResourceRow: React.FC<ResourceRowProps> = (props) => {
                     })}
                 </HStack>
             </Td>
+            {customColumns.map((col) => (
+                <Td verticalAlign="baseline" key={col.id}>
+                    {col.valueFor(resource)}
+                </Td>
+            ))}
             {showNamespace && (
                 <Td verticalAlign="baseline">
                     <Selectable display="block" isTruncated>
