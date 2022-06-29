@@ -320,6 +320,7 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
                         language: "yaml",
                         minimap: { enabled: false }, // I hate that little freak
                         links: false, // and don't even get me started on clickable links
+                        tabSize: 2,
                         padding: { top: 5 },
                     }}
                     value={value}
@@ -334,6 +335,7 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
                         language: "yaml",
                         minimap: { enabled: false },
                         links: false,
+                        tabSize: 2,
                         padding: { top: 5 },
                     }}
                     originalValue={originalValue}
