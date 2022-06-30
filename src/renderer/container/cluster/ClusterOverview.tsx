@@ -13,24 +13,20 @@ import { ClusterPortForwardsOverview } from "./ClusterPortForwardsOverview";
 
 export const ClusterOverview: React.FC<{}> = () => {
     const activeTab = useAppRoute(
-        (route) =>
-            (route.menuItem ? route.menuTab[route.menuItem] : null) ?? "info"
+        (route) => route.menuTab[route.menuItem ?? "cluster"] ?? "info"
     );
     const getAppRoute = useAppRouteGetter();
     const setAppRoute = useAppRouteSetter();
     const setActiveTab = useCallback(
         (menuTab: string) => {
             setAppRoute((route) => {
-                if (route.menuItem) {
-                    return {
-                        ...route,
-                        menuTab: {
-                            ...route.menuTab,
-                            [route.menuItem]: menuTab,
-                        },
-                    };
-                }
-                return route;
+                return {
+                    ...route,
+                    menuTab: {
+                        ...route.menuTab,
+                        [route.menuItem ?? "cluster"]: menuTab,
+                    },
+                };
             });
         },
         [setAppRoute]

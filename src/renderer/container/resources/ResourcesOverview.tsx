@@ -19,9 +19,7 @@ const namespaceResourceType = {
 
 export const ResourcesOverview: React.FC<{}> = () => {
     const activeTab = useAppRoute(
-        (route) =>
-            (route.menuItem ? route.menuTab[route.menuItem] : null) ??
-            "workloads"
+        (route) => route.menuTab[route.menuItem ?? "resources"] ?? "workloads"
     );
     const getAppRoute = useAppRouteGetter();
     const setAppRoute = useAppRouteSetter();
@@ -33,7 +31,7 @@ export const ResourcesOverview: React.FC<{}> = () => {
                         ...route,
                         menuTab: {
                             ...route.menuTab,
-                            [route.menuItem]: menuTab,
+                            [route.menuItem ?? "resources"]: menuTab,
                         },
                     };
                 }
