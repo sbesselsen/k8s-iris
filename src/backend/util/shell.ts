@@ -1,6 +1,15 @@
 import { exec } from "child_process";
+import { uniqueOrdered } from "../../common/util/array";
 
 let shellPathPromise: Promise<string[]> | undefined;
+const defaultPathItems = [
+    "/opt/homebrew/bin",
+    "/usr/local/bin",
+    "/usr/bin",
+    "/bin",
+    "/usr/sbin",
+    "/sbin",
+];
 
 export async function shellOptions(): Promise<{
     executablePath: string;
@@ -9,34 +18,32 @@ export async function shellOptions(): Promise<{
     if (!shellPathPromise) {
         shellPathPromise = loadShellPath();
     }
-    const path = await shellPathPromise;
+    const shellPath = await shellPathPromise;
 
     return {
         executablePath: process.env.SHELL ?? "/bin/sh",
         env: {
-            PATH: path.join(":"),
+            PATH: uniqueOrdered([
+                ...shellPath,
+                ...(process.env.PATH ?? "").split(":").filter((x) => x),
+                ...defaultPathItems,
+            ]).join(":"),
         },
     };
 }
 
 async function loadShellPath(): Promise<string[]> {
     return new Promise((resolve, reject) => {
-        const initialPathItems: string[] = (process.env.PATH ?? "")
-            .split(":")
-            .filter((x) => x);
-        initialPathItems.push(
-            "/usr/local/bin",
-            "/usr/bin",
-            "/bin",
-            "/usr/sbin",
-            "/sbin"
-        );
+        const initialPath = uniqueOrdered([
+            ...(process.env.PATH ?? "").split(":").filter((x) => x),
+            ...defaultPathItems,
+        ]).join(":");
 
         exec(
-            `${process.env.SHELL ?? "/bin/sh"} -i -c 'echo $PATH'`,
+            `${process.env.SHELL ?? "/bin/sh"} -c 'echo $PATH'`,
             {
                 env: {
-                    PATH: initialPathItems.join(":"),
+                    PATH: initialPath,
                 },
             },
             (error, stdout, stderr) => {
