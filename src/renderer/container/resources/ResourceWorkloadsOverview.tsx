@@ -559,7 +559,7 @@ function computePodSetGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
             contains(resource) {
                 return findPodSetGroup(resource) === id;
             },
-            sortOrder: 1,
+            sortOrder: 0,
             shouldDefaultExpand: true,
         };
     });
