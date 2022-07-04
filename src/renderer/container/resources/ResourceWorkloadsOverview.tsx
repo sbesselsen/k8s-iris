@@ -27,6 +27,7 @@ import {
     K8sResourceTypeIdentifier,
 } from "../../../common/k8s/client";
 import {
+    isSetLike,
     toK8sObjectIdentifier,
     updateResourceListByVersion,
 } from "../../../common/k8s/util";
@@ -332,6 +333,7 @@ function useMonitorWorkloads() {
 function computeGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
     const allGroups = [
         ...computeHelmGroups(resources),
+        ...computePodSetGroups(resources),
         {
             id: "helm-release-data",
             title: "Helm release data",
@@ -384,6 +386,183 @@ function computeGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
         return groupIsNonEmpty;
     });
     return necessaryGroups;
+}
+
+function computePodSetGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
+    const groupInfo: Record<
+        string,
+        {
+            title: string;
+            namespace: string;
+            labelSelector: Record<string, string>;
+        }
+    > = {};
+    const namespacesByTitle: Record<string, Record<string, string>> = {};
+    const relatedResourceGroupIds: Record<string, string> = {};
+
+    const findLabelSelector = (
+        resource: K8sObject
+    ): Record<string, string> | null => {
+        const r = resource as any;
+        if (
+            r.spec?.selector?.matchLabels &&
+            typeof r.spec.selector.matchLabels === "object"
+        ) {
+            const matchLabels = r.spec.selector.matchLabels;
+            let hasValues = false;
+            for (const k of Object.keys(matchLabels)) {
+                hasValues = true;
+                if (typeof matchLabels[k] !== "string") {
+                    return null;
+                }
+            }
+            if (hasValues) {
+                return matchLabels;
+            }
+        }
+        return null;
+    };
+
+    function matchesLabelSelector(
+        labels: Record<string, string>,
+        selector: Record<string, string>
+    ): boolean {
+        for (const [k, v] of Object.entries(selector)) {
+            if (labels[k] !== v) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    const findPodSetGroup = (resource: K8sObject): string | null => {
+        const resourceId = toK8sObjectIdentifierString(resource);
+        if (relatedResourceGroupIds[resourceId]) {
+            return relatedResourceGroupIds[resourceId];
+        }
+        if (isSetLike(resource)) {
+            const labelSelector = findLabelSelector(resource);
+            if (labelSelector) {
+                // This is the group.
+                groupInfo[resourceId] = {
+                    title: resource.metadata.name,
+                    namespace: resource.metadata.namespace as string,
+                    labelSelector,
+                };
+                return resourceId;
+            }
+        }
+        for (const [groupId, group] of Object.entries(groupInfo)) {
+            if (
+                matchesLabelSelector(
+                    resource.metadata.labels ?? {},
+                    group.labelSelector
+                )
+            ) {
+                return groupId;
+            }
+            if (resource.apiVersion === "v1" && resource.kind === "Service") {
+                if (
+                    matchesLabelSelector(
+                        (resource as any)?.spec?.selector ?? {},
+                        group.labelSelector
+                    ) &&
+                    matchesLabelSelector(
+                        group.labelSelector,
+                        (resource as any)?.spec?.selector ?? {}
+                    )
+                ) {
+                    relatedResourceGroupIds[resourceId] = groupId;
+                    return groupId;
+                }
+            }
+        }
+        // If this is an ingress, check by service.
+        if (
+            resource.apiVersion === "networking.k8s.io/v1" &&
+            resource.kind === "Ingress"
+        ) {
+            for (const rule of (resource as any).spec?.rules ?? []) {
+                for (const path of rule?.http?.paths ?? []) {
+                    if (path?.backend?.service?.name) {
+                        const serviceIdentifier = toK8sObjectIdentifierString({
+                            apiVersion: "v1",
+                            kind: "Service",
+                            name: path.backend.service.name,
+                            namespace: resource.metadata.namespace,
+                        });
+                        if (relatedResourceGroupIds[serviceIdentifier]) {
+                            relatedResourceGroupIds[resourceId] =
+                                relatedResourceGroupIds[serviceIdentifier];
+                            return relatedResourceGroupIds[resourceId];
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    };
+
+    // Make sure we get the sets first, then the services, then everything else.
+    const sortedResources = resources.sort((r1, r2) => {
+        const r1IsSet = isSetLike(r1);
+        const r2IsSet = isSetLike(r2);
+        if (r1IsSet !== r2IsSet) {
+            return r1IsSet ? -1 : 1;
+        }
+        const r1IsService = r1.apiVersion === "v1" && r1.kind === "Service";
+        const r2IsService = r2.apiVersion === "v1" && r2.kind === "Service";
+        if (r1IsService !== r2IsService) {
+            return r1IsService ? -1 : 1;
+        }
+        return r1.metadata.name.localeCompare(r2.metadata.name);
+    });
+
+    for (const resource of sortedResources) {
+        const groupId = findPodSetGroup(resource);
+        if (
+            groupId !== null &&
+            resource.apiVersion === "networking.k8s.io/v1" &&
+            resource.kind === "Ingress"
+        ) {
+            for (const tlsItem of (resource as any)?.spec?.tls ?? []) {
+                if (tlsItem.secretName) {
+                    relatedResourceGroupIds[
+                        `v1:Secret:${resource.metadata.namespace}:${tlsItem.secretName}`
+                    ] = groupId;
+                }
+            }
+        }
+        if (groupId !== null) {
+            let serviceAccount =
+                (resource as any)?.spec?.template?.spec?.serviceAccount ??
+                (resource as any)?.spec?.template?.spec?.serviceAccountName;
+            if (serviceAccount) {
+                relatedResourceGroupIds[
+                    `v1:ServiceAccount:${resource.metadata.namespace}:${serviceAccount}`
+                ] = groupId;
+            }
+        }
+    }
+
+    return Object.entries(groupInfo).map(([id, info]) => {
+        let title = info.title;
+        if (
+            namespacesByTitle[info.title] &&
+            Object.values(namespacesByTitle[info.title]).length > 1
+        ) {
+            title += ` (${info.namespace})`;
+        }
+        return {
+            id,
+            title,
+            contains(resource) {
+                return findPodSetGroup(resource) === id;
+            },
+            sortOrder: 1,
+            shouldDefaultExpand: true,
+        };
+    });
 }
 
 function computeHelmGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
