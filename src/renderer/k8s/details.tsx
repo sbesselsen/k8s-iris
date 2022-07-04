@@ -126,8 +126,8 @@ function generateIngressDetails(
                 return (
                     <List>
                         {urls.map((url, index) => (
-                            <ListItem>
-                                <IngressHostLink url={url} key={index} />
+                            <ListItem key={index}>
+                                <IngressHostLink url={url} />
                             </ListItem>
                         ))}
                     </List>
