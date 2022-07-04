@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useMemo } from "react";
 
 import { ScrollBox } from "../../component/main/ScrollBox";
 
@@ -9,7 +9,6 @@ import {
     Button,
     Heading,
     Icon,
-    IconButton,
     Table,
     Tbody,
     Td,
@@ -23,7 +22,7 @@ import { K8sObject } from "../../../common/k8s/client";
 import { parseCpu, parseMemory } from "../../../common/k8s/util";
 import { Toolbar } from "../../component/main/Toolbar";
 import { FiTerminal } from "react-icons/fi";
-import { useEditorOpener } from "../../hook/editor-link";
+import { useLocalShellEditorOpener } from "../../hook/shell-opener";
 
 const cloudProviderNames: Record<string, string> = {
     aws: "AWS",
@@ -62,15 +61,7 @@ export const ClusterInfoOverview: React.FC = () => {
 
     const headingColor = useColorModeValue("primary.900", "white");
 
-    const openEditor = useEditorOpener();
-    const onClickLocalShell = useCallback(() => {
-        const index = localShellIndex++;
-        openEditor({
-            id: `local-shell:${index}`,
-            name: "Shell" + (index === 1 ? "" : ` (${index})`),
-            type: "local-shell",
-        });
-    }, [openEditor]);
+    const onClickLocalShell = useLocalShellEditorOpener();
 
     return (
         <ScrollBox

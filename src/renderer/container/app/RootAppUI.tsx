@@ -59,6 +59,7 @@ import {
 import { LazyComponent } from "../../component/main/LazyComponent";
 import { HibernateContainer } from "../../context/hibernate";
 import { ErrorBoundary } from "../../component/util/ErrorBoundary";
+import { useLocalShellEditorOpener } from "../../hook/shell-opener";
 
 const PodLogsEditor = React.lazy(async () => ({
     default: (await import("../editor/PodLogsEditor")).PodLogsEditor,
@@ -444,6 +445,8 @@ const AppEditors: React.FC<{}> = () => {
         }
     }, [createWindow, getAppRoute, setAppRoute, metaKeyRef]);
 
+    const onPressCreateShell = useLocalShellEditorOpener();
+
     return (
         <SidebarEditorsMenu
             items={editors}
@@ -451,6 +454,7 @@ const AppEditors: React.FC<{}> = () => {
             onChangeSelection={onChangeSelectedEditor}
             onCloseEditor={onCloseEditor}
             onPressCreate={onPressCreate}
+            onPressCreateShell={onPressCreateShell}
         />
     );
 };

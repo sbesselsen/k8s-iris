@@ -388,6 +388,7 @@ export type SidebarEditorsMenuProps = {
     onChangeSelection?: (selection: string, requestNewWindow?: boolean) => void;
     onCloseEditor?: (id: string) => void;
     onPressCreate?: () => void;
+    onPressCreateShell?: () => void;
 };
 
 export const SidebarEditorsMenu: React.FC<SidebarEditorsMenuProps> = (
@@ -399,6 +400,7 @@ export const SidebarEditorsMenu: React.FC<SidebarEditorsMenuProps> = (
         onChangeSelection,
         onCloseEditor,
         onPressCreate,
+        onPressCreateShell,
     } = props;
 
     const opacity = useWindowFocusValue(1.0, 0.5);
@@ -456,14 +458,27 @@ export const SidebarEditorsMenu: React.FC<SidebarEditorsMenuProps> = (
                     />
                 ))}
             </VStack>
-            <Box px={2}>
+            <VStack px={2} spacing={0}>
                 <SidebarEditorsCustomMenuButton
                     onClick={onPressCreate}
                     leftIcon={<AddIcon w={2} h={2} />}
                 >
-                    Create new
+                    New resource
                 </SidebarEditorsCustomMenuButton>
-            </Box>
+                <SidebarEditorsCustomMenuButton
+                    onClick={onPressCreateShell}
+                    leftIcon={
+                        <Icon
+                            as={FiTerminal}
+                            transform="scale(1.5)"
+                            w={2}
+                            h={2}
+                        />
+                    }
+                >
+                    New shell
+                </SidebarEditorsCustomMenuButton>
+            </VStack>
         </VStack>
     );
 };
