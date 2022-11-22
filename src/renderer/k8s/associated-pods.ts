@@ -58,7 +58,7 @@ export function useK8sAssociatedPods(
                 apiVersion: "v1",
                 kind: "Pod",
                 ...(object?.metadata.namespace
-                    ? { namespace: [object.metadata.namespace] }
+                    ? { namespaces: [object.metadata.namespace] }
                     : {}),
                 labelSelector: Object.entries(selector).map(([k, v]) => ({
                     name: k,
@@ -75,7 +75,7 @@ export function useK8sAssociatedPods(
                 apiVersion: "v1",
                 kind: "Pod",
                 ...(object?.metadata.namespace
-                    ? { namespace: [object.metadata.namespace] }
+                    ? { namespaces: [object.metadata.namespace] }
                     : {}),
                 labelSelector: Object.entries(selector).map(([k, v]) => ({
                     name: k,
