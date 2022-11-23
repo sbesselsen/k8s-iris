@@ -564,8 +564,19 @@ const AppContent: React.FC<{}> = () => {
     const menuItem = useAppRoute((route) => route.menuItem ?? defaultMenuItem);
     const editorDefs = useAppEditors();
 
+    // Use the context in here to give everything a full state reset upon context change.
+    // It ain't pretty but not using this would cause unacceptable slowness in this scenario:
+    // * Open cluster A
+    // * Open workloads overview
+    // * Open cluster B
+    // * Click a namespace in the left bar
+    // Because the workloads overview remained active in the background (the default behaviour of LazyComponent + HibernateContainer),
+    // it would fetch *all* resources in the entire cluster and then slowly filter that back to only the resources in the namespace.
+    // I want a better solution.
+    const context = useK8sContext();
+
     return (
-        <>
+        <Fragment key={context}>
             {Object.entries(appComponents).map(([key, component]) => {
                 const isActive = key === menuItem && !editor;
 
@@ -588,7 +599,7 @@ const AppContent: React.FC<{}> = () => {
                     isSelected={editorDef.id === editor}
                 />
             ))}
-        </>
+        </Fragment>
     );
 };
 
