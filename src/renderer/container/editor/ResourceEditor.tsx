@@ -76,7 +76,7 @@ import {
 } from "../../component/k8s/K8sObjectViewer";
 import { ScrollBox } from "../../component/main/ScrollBox";
 import { Toolbar } from "../../component/main/Toolbar";
-import { useContextLock } from "../../context/context-lock";
+import { useContextLockHelpers } from "../../context/context-lock";
 import {
     resourceEditor,
     isEditorForResource,
@@ -259,7 +259,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
 
     const openEditor = useEditorOpener();
 
-    const isClusterLocked = useContextLock();
+    const { checkContextLock } = useContextLockHelpers();
 
     const appEditorStore = useAppEditorsStore();
 
@@ -283,14 +283,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
     }, [createWindow, metaKeyPressedRef, setMode]);
     const onClickDelete = useCallback(() => {
         (async () => {
-            if (isClusterLocked) {
-                showDialog({
-                    title: "Read-only mode",
-                    type: "error",
-                    message: "This cluster is in read-only mode.",
-                    detail: "You can delete after you unlock the cluster with the lock/unlock button in the toolbar.",
-                    buttons: ["OK"],
-                });
+            if (!(await checkContextLock())) {
                 return;
             }
             const result = await showDialog({
@@ -314,27 +307,21 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
         })();
     }, [
         appEditorStore,
+        checkContextLock,
         client,
-        isClusterLocked,
         object,
         setIsDeleting,
         showDialog,
     ]);
+
     const onClickShell = useCallback(
-        (containerName: string) => {
-            if (isClusterLocked) {
-                showDialog({
-                    title: "Read-only mode",
-                    type: "error",
-                    message: "This cluster is in read-only mode.",
-                    detail: "You can only open a shell after you unlock the cluster with the lock/unlock button in the toolbar.",
-                    buttons: ["OK"],
-                });
+        async (containerName: string) => {
+            if (!(await checkContextLock())) {
                 return;
             }
             openEditor(shellEditor(object, containerName));
         },
-        [isClusterLocked, openEditor, object]
+        [checkContextLock, openEditor, object]
     );
     const onClickLogs = useCallback(
         (containerName: string) => {
@@ -343,33 +330,24 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
         [openEditor, object]
     );
     const [isRedeploying, setRedeploying] = useState(false);
-    const onClickRedeploy = useCallback(() => {
+    const onClickRedeploy = useCallback(async () => {
         if (object) {
-            if (isClusterLocked) {
-                showDialog({
-                    title: "Read-only mode",
-                    type: "error",
-                    message: "This cluster is in read-only mode.",
-                    detail: "You can only redeploy after you unlock the cluster with the lock/unlock button in the toolbar.",
-                    buttons: ["OK"],
-                });
+            if (!(await checkContextLock())) {
                 return;
             }
-            (async () => {
-                const result = await showDialog({
-                    title: "Are you sure?",
-                    type: "question",
-                    message: `Are you sure you want to redeploy ${object.metadata.name}?`,
-                    buttons: ["Yes", "No"],
-                });
-                if (result.response === 0) {
-                    setRedeploying(true);
-                    client?.redeploy(object);
-                    setRedeploying(false);
-                }
-            })();
+            const result = await showDialog({
+                title: "Are you sure?",
+                type: "question",
+                message: `Are you sure you want to redeploy ${object.metadata.name}?`,
+                buttons: ["Yes", "No"],
+            });
+            if (result.response === 0) {
+                setRedeploying(true);
+                client?.redeploy(object);
+                setRedeploying(false);
+            }
         }
-    }, [client, object, setRedeploying, showDialog, isClusterLocked]);
+    }, [client, object, setRedeploying, showDialog, checkContextLock]);
 
     // TODO: wire the log button and the shell button to an associated pod
     const isLoggable = object?.apiVersion === "v1" && object.kind === "Pod";
@@ -659,7 +637,8 @@ const ScalePopoverContent: React.FC<{
         hpas?.items?.[0] ?? object
     );
 
-    const isClusterLocked = useContextLock();
+    const { checkContextLock } = useContextLockHelpers();
+
     const isAutoScaled = hpas?.items && hpas.items.length > 0;
     const currentScale = (object as any)?.spec?.replicas ?? 0;
     const pausedScaleNumber: number | undefined = useMemo(() => {
@@ -703,14 +682,7 @@ const ScalePopoverContent: React.FC<{
             targetScale: number,
             annotations: Record<string, string | null> = {}
         ) => {
-            if (isClusterLocked) {
-                showDialog({
-                    title: "Read-only mode",
-                    type: "error",
-                    message: "This cluster is in read-only mode.",
-                    detail: "You can only scale after you unlock the cluster with the lock/unlock button in the toolbar.",
-                    buttons: ["OK"],
-                });
+            if (!(await checkContextLock())) {
                 return;
             }
             if (targetScale === 0) {
@@ -757,7 +729,7 @@ const ScalePopoverContent: React.FC<{
                 });
             }
         },
-        [client, object, showDialog, targetScale]
+        [checkContextLock, client, object, showDialog, targetScale]
     );
 
     const [isScaling, setIsScaling] = useState(false);
@@ -1091,25 +1063,17 @@ const AssociatedPodRow: React.FC<{ object: K8sObject }> = (props) => {
         [object]
     );
 
-    const isClusterLocked = useContextLock();
-    const showDialog = useDialog();
+    const { checkContextLock } = useContextLockHelpers();
     const openEditor = useEditorOpener();
 
     const onClickShell = useCallback(
-        (containerName: string) => {
-            if (isClusterLocked) {
-                showDialog({
-                    title: "Read-only mode",
-                    type: "error",
-                    message: "This cluster is in read-only mode.",
-                    detail: "You can only open a shell after you unlock the cluster with the lock/unlock button in the toolbar.",
-                    buttons: ["OK"],
-                });
+        async (containerName: string) => {
+            if (!(await checkContextLock())) {
                 return;
             }
             openEditor(shellEditor(object, containerName));
         },
-        [isClusterLocked, openEditor, object]
+        [checkContextLock, openEditor, object]
     );
     const onClickLogs = useCallback(
         (containerName: string) => {
@@ -1188,7 +1152,7 @@ const PortForwardingMenu: React.FC<{ object: K8sObject }> = (props) => {
 
     const client = useK8sClient();
     const showDialog = useDialog();
-    const isContextLocked = useContextLock();
+    const { checkContextLock } = useContextLockHelpers();
 
     const [stats, setStats] = useState<Record<string, K8sPortForwardStats>>({});
 
@@ -1247,14 +1211,7 @@ const PortForwardingMenu: React.FC<{ object: K8sObject }> = (props) => {
             localOnly: boolean
         ) => {
             (async () => {
-                if (isContextLocked) {
-                    showDialog({
-                        title: "Read-only mode",
-                        type: "error",
-                        message: "This cluster is in read-only mode.",
-                        detail: "You can only port forward after you unlock the cluster with the lock/unlock button in the toolbar.",
-                        buttons: ["OK"],
-                    });
+                if (!(await checkContextLock())) {
                     return;
                 }
                 try {
@@ -1278,20 +1235,13 @@ const PortForwardingMenu: React.FC<{ object: K8sObject }> = (props) => {
                 }
             })();
         },
-        [client, isContextLocked, object, showDialog]
+        [client, checkContextLock, object, showDialog]
     );
 
     const stopForward = useCallback(
         (id: string) => {
             (async () => {
-                if (isContextLocked) {
-                    showDialog({
-                        title: "Read-only mode",
-                        type: "error",
-                        message: "This cluster is in read-only mode.",
-                        detail: "You can only stop this port forward after you unlock the cluster with the lock/unlock button in the toolbar.",
-                        buttons: ["OK"],
-                    });
+                if (!(await checkContextLock())) {
                     return;
                 }
                 try {
@@ -1301,7 +1251,7 @@ const PortForwardingMenu: React.FC<{ object: K8sObject }> = (props) => {
                 }
             })();
         },
-        [client, isContextLocked, showDialog]
+        [client, checkContextLock, showDialog]
     );
 
     const onAddHandlers = useMemo(

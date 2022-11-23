@@ -8,7 +8,7 @@ import {
 } from "../../../common/k8s/client";
 import { isSetLike } from "../../../common/k8s/util";
 import { Toolbar } from "../../component/main/Toolbar";
-import { useContextLock } from "../../context/context-lock";
+import { useContextLockHelpers } from "../../context/context-lock";
 import {
     resourceEditor,
     isEditorForResource,
@@ -34,7 +34,7 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
     const setAppRoute = useAppRouteSetter();
     const appEditorsStore = useAppEditorsStore();
 
-    const isClusterLocked = useContextLock();
+    const { checkContextLock } = useContextLockHelpers();
 
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
     const altKeyRef = useModifierKeyRef("Alt");
@@ -94,14 +94,7 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
 
     const onClickDelete = useCallback(() => {
         (async () => {
-            if (isClusterLocked) {
-                showDialog({
-                    title: "Read-only mode",
-                    type: "error",
-                    message: "This cluster is in read-only mode.",
-                    detail: "You can delete after you unlock the cluster with the lock/unlock button in the toolbar.",
-                    buttons: ["OK"],
-                });
+            if (!(await checkContextLock())) {
                 return;
             }
             const detail =
@@ -136,7 +129,7 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
     }, [
         appEditorStore,
         client,
-        isClusterLocked,
+        checkContextLock,
         resources,
         onClearSelection,
         setIsDeleting,
@@ -164,14 +157,7 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
         if (resources.length === 0) {
             return;
         }
-        if (isClusterLocked) {
-            showDialog({
-                title: "Read-only mode",
-                type: "error",
-                message: "This cluster is in read-only mode.",
-                detail: "You can only scale after you unlock the cluster with the lock/unlock button in the toolbar.",
-                buttons: ["OK"],
-            });
+        if (!(await checkContextLock())) {
             return;
         }
         const result = await showDialog({
@@ -235,21 +221,14 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
                 buttons: ["OK"],
             });
         }
-    }, [client, resources, setIsPausing, showDialog]);
+    }, [client, checkContextLock, resources, setIsPausing, showDialog]);
 
     const [isResuming, setIsResuming] = useState(false);
     const onClickResume = useCallback(async () => {
         if (resources.length === 0) {
             return;
         }
-        if (isClusterLocked) {
-            showDialog({
-                title: "Read-only mode",
-                type: "error",
-                message: "This cluster is in read-only mode.",
-                detail: "You can only scale after you unlock the cluster with the lock/unlock button in the toolbar.",
-                buttons: ["OK"],
-            });
+        if (!(await checkContextLock())) {
             return;
         }
         const errors: string[] = [];
@@ -306,7 +285,7 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
                 buttons: ["OK"],
             });
         }
-    }, [client, resources, setIsResuming, showDialog]);
+    }, [client, checkContextLock, resources, setIsResuming, showDialog]);
 
     useKeyListener(
         useCallback(

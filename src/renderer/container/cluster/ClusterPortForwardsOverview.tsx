@@ -41,7 +41,7 @@ import { useK8sPortForwardsWatch } from "../../k8s/port-forward-watch";
 import { ResourceEditorLink } from "../resources/ResourceEditorLink";
 import { useKeyListener, useModifierKeyRef } from "../../hook/keyboard";
 import { useDialog } from "../../hook/dialog";
-import { useContextLock } from "../../context/context-lock";
+import { useContextLockHelpers } from "../../context/context-lock";
 import {
     PortForwardStats,
     usePeriodStats,
@@ -307,21 +307,14 @@ type PortForwardsToolbarProps = {
 const PortForwardsToolbar: React.FC<PortForwardsToolbarProps> = (props) => {
     const { portForwards, onClearSelection } = props;
 
-    const isContextLocked = useContextLock();
+    const { checkContextLock } = useContextLockHelpers();
     const showDialog = useDialog();
     const client = useK8sClient();
 
     const [isDeleting, setIsDeleting] = useState(false);
     const onClickDelete = useCallback(() => {
         (async () => {
-            if (isContextLocked) {
-                showDialog({
-                    title: "Read-only mode",
-                    type: "error",
-                    message: "This cluster is in read-only mode.",
-                    detail: "You can stop this port forward after you unlock the cluster with the lock/unlock button in the toolbar.",
-                    buttons: ["OK"],
-                });
+            if (!(await checkContextLock())) {
                 return;
             }
             const detail =
@@ -343,7 +336,7 @@ const PortForwardsToolbar: React.FC<PortForwardsToolbarProps> = (props) => {
                 setIsDeleting(false);
             }
         })();
-    }, [isContextLocked, portForwards, setIsDeleting, showDialog]);
+    }, [checkContextLock, portForwards, setIsDeleting, showDialog]);
 
     const metaKeyRef = useModifierKeyRef("Meta");
     useKeyListener(

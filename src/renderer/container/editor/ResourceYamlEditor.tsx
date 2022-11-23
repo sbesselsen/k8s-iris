@@ -21,7 +21,7 @@ import {
     mergeDiffs,
 } from "../../../common/util/diff";
 import { MonacoCodeEditor } from "../../component/editor/MonacoCodeEditor";
-import { useContextLock } from "../../context/context-lock";
+import { useContextLockHelpers } from "../../context/context-lock";
 import { useK8sClient } from "../../k8s/client";
 import { parseYaml, toYaml } from "../../../common/util/yaml";
 import { useDialog } from "../../hook/dialog";
@@ -48,7 +48,7 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
     } = props;
 
     const client = useK8sClient();
-    const isClusterLocked = useContextLock();
+    const { checkContextLock } = useContextLockHelpers();
     const showDialog = useDialog();
 
     const [editorObject, setEditorObjectState] = useState(object);
@@ -148,15 +148,8 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
         value,
     ]);
 
-    const onReview = useCallback(() => {
-        if (isClusterLocked) {
-            showDialog({
-                title: "Read-only mode",
-                type: "error",
-                message: "This cluster is in read-only mode.",
-                detail: "You can save after you unlock the cluster with the lock/unlock button in the toolbar.",
-                buttons: ["OK"],
-            });
+    const onReview = useCallback(async () => {
+        if (!(await checkContextLock())) {
             return;
         }
 
@@ -176,7 +169,7 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
         }
 
         setPhase("review");
-    }, [isClusterLocked, showDialog, mergeClusterUpdates, setPhase]);
+    }, [checkContextLock, showDialog, mergeClusterUpdates, setPhase]);
 
     const onReviewRef = useRef<() => void>(onReview);
     useEffect(() => {
