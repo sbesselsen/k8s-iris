@@ -135,6 +135,18 @@ export type IpcCalls = {
         }): Promise<K8sPortForwardEntry>;
         stopPortForward(params: { context: string; id: string }): Promise<void>;
     };
+    contextLock: {
+        set(params: { context: string; locked: boolean }): Promise<void>;
+        watch(
+            params: {
+                context: string;
+            },
+            receive: (
+                error: any,
+                message?: undefined | { locked: boolean }
+            ) => void
+        ): { stop: () => void };
+    };
     shell: {
         openForContext(params: {
             context: string;

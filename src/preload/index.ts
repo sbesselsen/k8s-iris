@@ -33,6 +33,8 @@ const stopPortForward = ipcInvoker("k8s:client:stopPortForward");
 const onWindowFocusChange = ipcEventSubscriber<boolean>(
     "app:window:focus-change"
 );
+const setContextLock = ipcInvoker("contextLock:set");
+const watchContextLock = ipcSubscriber("contextLock:watch");
 const openForContext = ipcSocketOpener("shell:openForContext");
 
 contextBridge.exposeInMainWorld("charm", {
@@ -65,6 +67,10 @@ contextBridge.exposeInMainWorld("charm", {
         watchPortForwards,
         portForward,
         stopPortForward,
+    },
+    contextLock: {
+        set: setContextLock,
+        watch: watchContextLock,
     },
     shell: {
         openForContext,
