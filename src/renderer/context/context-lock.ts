@@ -1,16 +1,66 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useDialog } from "../hook/dialog";
+import { useIpcCall } from "../hook/ipc";
 import { create, StoreUpdate } from "../util/state";
 import { useK8sContext } from "./k8s-context";
 
-const { useStore, useStoreValue } = create({} as Record<string, boolean>);
+const { useStore, useStoreValue } = create({ locks: {}, ipcWatchers: {} } as {
+    locks: Record<string, boolean>;
+    ipcWatchers: Record<string, { stop: () => void }>;
+});
+
+function useContextLockIpcWatch(context: string) {
+    const store = useStore();
+    const ipcWatch = useIpcCall((ipc) => ipc.contextLock.watch);
+    useEffect(() => {
+        store.set((value) => {
+            if (value.ipcWatchers[context]) {
+                // A watcher already exists.
+                return value;
+            }
+            // Watch for changes via IPC and apply them to our store.
+            const { stop } = ipcWatch({ context }, (_error, message) => {
+                if (message) {
+                    store.set((value) => {
+                        if (value.locks[context] === message.locked) {
+                            return value;
+                        }
+                        return {
+                            ...value,
+                            locks: {
+                                ...value.locks,
+                                [context]: message.locked,
+                            },
+                        };
+                    });
+                }
+            });
+            return {
+                ...value,
+                ipcWatchers: {
+                    ...value.ipcWatchers,
+                    [context]: {
+                        stop,
+                    },
+                },
+            };
+        });
+    }, [context, store]);
+}
 
 export function useContextLock(): boolean {
     const context = useK8sContext();
+    useContextLockIpcWatch(context);
+    return useStoreValue(({ locks }) => locks[context] ?? true, [context]);
+}
 
-    return useStoreValue(
-        (locks) => (context ? locks[context] ?? autoLockValue(context) : false),
-        [context]
+export function useContextLockGetter(): () => boolean {
+    const context = useK8sContext();
+    useContextLockIpcWatch(context);
+    const store = useStore();
+    return useCallback(
+        () => lockValue(store.get().locks, context),
+        [context, store]
     );
 }
 
@@ -18,22 +68,35 @@ export function useContextLockSetter(): (
     lockValue: StoreUpdate<boolean>
 ) => void {
     const context = useK8sContext();
+    const getLock = useContextLockGetter();
+    const setIpcLock = useIpcCall((ipc) => ipc.contextLock.set);
+
     const store = useStore();
     return useCallback(
-        (lockValue) => {
+        (newLockValue) => {
             if (!context) {
                 return;
             }
-            store.set((locks) => {
-                const oldValue = locks[context] ?? autoLockValue(context);
+            const newStoreValue = store.set((storeValue) => {
+                const oldValue = lockValue(storeValue.locks, context);
                 const newValue =
-                    typeof lockValue === "boolean"
-                        ? lockValue
-                        : lockValue(oldValue);
-                return { ...locks, [context]: newValue };
+                    typeof newLockValue === "boolean"
+                        ? newLockValue
+                        : newLockValue(oldValue);
+                if (newValue === oldValue) {
+                    return storeValue;
+                }
+                return {
+                    ...storeValue,
+                    locks: { ...storeValue.locks, [context]: newValue },
+                };
+            });
+            setIpcLock({
+                context,
+                locked: lockValue(newStoreValue.locks, context),
             });
         },
-        [context, store]
+        [context, getLock, setIpcLock, store]
     );
 }
 
@@ -41,16 +104,14 @@ export function useContextLockHelpers(): {
     checkContextLock: () => Promise<boolean>;
 } {
     const context = useK8sContext();
-    const store = useStore();
     const showDialog = useDialog();
+    const getLock = useContextLockGetter();
+    const setLock = useContextLockSetter();
 
     return useMemo(() => {
         return {
             checkContextLock: async () => {
-                const locks = store.get();
-                const isClusterLocked = context
-                    ? locks[context] ?? autoLockValue(context)
-                    : false;
+                const isClusterLocked = getLock();
 
                 if (isClusterLocked) {
                     const result = await showDialog({
@@ -71,10 +132,7 @@ export function useContextLockHelpers(): {
                     }
                     if (result.response === 0) {
                         // Continue and unlock.
-                        store.set((oldValue) => ({
-                            ...oldValue,
-                            [context]: false,
-                        }));
+                        setLock(false);
                         return true;
                     }
                     // User cancelled.
@@ -84,11 +142,14 @@ export function useContextLockHelpers(): {
                 return true;
             },
         };
-    }, [context, showDialog, store]);
+    }, [context, getLock, setLock, showDialog]);
 }
 
 export class ContextLockedError extends Error {}
 
-function autoLockValue(context: string): boolean {
-    return context.match(/prod/) && !context.match(/non-?prod/);
+function lockValue(
+    locks: Record<string, boolean>,
+    context: string | null | undefined
+): boolean {
+    return context ? locks[context] ?? true : false;
 }
