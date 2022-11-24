@@ -31,7 +31,11 @@ export const PodShellEditor: React.FC<PodShellEditorProps> = (props) => {
                     namespace,
                     podName: name,
                     containerName,
-                    command: ["/bin/sh"],
+                    command: [
+                        "/bin/sh",
+                        "-c",
+                        "[ -x /bin/bash ] && /bin/bash || /bin/sh",
+                    ],
                     tty: true,
                 });
             } catch (e) {
