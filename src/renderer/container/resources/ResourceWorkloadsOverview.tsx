@@ -31,6 +31,7 @@ import {
     toK8sObjectIdentifier,
     updateResourceListByVersion,
 } from "../../../common/k8s/util";
+import { searchMatch } from "../../../common/util/search";
 import { k8sSmartCompare } from "../../../common/util/sort";
 import { LazyComponent } from "../../component/main/LazyComponent";
 import { ScrollBox } from "../../component/main/ScrollBox";
@@ -41,6 +42,7 @@ import {
     useAppRouteGetter,
     useAppRouteSetter,
 } from "../../context/route";
+import { useAppSearch } from "../../context/search";
 import { useIpcCall } from "../../hook/ipc";
 import { useModifierKeyRef } from "../../hook/keyboard";
 import { generateBadges, ResourceBadge } from "../../k8s/badges";
@@ -699,12 +701,24 @@ const GroupedResourcesOverview: React.FC<{}> = () => {
         [groups]
     );
 
+    const { query } = useAppSearch();
+
+    const filteredGroups = useMemo(
+        () =>
+            query
+                ? sortedGroups.filter((group) =>
+                      searchMatch(query, group.title)
+                  )
+                : sortedGroups,
+        [sortedGroups, query]
+    );
+
     return (
         <VStack alignItems="stretch" spacing={2}>
-            {sortedGroups.map((group) => (
+            {filteredGroups.map((group) => (
                 <WorkloadGroup groupId={group.id} key={group.id} />
             ))}
-            {sortedGroups.length === 0 && !isAnythingLoading && (
+            {filteredGroups.length === 0 && !isAnythingLoading && (
                 <Box>
                     <Text color="gray">No workloads selected.</Text>
                 </Box>
