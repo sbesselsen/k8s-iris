@@ -85,6 +85,7 @@ const resourceTypes: Record<string, { title: string }> = {
     deployments: { title: "Deployments" },
     statefulSets: { title: "StatefulSets" },
     daemonSets: { title: "DaemonSets" },
+    persistentVolumeClaims: { title: "Persistent Volume Claims" },
     ingresses: { title: "Ingresses" },
     services: { title: "Services" },
     configMaps: { title: "ConfigMaps" },
@@ -325,6 +326,11 @@ function useMonitorWorkloads() {
         ingresses: {
             apiVersion: "networking.k8s.io/v1",
             kind: "Ingress",
+            ...defaultSpecItems,
+        },
+        persistentVolumeClaims: {
+            apiVersion: "v1",
+            kind: "PersistentVolumeClaim",
             ...defaultSpecItems,
         },
     };
