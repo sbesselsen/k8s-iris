@@ -35,9 +35,16 @@ export type K8sLabelPredicate = {
     value: string | string[];
 };
 
+export type K8sFieldPredicate = {
+    name: string;
+    value: string;
+    operator?: "==" | "!=";
+};
+
 export type K8sObjectListQuery = K8sResourceTypeIdentifier & {
     namespaces?: string[];
     labelSelector?: Array<K8sLabelPredicate>;
+    fieldSelector?: Array<K8sFieldPredicate>;
 };
 
 export type K8sPatchOptions = {

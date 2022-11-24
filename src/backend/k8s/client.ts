@@ -61,7 +61,11 @@ import {
     updateListObject,
 } from "../../common/k8s/util";
 import { deepEqual } from "../../common/util/deep-equal";
-import { kubeRequestOpts, labelSelectorToString } from "./util";
+import {
+    kubeRequestOpts,
+    fieldSelectorToString,
+    labelSelectorToString,
+} from "./util";
 import { CharmPatchedExecAuth } from "./authenticator/exec";
 import { toYaml } from "../../common/util/yaml";
 import { shellOptions } from "../util/shell";
@@ -419,6 +423,12 @@ export function createClient(
             queryParams.labelSelector = labelSelectorString;
         }
 
+        if (spec.fieldSelector && spec.fieldSelector.length > 0) {
+            queryParams.fieldSelector = fieldSelectorToString(
+                spec.fieldSelector
+            );
+        }
+
         return new Promise((resolve, reject) => {
             request.get(
                 `${kubeConfig.getCurrentCluster().server}/${path}?` +
@@ -545,6 +555,12 @@ export function createClient(
                 queryParams.labelSelector = labelSelectorString;
             }
 
+            if (spec.fieldSelector && spec.fieldSelector.length > 0) {
+                queryParams.fieldSelector = fieldSelectorToString(
+                    spec.fieldSelector
+                );
+            }
+
             const listFn = () => {
                 return new Promise((resolve, reject) => {
                     request.get(
@@ -582,7 +598,7 @@ export function createClient(
 
             informer = k8s.makeInformer(
                 kubeConfig,
-                `/${path}`,
+                `/${path}?` + querystring.stringify(queryParams),
                 listFn as any,
                 labelSelectorString
             );

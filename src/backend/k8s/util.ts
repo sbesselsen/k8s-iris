@@ -1,6 +1,6 @@
 import { KubeConfig } from "@kubernetes/client-node";
 import * as request from "request";
-import { K8sLabelPredicate } from "../../common/k8s/client";
+import { K8sFieldPredicate, K8sLabelPredicate } from "../../common/k8s/client";
 
 export async function kubeRequestOpts(
     kubeConfig: KubeConfig
@@ -26,5 +26,18 @@ export function labelSelectorToString(
                 return selector.name + "=" + selector.value;
             }
         })
+        .join(",");
+}
+
+export function fieldSelectorToString(
+    fieldSelector: Array<K8sFieldPredicate>
+): string {
+    return fieldSelector
+        .map(
+            (selector) =>
+                selector.name +
+                (selector.operator === "!=" ? "!=" : "==") +
+                selector.value
+        )
         .join(",");
 }
