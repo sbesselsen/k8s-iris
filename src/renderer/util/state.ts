@@ -7,6 +7,7 @@ import {
     useRef,
     useState,
 } from "react";
+import { unstable_batchedUpdates } from "react-dom";
 
 export type StoreUpdate<T> = T | ((oldValue: T) => T);
 
@@ -43,7 +44,9 @@ export function createStore<T>(initialValue: T): Store<T> {
                 value = newValue;
             }
             if (oldValue !== value) {
-                listeners.forEach((l) => l(value));
+                unstable_batchedUpdates(() => {
+                    listeners.forEach((l) => l(value));
+                });
             }
             return value;
         },

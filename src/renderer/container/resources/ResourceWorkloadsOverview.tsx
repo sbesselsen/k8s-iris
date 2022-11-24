@@ -879,43 +879,42 @@ type WorkloadResourceSectionProps = {
 
 const emptyResourcesList: K8sObject[] = [];
 
-const WorkloadResourceSection: React.FC<WorkloadResourceSectionProps> = (
-    props
-) => {
-    const { title, showNamespace, typeKey, groupId } = props;
+const WorkloadResourceSection: React.FC<WorkloadResourceSectionProps> =
+    React.memo((props) => {
+        const { title, showNamespace, typeKey, groupId } = props;
 
-    const isLoading = useStoreValue(
-        (value) => value.allResourcesByType[typeKey]?.isLoading ?? true,
-        [typeKey]
-    );
-    const resources = useStoreValue(
-        (value) =>
-            value.groupSubResources[`${groupId}:${typeKey}`] ??
-            emptyResourcesList,
-        [groupId, typeKey]
-    );
+        const isLoading = useStoreValue(
+            (value) => value.allResourcesByType[typeKey]?.isLoading ?? true,
+            [typeKey]
+        );
+        const resources = useStoreValue(
+            (value) =>
+                value.groupSubResources[`${groupId}:${typeKey}`] ??
+                emptyResourcesList,
+            [groupId, typeKey]
+        );
 
-    if (!isLoading && resources.length === 0) {
-        return null;
-    }
+        if (!isLoading && resources.length === 0) {
+            return null;
+        }
 
-    return (
-        <VStack alignItems="stretch">
-            <Heading fontSize="sm">{title}</Heading>
-            {isLoading && (
-                <Box>
-                    <Spinner color="gray" size="sm" />
-                </Box>
-            )}
-            {!isLoading && (
-                <WorkloadResourceList
-                    showNamespace={showNamespace}
-                    resources={resources}
-                />
-            )}
-        </VStack>
-    );
-};
+        return (
+            <VStack alignItems="stretch">
+                <Heading fontSize="sm">{title}</Heading>
+                {isLoading && (
+                    <Box>
+                        <Spinner color="gray" size="sm" />
+                    </Box>
+                )}
+                {!isLoading && (
+                    <WorkloadResourceList
+                        showNamespace={showNamespace}
+                        resources={resources}
+                    />
+                )}
+            </VStack>
+        );
+    });
 
 type WorkloadResourceListProps = {
     resources: K8sObject[];
