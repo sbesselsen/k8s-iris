@@ -9,6 +9,7 @@ import {
     MenuItemOption,
     MenuList,
     MenuOptionGroup,
+    useColorModeValue,
 } from "@chakra-ui/react";
 
 import { MdArrowBackIosNew, MdArrowForwardIos } from "react-icons/md";
@@ -67,20 +68,18 @@ export const AppToolbar: React.FC = () => {
         [setLock]
     );
 
+    const buttonColor = useColorModeValue("gray.600", "gray.300");
+
     return (
         <HStack py={2} spacing={0}>
-            <ButtonGroup
-                variant="ghost"
-                colorScheme="primary"
-                size="sm"
-                isAttached
-            >
+            <ButtonGroup variant="ghost" size="sm" isAttached>
                 <IconButton
                     disabled={!canGoBack}
                     onClick={goBack}
                     icon={<Icon as={MdArrowBackIosNew} />}
                     aria-label="Back"
                     title="Back"
+                    color={buttonColor}
                     _focus={{}}
                     tabIndex={-1}
                 />
@@ -90,28 +89,30 @@ export const AppToolbar: React.FC = () => {
                     icon={<Icon as={MdArrowForwardIos} />}
                     aria-label="Forward"
                     title="Forward"
+                    color={buttonColor}
                     _focus={{}}
                     tabIndex={-1}
                 />
             </ButtonGroup>
-            <ButtonGroup variant="ghost" colorScheme="primary" size="sm">
+            <ButtonGroup variant="ghost" size="sm">
                 <IconButton
                     onClick={toggleSidebarVisible}
                     icon={<HamburgerIcon />}
                     aria-label={isSidebarVisible ? "Hide menu" : "Show menu"}
                     title={isSidebarVisible ? "Hide menu" : "Show menu"}
+                    color={buttonColor}
                     _focus={{}}
                     tabIndex={-1}
                 />
             </ButtonGroup>
-            <ButtonGroup variant="ghost" colorScheme="primary" size="sm">
+            <ButtonGroup variant="ghost" size="sm">
                 <Menu>
                     <MenuButton
-                        colorScheme="primary"
                         as={IconButton}
                         icon={<Icon as={isLocked ? FiLock : FiUnlock} />}
                         aria-label="Lock/unlock cluster"
                         title="Lock/unlock cluster"
+                        color={buttonColor}
                         fontWeight="normal"
                     />
                     <MenuList zIndex={50}>

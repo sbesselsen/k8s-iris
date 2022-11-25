@@ -125,7 +125,10 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
     }, [sidebarWidth, sidebarBoxRef, sidebarContentRef]);
 
     const contentBackground = useColorModeValue("white", "gray.900");
-    const headerBorderColor = useColorModeValue("gray.100", "gray.800");
+    const headerBorderColor = useColorModeValue(
+        "blackAlpha.100",
+        useWindowFocusValue("whiteAlpha.200", "blackAlpha.600")
+    );
     const headerHeight = "48px";
 
     useWindowResizeListener(() => {
@@ -146,6 +149,10 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
     const sidebarBackground = isSidebarFloating
         ? sidebarOwnBackground
         : "transparent";
+    const sidebarHeaderBorderColor = useWindowFocusValue(
+        "transparent",
+        headerBorderColor
+    );
 
     const onClickContent = useCallback(() => {
         if (isSidebarFloating) {
@@ -155,8 +162,13 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
 
     const sidebarOpacity = useWindowFocusValue(
         1.0,
-        isSidebarFloating ? 1.0 : 0.5
+        isSidebarFloating ? 1.0 : 0.7
     );
+    const headerBackground = useWindowFocusValue(
+        contentBackground,
+        "transparent"
+    );
+    const headerOpacity = useWindowFocusValue(1.0, 0.7);
 
     // TODO: make button offset work in Windows as well, on the other side
 
@@ -213,7 +225,11 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                             w={sidebarWidth}
                             top={0}
                             left={0}
+                            borderBottom="1px solid"
+                            borderBottomColor={sidebarHeaderBorderColor}
+                            boxSizing="content-box"
                             sx={{ WebkitAppRegion: "drag" }}
+                            opacity={headerOpacity}
                             position="absolute"
                         ></Box>
                     )}
@@ -234,19 +250,17 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                         {sidebar}
                     </Box>
                 </Box>
-                <VStack
-                    flex="1 0 0"
-                    alignItems="stretch"
-                    spacing={0}
-                    bg={contentBackground}
-                >
+                <VStack flex="1 0 0" alignItems="stretch" spacing={0}>
                     <HStack
-                        flex="0 0 30px"
+                        flex="0 0 0"
+                        flexBasis={headerHeight}
+                        bg={headerBackground}
                         borderBottom="1px solid"
                         borderBottomColor={headerBorderColor}
                         spacing={0}
                         justifyContent="space-between"
                         alignItems="stretch"
+                        opacity={headerOpacity}
                         sx={{ WebkitAppRegion: "drag" }}
                     >
                         <Box
@@ -280,7 +294,12 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                             {search}
                         </Box>
                     </HStack>
-                    <VStack spacing={0} flex="1 0 0">
+                    <VStack
+                        spacing={0}
+                        flex="1 0 0"
+                        bg={contentBackground}
+                        alignItems="stretch"
+                    >
                         {isSidebarVisible && isSidebarFloating && (
                             <Box
                                 position="absolute"
