@@ -2,6 +2,7 @@ html,
 body {
     overflow: hidden;
     margin: 0;
+    background: transparent;
 }
 
 :not(input):not(textarea),
@@ -20,16 +21,16 @@ body {
     height: 100%;
 }
 
-body,
-body.chakra-ui-light {
-    background: #fff;
+body.chakra-ui-light,
+body.chakra-ui-dark {
+    background: transparent;
 }
 
 body.app-ui-mounted {
     height: initial;
 }
 #root {
-    background: #f8f9fa;
+    background: white;
     width: 100%;
     min-height: 48px;
     -webkit-app-region: drag;
@@ -37,10 +38,6 @@ body.app-ui-mounted {
 }
 
 @media (prefers-color-scheme: dark) {
-    body,
-    body.chakra-ui-dark {
-        background: #111;
-    }
     #root {
         background: #363636;
     }

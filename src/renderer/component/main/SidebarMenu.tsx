@@ -33,7 +33,6 @@ import { searchMatch } from "../../../common/util/search";
 import { useAppSearch } from "../../context/search";
 import { useModifierKeyRef } from "../../hook/keyboard";
 import { useMultiSelectUpdater } from "../../hook/multi-select";
-import { useWindowFocusValue } from "../../hook/window-focus";
 
 export type SidebarMainMenuItem = {
     id: string;
@@ -49,8 +48,6 @@ export type SidebarMainMenuProps = {
 
 export const SidebarMainMenu: React.FC<SidebarMainMenuProps> = (props) => {
     const { items, selection, onChangeSelection } = props;
-
-    const opacity = useWindowFocusValue(1.0, 0.5);
 
     const metaKeyRef = useModifierKeyRef("Meta");
 
@@ -68,7 +65,7 @@ export const SidebarMainMenu: React.FC<SidebarMainMenuProps> = (props) => {
     );
 
     return (
-        <VStack pt={2} px={2} spacing={0} opacity={opacity}>
+        <VStack pt={2} px={2} spacing={0}>
             {items.map((item) => (
                 <SidebarMenuButton
                     key={item.id}
@@ -162,7 +159,6 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
         selection,
     } = props;
 
-    const opacity = useWindowFocusValue(1.0, 0.5);
     const metaKeyRef = useModifierKeyRef("Meta");
 
     const onClickAll = useCallback(() => {
@@ -310,13 +306,12 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                 fontWeight="semibold"
                 fontSize="xs"
                 textTransform="uppercase"
-                opacity={opacity}
                 px={4}
             >
                 Namespaces
             </Heading>
 
-            <Box px={4} flex="0 0 0" opacity={opacity}>
+            <Box px={4} flex="0 0 0">
                 <ButtonGroup variant="outline" size="xs" isAttached>
                     <Button
                         mr="-1px"
@@ -364,7 +359,6 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                 flex="1 0 0"
                 overflow="hidden scroll"
                 sx={{ scrollbarGutter: "stable" }}
-                opacity={opacity}
             >
                 <CheckboxGroup
                     colorScheme="primary"
@@ -403,8 +397,6 @@ export const SidebarEditorsMenu: React.FC<SidebarEditorsMenuProps> = (
         onPressCreateShell,
     } = props;
 
-    const opacity = useWindowFocusValue(1.0, 0.5);
-
     const metaKeyRef = useModifierKeyRef("Meta");
     const onSelectCallbacks = useMemo(
         () =>
@@ -422,13 +414,7 @@ export const SidebarEditorsMenu: React.FC<SidebarEditorsMenuProps> = (
     );
 
     return (
-        <VStack
-            flex="0 0 auto"
-            spacing={0}
-            alignItems="stretch"
-            p={0}
-            opacity={opacity}
-        >
+        <VStack flex="0 0 auto" spacing={0} alignItems="stretch" p={0}>
             <Heading
                 textColor={"primary.500"}
                 fontWeight="semibold"
