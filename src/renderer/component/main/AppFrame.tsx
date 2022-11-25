@@ -145,7 +145,7 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
         shouldSidebarBeFloating,
     ]);
 
-    const sidebarOwnBackground = useColorModeValue("gray.200", "gray.800");
+    const sidebarOwnBackground = useColorModeValue("gray.100", "gray.800");
     const sidebarBackground = isSidebarFloating
         ? sidebarOwnBackground
         : "transparent";
@@ -246,6 +246,7 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                         right={0}
                         overflow="hidden"
                         opacity={sidebarOpacity}
+                        pt="1px"
                     >
                         {sidebar}
                     </Box>

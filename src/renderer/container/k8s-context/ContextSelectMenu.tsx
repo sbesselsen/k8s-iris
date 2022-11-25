@@ -1,6 +1,7 @@
 import {
     Box,
     Button,
+    HStack,
     Menu,
     MenuButton,
     MenuGroup,
@@ -175,6 +176,7 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
                 onOpen={onOpen}
                 onClose={onClose}
                 matchWidth={true}
+                orientation="horizontal"
                 gutter={1}
             >
                 <MenuButton
@@ -182,9 +184,10 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
                     rightIcon={<ChevronDownIcon />}
                     width="100%"
                     textAlign="start"
-                    colorScheme="primary"
+                    colorScheme="contextClue"
+                    bg="contextClue.500"
+                    textColor="white"
                     size="sm"
-                    boxShadow="0 1px 2px rgba(0, 0, 0, 0.1)"
                     flex="1 0 0"
                     _active={{
                         bg: "",
@@ -195,7 +198,7 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
                     }}
                     ref={ref}
                 >
-                    <Box isTruncated>
+                    <HStack h="100%" alignItems="center" isTruncated>
                         {isLoadingWithDelay && <Spinner />}
                         {!isLoading && (
                             <Fragment>
@@ -203,7 +206,7 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
                                     kubeContext}
                             </Fragment>
                         )}
-                    </Box>
+                    </HStack>
                 </MenuButton>
                 <MenuList
                     maxHeight="calc(100vh - 100px)"

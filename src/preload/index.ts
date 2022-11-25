@@ -36,6 +36,8 @@ const onWindowFocusChange = ipcEventSubscriber<boolean>(
 const setContextLock = ipcInvoker("contextLock:set");
 const watchContextLock = ipcSubscriber("contextLock:watch");
 const openForContext = ipcSocketOpener("shell:openForContext");
+const getAccentColor = ipcInvoker("appAppearance:getAccentColor");
+const watchAccentColor = ipcSubscriber("appAppearance:watchAccentColor");
 
 contextBridge.exposeInMainWorld("charm", {
     app: {
@@ -74,5 +76,9 @@ contextBridge.exposeInMainWorld("charm", {
     },
     shell: {
         openForContext,
+    },
+    appearance: {
+        getAccentColor,
+        watchAccentColor,
     },
 } as IpcCalls);

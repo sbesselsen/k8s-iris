@@ -2,6 +2,8 @@ import { app, BrowserWindow } from "electron";
 import { ipcHandle } from "../common/ipc/main";
 import { emptyAppRoute } from "../common/route/app-route";
 import { DialogOptions, DialogResult } from "../common/ui/dialog";
+import { createAppearanceManager } from "./appearance";
+import { wireAppearanceIpc } from "./appearance/ipc";
 import { createCloudManager } from "./cloud";
 import { wireCloudIpc } from "./cloud/ipc";
 import { cloudShellWrapper } from "./cloud/shell";
@@ -60,6 +62,7 @@ import { createWindowManager, WindowParameters } from "./window";
         },
     });
     const contextLockManager = createContextLockManager();
+    const appearanceManager = createAppearanceManager();
 
     // Initialize the main menu.
     menuManager.initialize();
@@ -70,6 +73,7 @@ import { createWindowManager, WindowParameters } from "./window";
     wireShellIpc(shellManager);
     wireOsIpc(osManager);
     wireContextLockIpc(contextLockManager);
+    wireAppearanceIpc(appearanceManager);
 
     ipcHandle("app:createWindow", (params?: WindowParameters) => {
         windowManager.createWindow(params);
