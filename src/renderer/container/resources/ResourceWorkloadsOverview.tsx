@@ -749,7 +749,7 @@ const WorkloadGroup: React.FC<{
     const group = useStoreValue((value) => value.groups[groupId], [groupId]);
     const showNamespace = useStoreValue((value) => value.showNamespace);
 
-    const groupEdgeBg = useColorModeValue("gray.100", "gray.700");
+    const groupEdgeBg = useColorModeValue("gray.100", "gray.800");
     const groupContentBg = useColorModeValue("white", "gray.900");
     const headingColor = useColorModeValue("primary.500", "primary.400");
 
