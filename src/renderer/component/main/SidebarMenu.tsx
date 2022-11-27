@@ -65,7 +65,7 @@ export const SidebarMainMenu: React.FC<SidebarMainMenuProps> = (props) => {
     );
 
     return (
-        <VStack pt={2} px={2} spacing={0}>
+        <VStack pt={2} px={2} spacing={0} alignItems="stretch">
             {items.map((item) => (
                 <SidebarMenuButton
                     key={item.id}
@@ -88,22 +88,12 @@ const SidebarMenuButton: React.FC<SidebarMenuButtonProps> = (props) => {
     const { item, isSelected = false, onSelect } = props;
 
     const iconSize = 4;
-
-    const itemTextColor = useColorModeValue("primary.900", "white");
-    const iconColor = "primary.500";
-    const selectedTextColor = "white";
-    const hoverBackgroundColor = useColorModeValue("primary.50", "primary.700");
-    const selectedBackgroundColor = useColorModeValue(
-        "primary.500",
-        "primary.500"
-    );
     const icon = item.iconType ? (
         <Icon
             verticalAlign="middle"
             w={iconSize}
             h={iconSize}
             as={item.iconType}
-            color={isSelected ? selectedTextColor : iconColor}
         />
     ) : null;
 
@@ -111,23 +101,9 @@ const SidebarMenuButton: React.FC<SidebarMenuButtonProps> = (props) => {
 
     return (
         <Button
-            bg="transparent"
-            textColor={itemTextColor}
-            px={3}
+            variant="sidebarGhost"
             leftIcon={icon}
-            w="100%"
-            borderRadius={6}
-            justifyContent="start"
-            fontWeight="normal"
-            transition="none"
             onClick={onSelect}
-            _hover={{
-                bg: hoverBackgroundColor,
-            }}
-            _active={{
-                textColor: selectedTextColor,
-                bg: selectedBackgroundColor,
-            }}
             _focus={{}}
             _focusVisible={{
                 boxShadow: focusShadow,
@@ -186,15 +162,17 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
         );
     }, [metaKeyRef, selection, onChangeSelection]);
 
-    const itemTextColor = useColorModeValue("primary.900", "white");
+    const itemTextColor = useColorModeValue("gray.700", "white");
 
-    const namespacesToggleBorderColor = "primary.500";
-    const namespacesToggleHoverColor = useColorModeValue(
-        "primary.50",
-        "primary.700"
+    const namespacesToggleBorderColor = useColorModeValue(
+        "gray.700",
+        "gray.300"
     );
+    const namespacesToggleHoverColor = useColorModeValue("gray.50", "gray.700");
 
-    const checkboxBorderColor = useColorModeValue("primary.300", "primary.700");
+    const checkboxBorderColor = useColorModeValue("gray.400", "gray.200");
+
+    const headingColor = useColorModeValue("gray.600", "gray.200");
 
     const query = useAppSearch((s) => s.query);
     const filteredNamespaces = useMemo(
@@ -302,7 +280,7 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
     return (
         <VStack flex="1 0 0" alignItems="stretch">
             <Heading
-                textColor={"primary.500"}
+                textColor={headingColor}
                 fontWeight="semibold"
                 fontSize="xs"
                 textTransform="uppercase"
@@ -361,7 +339,7 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                 sx={{ scrollbarGutter: "stable" }}
             >
                 <CheckboxGroup
-                    colorScheme="primary"
+                    colorScheme={selection.mode == "all" ? "gray" : "primary"}
                     value={selectedNamespaces}
                     onChange={onChangeSelectedNamespaces}
                 >
@@ -413,10 +391,12 @@ export const SidebarEditorsMenu: React.FC<SidebarEditorsMenuProps> = (
         [items, onCloseEditor]
     );
 
+    const headingColor = useColorModeValue("gray.600", "gray.200");
+
     return (
         <VStack flex="0 0 auto" spacing={0} alignItems="stretch" p={0}>
             <Heading
-                textColor={"primary.500"}
+                textColor={headingColor}
                 fontWeight="semibold"
                 fontSize="xs"
                 textTransform="uppercase"
@@ -433,6 +413,7 @@ export const SidebarEditorsMenu: React.FC<SidebarEditorsMenuProps> = (
                 spacing={0}
                 px={2}
                 py={1}
+                alignItems="stretch"
             >
                 {items.map((item, index) => (
                     <SidebarEditorsMenuButton
@@ -444,7 +425,7 @@ export const SidebarEditorsMenu: React.FC<SidebarEditorsMenuProps> = (
                     />
                 ))}
             </VStack>
-            <VStack px={2} spacing={0}>
+            <VStack px={2} spacing={0} alignItems="stretch">
                 <SidebarEditorsCustomMenuButton
                     onClick={onPressCreate}
                     leftIcon={<AddIcon w={2} h={2} />}
@@ -500,7 +481,7 @@ const SidebarEditorsMenuButton: React.FC<SidebarEditorsMenuButtonProps> = (
                 verticalAlign="middle"
                 w={iconSize}
                 h={iconSize}
-                color={isSelected ? selectedTextColor : iconColor}
+                color={isSelected ? "white" : "gray.500"}
             />
         </Box>
     );
@@ -554,38 +535,21 @@ const SidebarEditorsMenuButton: React.FC<SidebarEditorsMenuButtonProps> = (
 const SidebarEditorsCustomMenuButton: React.FC<ButtonProps> = (props) => {
     const { children, ...buttonProps } = props;
 
-    const itemTextColor = useColorModeValue("primary.900", "white");
-    const selectedTextColor = "white";
-    const hoverBackgroundColor = useColorModeValue("primary.50", "primary.700");
-    const selectedBackgroundColor = useColorModeValue(
-        "primary.500",
-        "primary.500"
-    );
-
     const focusShadow = useToken("shadows", "outline");
 
     return (
         <Button
+            variant="sidebarGhost"
             flex="0 0 auto"
-            bg="transparent"
-            textColor={itemTextColor}
             px={2}
             pe={1}
             py={0}
-            w="100%"
             h={8}
             fontSize="sm"
             borderRadius={6}
             justifyContent="start"
             fontWeight="normal"
             transition="none"
-            _hover={{
-                bg: hoverBackgroundColor,
-            }}
-            _active={{
-                textColor: selectedTextColor,
-                bg: selectedBackgroundColor,
-            }}
             _focus={{}}
             _focusVisible={{
                 boxShadow: focusShadow,
