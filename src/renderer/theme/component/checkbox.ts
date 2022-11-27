@@ -3,8 +3,6 @@ import { mode } from "@chakra-ui/theme-tools";
 const baseStyle = (props) => {
     const { colorScheme } = props;
 
-    console.log("Got basestyle");
-
     return {
         control: {
             _checked: {
