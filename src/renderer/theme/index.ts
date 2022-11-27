@@ -1,5 +1,6 @@
 import { extendTheme, ThemeConfig } from "@chakra-ui/react";
 import { Button } from "./component/button";
+import { Checkbox } from "./component/checkbox";
 
 const config: ThemeConfig = {
     useSystemColorMode: true,
@@ -28,6 +29,7 @@ export const theme = extendTheme({
     },
     components: {
         Button,
+        Checkbox,
         Code: {
             variants: {
                 large: (options: any) => {

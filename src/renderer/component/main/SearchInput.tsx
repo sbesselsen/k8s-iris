@@ -86,7 +86,9 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
                     }}
                     _focus={{
                         bg: searchFocusedBackground,
+                        boxShadow: "none",
                     }}
+                    _focusVisible={{ boxShadow: "outline" }}
                     sx={{ WebkitAppRegion: "no-drag" }}
                     value={innerValue}
                     onChange={onChangeCallback}
