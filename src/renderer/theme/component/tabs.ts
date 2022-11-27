@@ -1,9 +1,19 @@
 import { mode } from "@chakra-ui/theme-tools";
 
 const content = (props) => {
+    const bgGradient = mode(
+        "linear(to-t, gray.200 0%, gray.100 4px)",
+        "linear(to-t, gray.700 0%, gray.800 4px)"
+    )(props);
+
+    const borderColor = mode("gray.200", "gray.700")(props);
+
+    const selectedBg = mode("white", "gray.900")(props);
+    const selectedColor = mode("black", "white")(props);
+
     return {
         tablist: {
-            bgGradient: "linear(to-t, gray.200 0%, gray.100 4px)",
+            bgGradient,
         },
         tab: {
             whiteSpace: "nowrap",
@@ -12,18 +22,18 @@ const content = (props) => {
             color: mode("gray.600", "gray.200")(props),
             borderLeft: "1px solid",
             borderRight: "1px solid",
-            borderColor: "gray.200",
+            borderColor,
             borderTopColor: "transparent",
             fontWeight: "semibold",
             fontSize: props.size,
             textTransform: "uppercase",
             px: 6,
-            bgGradient: "linear(to-t, gray.200 0%, gray.100 2px, gray.50 4px)",
+            bgGradient,
             _selected: {
-                color: mode("black", "white")(props),
-                bg: "white",
+                color: selectedColor,
+                bg: selectedBg,
                 _hover: {
-                    bg: "white",
+                    bg: selectedBg,
                 },
             },
             _hover: {

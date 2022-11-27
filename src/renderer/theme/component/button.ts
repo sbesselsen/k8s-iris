@@ -74,7 +74,6 @@ const sidebarGhost = (props) => {
     return {
         bg: "transparent",
         color: colorMode === "light" ? `gray.700` : `white`,
-        borderRadius: "6px",
         fontWeight: "normal",
         transitionProperty: "none",
         justifyContent: "start",
@@ -106,7 +105,7 @@ const sidebarGhost = (props) => {
 export const Button = {
     baseStyle: () => {
         return {
-            borderRadius: "9px",
+            borderRadius: "6px",
         };
     },
     defaultProps: {

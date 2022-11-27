@@ -264,7 +264,7 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                 key={name}
                 opacity={isDeleting ? 0.5 : 1}
                 py={1}
-                borderRadius="9px"
+                borderRadius="6px"
                 _hover={{
                     bg: hoverBg,
                 }}
@@ -479,8 +479,6 @@ const SidebarEditorsMenuButton: React.FC<SidebarEditorsMenuButtonProps> = (
     const { item, isSelected = false, onClose, onSelect } = props;
 
     const iconSize = 2;
-    const iconColor = "primary.500";
-    const selectedTextColor = "white";
 
     const onClickCloseCallback = useCallback(
         (e: MouseEvent) => {
