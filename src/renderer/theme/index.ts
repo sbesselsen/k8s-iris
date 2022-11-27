@@ -1,6 +1,7 @@
 import { extendTheme, ThemeConfig } from "@chakra-ui/react";
 import { Button } from "./component/button";
 import { Checkbox } from "./component/checkbox";
+import { Tabs } from "./component/tabs";
 
 const config: ThemeConfig = {
     useSystemColorMode: true,
@@ -45,5 +46,6 @@ export const theme = extendTheme({
                 },
             },
         },
+        Tabs,
     },
 });

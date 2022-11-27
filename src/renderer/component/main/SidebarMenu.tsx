@@ -170,7 +170,7 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
     );
     const namespacesToggleAllBorderColor = useColorModeValue(
         "primary.500",
-        "primary.600"
+        "primary.500"
     );
     const namespacesToggleBorderColor =
         selection.mode === "all"

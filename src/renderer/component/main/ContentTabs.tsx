@@ -32,20 +32,6 @@ export type ContentTabsProps = {
 export const ContentTabs: React.FC<ContentTabsProps> = (props) => {
     const { isLazy = false, onChangeSelection, selected, tabs } = props;
 
-    const primaryColorIsGray =
-        useToken("colors", "primary.500") === useToken("colors", "gray.500");
-    const tabsBackgroundColor = useColorModeValue(
-        "primary.100",
-        primaryColorIsGray ? "primary.700" : "primary.900"
-    );
-    const focusBoxShadow = useToken("shadows", "outline");
-
-    const tabTextColor = useColorModeValue("primary.900", "white");
-    const selectedTabTextColor = "white";
-    const selectedTabBackgroundColor = "primary.500";
-
-    const opacity = useWindowFocusValue(1.0, 0.5);
-
     let tabIndex = tabs.findIndex((tab) => selected && tab.id === selected);
     if (tabIndex === -1) {
         tabIndex = 0;
@@ -78,40 +64,17 @@ export const ContentTabs: React.FC<ContentTabsProps> = (props) => {
             w="100%"
             h="100%"
             flexDirection="column"
-            variant="soft-rounded"
-            colorScheme="primary"
+            variant="content"
+            size="xs"
             index={tabIndex}
             isLazy={isLazy === "lazy-create" ? false : isLazy}
         >
-            <TabList flex="0 0 0" opacity={opacity} m={2}>
-                <HStack
-                    flex="0 0 0"
-                    bg={tabsBackgroundColor}
-                    borderRadius={6}
-                    spacing={1}
-                >
-                    {tabs.map((tab, index) => (
-                        <Tab
-                            key={tab.id}
-                            borderRadius={6}
-                            _focus={{}}
-                            fontWeight="normal"
-                            textColor={tabTextColor}
-                            whiteSpace="nowrap"
-                            _focusVisible={{
-                                boxShadow: focusBoxShadow,
-                            }}
-                            _selected={{
-                                bg: selectedTabBackgroundColor,
-                                textColor: selectedTabTextColor,
-                            }}
-                            onClick={onChangeTabIndexes[index]}
-                        >
-                            {tab.title}
-                        </Tab>
-                    ))}
-                </HStack>
-                <Box flex="1 0 0"></Box>
+            <TabList flex="0 0 0">
+                {tabs.map((tab, index) => (
+                    <Tab key={tab.id} onClick={onChangeTabIndexes[index]}>
+                        {tab.title}
+                    </Tab>
+                ))}
             </TabList>
             <TabPanels
                 flex="1 0 0"

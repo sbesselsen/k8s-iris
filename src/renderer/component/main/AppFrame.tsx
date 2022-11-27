@@ -126,7 +126,7 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
 
     const contentBackground = useColorModeValue("white", "gray.900");
     const headerBorderColor = useColorModeValue(
-        "blackAlpha.100",
+        "gray.200",
         useWindowFocusValue("whiteAlpha.200", "blackAlpha.600")
     );
     const headerHeight = "48px";
@@ -206,6 +206,8 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                     transitionTimingFunction="ease-out"
                     transitionProperty="flex-basis, width"
                     boxShadow={isSidebarFloating ? "lg" : "none"}
+                    borderRight="1px solid"
+                    borderRightColor={headerBorderColor}
                 >
                     <Box
                         display={isSidebarFloating ? "none" : "block"}
