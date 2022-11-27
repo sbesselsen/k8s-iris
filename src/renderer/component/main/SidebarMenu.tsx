@@ -164,10 +164,18 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
 
     const itemTextColor = useColorModeValue("gray.700", "white");
 
-    const namespacesToggleBorderColor = useColorModeValue(
-        "gray.700",
+    const namespacesToggleSelectedBorderColor = useColorModeValue(
+        "gray.600",
         "gray.300"
     );
+    const namespacesToggleAllBorderColor = useColorModeValue(
+        "primary.500",
+        "primary.600"
+    );
+    const namespacesToggleBorderColor =
+        selection.mode === "all"
+            ? namespacesToggleAllBorderColor
+            : namespacesToggleSelectedBorderColor;
     const namespacesToggleHoverColor = useColorModeValue("gray.50", "gray.700");
 
     const checkboxBorderColor = useColorModeValue("gray.400", "gray.200");
@@ -243,6 +251,8 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
         [namespaceNames, selection]
     );
 
+    const hoverBg = useColorModeValue("blackAlpha.50", "whiteAlpha.200");
+
     const buildMenuItem = (namespace: K8sObject) => {
         const name = namespace.metadata.name;
         const isDeleting = !!(namespace.metadata as any).deletionTimestamp;
@@ -253,10 +263,16 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                 spacing={0}
                 key={name}
                 opacity={isDeleting ? 0.5 : 1}
+                py={1}
+                borderRadius="9px"
+                _hover={{
+                    bg: hoverBg,
+                }}
             >
                 <Checkbox
                     color={itemTextColor}
-                    px={4}
+                    ps={2}
+                    pe={4}
                     size="sm"
                     value={name}
                     py={1}
@@ -269,7 +285,7 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                     flexGrow={1}
                     textColor={itemTextColor}
                     isTruncated
-                    pe={4}
+                    pe={2}
                 >
                     {name}
                 </Box>
@@ -343,7 +359,7 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                     value={selectedNamespaces}
                     onChange={onChangeSelectedNamespaces}
                 >
-                    <VStack alignItems="start" spacing={2} pt={1} pb={4}>
+                    <VStack alignItems="start" spacing={0} pt={1} pb={4} px={2}>
                         {filteredNamespaces.map(buildMenuItem)}
                     </VStack>
                 </CheckboxGroup>
