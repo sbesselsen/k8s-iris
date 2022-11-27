@@ -968,7 +968,13 @@ export const NewResourceEditor: React.FC<NewResourceEditorProps> = (props) => {
     );
 
     return (
-        <VStack w="100%" h="100%" spacing={0} alignItems="stretch">
+        <VStack
+            w="100%"
+            h="100%"
+            spacing={0}
+            alignItems="stretch"
+            bg="gray.900"
+        >
             <Box px={2} py={2} flex="0 0 auto">
                 <ResourceTypeSelector
                     value={selectedResourceType}
