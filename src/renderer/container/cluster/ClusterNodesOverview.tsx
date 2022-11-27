@@ -148,7 +148,7 @@ const NodeInfo: React.FC<NodeInfoProps> = React.memo((props) => {
                             {node.metadata.name}
                         </ResourceEditorLink>
                     </Selectable>
-                    {isNew && <Badge colorScheme="primary">new</Badge>}
+                    {true && <Badge colorScheme="green">new</Badge>}
                 </HStack>
                 {(node as any)?.spec?.taints?.length > 0 && (
                     <HStack spacing={1} mt={1}>

@@ -4,8 +4,8 @@ import React from "react";
 export const Toolbar: React.FC<{}> = (props) => {
     const { children } = props;
 
-    const bgColor = useColorModeValue("gray.100", "gray.700");
-    const borderColor = useColorModeValue(bgColor, "gray.500");
+    const bgColor = useColorModeValue("gray.100", "gray.800");
+    const borderColor = useColorModeValue(bgColor, "gray.700");
 
     return (
         <HStack

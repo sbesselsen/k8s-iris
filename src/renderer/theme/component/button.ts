@@ -2,8 +2,8 @@ const solid = (props) => {
     const { colorMode, colorScheme } = props;
     return {
         transitionProperty: "none",
-        bg: colorMode === "light" ? `${colorScheme}.500` : `${colorScheme}.400`,
-        color: colorMode === "light" ? "white" : "black",
+        bg: colorMode === "light" ? `${colorScheme}.500` : `${colorScheme}.500`,
+        color: "white",
         _hover: {
             bg:
                 colorMode === "light"

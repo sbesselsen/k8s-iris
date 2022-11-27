@@ -468,11 +468,7 @@ const ResourceRow: React.FC<ResourceRowProps> = (props) => {
         <>
             <Tr>
                 <Td {...commonTdProps} ps={2} verticalAlign="baseline">
-                    <Checkbox
-                        colorScheme="primary"
-                        isChecked={isSelected}
-                        onChange={onChange}
-                    />
+                    <Checkbox isChecked={isSelected} onChange={onChange} />
                 </Td>
                 <Td
                     {...commonTdProps}

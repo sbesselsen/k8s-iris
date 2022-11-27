@@ -70,7 +70,6 @@ export const ClusterInfoOverview: React.FC = () => {
             bottomToolbar={
                 <Toolbar>
                     <Button
-                        colorScheme="primary"
                         leftIcon={<Icon as={FiTerminal} />}
                         fontWeight="normal"
                         onClick={onClickLocalShell}
