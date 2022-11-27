@@ -81,7 +81,7 @@ export const AppToolbar: React.FC = () => {
                     title="Back"
                     color={buttonColor}
                     _focus={{}}
-                    tabIndex={-1}
+                    _focusVisible={{ boxShadow: "outline" }}
                 />
                 <IconButton
                     disabled={!canGoForward}
@@ -91,7 +91,7 @@ export const AppToolbar: React.FC = () => {
                     title="Forward"
                     color={buttonColor}
                     _focus={{}}
-                    tabIndex={-1}
+                    _focusVisible={{ boxShadow: "outline" }}
                 />
             </ButtonGroup>
             <ButtonGroup variant="ghost" size="sm">
@@ -102,7 +102,7 @@ export const AppToolbar: React.FC = () => {
                     title={isSidebarVisible ? "Hide menu" : "Show menu"}
                     color={buttonColor}
                     _focus={{}}
-                    tabIndex={-1}
+                    _focusVisible={{ boxShadow: "outline" }}
                 />
             </ButtonGroup>
             <ButtonGroup variant="ghost" size="sm">
@@ -114,6 +114,8 @@ export const AppToolbar: React.FC = () => {
                         title="Lock/unlock cluster"
                         color={buttonColor}
                         fontWeight="normal"
+                        _focus={{}}
+                        _focusVisible={{ boxShadow: "outline" }}
                     />
                     <MenuList zIndex={50}>
                         <MenuOptionGroup
