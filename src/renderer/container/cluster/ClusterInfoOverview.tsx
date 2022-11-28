@@ -59,7 +59,7 @@ export const ClusterInfoOverview: React.FC = () => {
           contextInfo.cloudInfo.cloudProvider
         : "Cloud";
 
-    const headingColor = useColorModeValue("primary.900", "white");
+    const headingColor = useColorModeValue("gray.800", "white");
 
     const onClickLocalShell = useLocalShellEditorOpener();
 
@@ -70,7 +70,6 @@ export const ClusterInfoOverview: React.FC = () => {
             bottomToolbar={
                 <Toolbar>
                     <Button
-                        colorScheme="primary"
                         leftIcon={<Icon as={FiTerminal} />}
                         fontWeight="normal"
                         onClick={onClickLocalShell}

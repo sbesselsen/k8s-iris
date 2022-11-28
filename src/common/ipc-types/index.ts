@@ -152,4 +152,11 @@ export type IpcCalls = {
             context: string;
         }): Promise<IpcRendererSocketHooks>;
     };
+    appearance: {
+        getAccentColor(): Promise<string>;
+        watchAccentColor(
+            params: undefined,
+            receive: (error: any, message?: undefined | string) => void
+        ): { stop: () => void };
+    };
 };

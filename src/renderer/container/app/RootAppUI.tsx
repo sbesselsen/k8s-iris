@@ -282,7 +282,7 @@ export const RootAppUI: React.FunctionComponent = () => {
                     onRequestSidebarVisibilityChange
                 }
                 title={
-                    <HStack p={2} spacing="2px" maxWidth="350px" mx="auto">
+                    <HStack p={2} spacing="2px" maxWidth="300px" mx="auto">
                         <ContextSelectMenu ref={contextSelectMenuRef} />
                     </HStack>
                 }

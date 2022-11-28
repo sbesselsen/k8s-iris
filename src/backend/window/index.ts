@@ -54,7 +54,8 @@ export function createWindowManager(): WindowManager {
                 x: 14,
                 y: 16,
             },
-            backgroundColor: nativeTheme.shouldUseDarkColors ? "#000" : "#fff",
+            vibrancy: "sidebar",
+            backgroundColor: "#00000000",
             show: false,
             webPreferences: {
                 backgroundThrottling: false,

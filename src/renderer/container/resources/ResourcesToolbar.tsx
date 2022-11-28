@@ -310,16 +310,11 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
 
     return (
         <Toolbar>
-            <Button
-                colorScheme="primary"
-                onClick={onClickAddNew}
-                leftIcon={<AddIcon w={2} h={2} />}
-            >
+            <Button onClick={onClickAddNew} leftIcon={<AddIcon w={2} h={2} />}>
                 New
             </Button>
             {resources.length > 0 && (
                 <IconButton
-                    colorScheme="primary"
                     icon={<EditIcon />}
                     aria-label="Bulk open editor"
                     title="Bulk open editor"
@@ -328,7 +323,6 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
             )}
             {resources.length > 0 && (
                 <IconButton
-                    colorScheme="primary"
                     icon={<DeleteIcon />}
                     aria-label="Delete"
                     title="Delete"
@@ -342,7 +336,6 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
                     <ButtonGroup isAttached>
                         {isPausable && (
                             <IconButton
-                                colorScheme="primary"
                                 icon={<Icon as={MdOutlinePause} />}
                                 aria-label="Pause"
                                 title="Pause"
@@ -352,7 +345,6 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
                         )}
                         {isResumable && (
                             <IconButton
-                                colorScheme="primary"
                                 icon={<Icon as={MdPlayArrow} />}
                                 aria-label="Resume"
                                 title="Resume"

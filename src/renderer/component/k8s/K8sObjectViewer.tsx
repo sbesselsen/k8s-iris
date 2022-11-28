@@ -168,7 +168,7 @@ export const K8sInnerObjectViewer: React.FC<K8sInnerObjectViewerProps> = (
             >
                 {isEmpty && "(empty)"}
                 {isBoolean && (
-                    <Checkbox isChecked={data} colorScheme="primary" readOnly />
+                    <Checkbox isChecked={data} colorScheme="gray" readOnly />
                 )}
                 {isTimestamp && <Datetime value={timestamp} />}
                 {!isEmpty && !isBoolean && !isTimestamp && String(data)}
@@ -413,11 +413,14 @@ const K8sObjectAccordion: React.FC<K8sObjectAccordionProps> = (props) => {
         [displayableItems, setExpandedKeys]
     );
 
+    const accordionButtonColor = useColorModeValue("gray.500", "gray.200");
+    const accordionBorderColor = useColorModeValue("gray.100", "gray.700");
+
     return (
         <Accordion allowMultiple index={indexes} onChange={onChangeIndexes}>
             {displayableItems.map(({ key, item, path, selector }, index) => {
                 return (
-                    <AccordionItem key={key}>
+                    <AccordionItem key={key} borderColor={accordionBorderColor}>
                         <Heading>
                             <AccordionButton
                                 ps={0}
@@ -426,7 +429,7 @@ const K8sObjectAccordion: React.FC<K8sObjectAccordionProps> = (props) => {
                                 textColor="primary.500"
                                 textTransform="uppercase"
                             >
-                                <AccordionIcon />
+                                <AccordionIcon color={accordionButtonColor} />
                                 {key}
                             </AccordionButton>
                         </Heading>
@@ -570,11 +573,12 @@ function isSimpleArray(obj: any[]): obj is SimpleValue[] {
 }
 
 const PropHeading: React.FC<{}> = ({ children, ...props }) => {
+    const textColor = useColorModeValue("gray.600", "gray.400");
     return (
         <Heading
             fontSize="xs"
             fontWeight="semibold"
-            textColor="primary.500"
+            textColor={textColor}
             textTransform="uppercase"
             {...props}
         >

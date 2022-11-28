@@ -2,6 +2,7 @@ html,
 body {
     overflow: hidden;
     margin: 0;
+    background: transparent;
 }
 
 :not(input):not(textarea),
@@ -20,29 +21,27 @@ body {
     height: 100%;
 }
 
-body,
-body.chakra-ui-light {
-    background: #fff;
+body.chakra-ui-light,
+body.chakra-ui-dark {
+    background: transparent;
 }
 
 body.app-ui-mounted {
     height: initial;
 }
 #root {
-    background: #f8f9fa;
+    background: white;
     width: 100%;
     min-height: 48px;
+    box-sizing: content-box;
     -webkit-app-region: drag;
-    box-shadow: 0 -5px 5px 5px rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 @media (prefers-color-scheme: dark) {
-    body,
-    body.chakra-ui-dark {
-        background: #111;
-    }
     #root {
         background: #363636;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
 }
 

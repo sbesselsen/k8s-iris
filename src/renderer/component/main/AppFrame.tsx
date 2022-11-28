@@ -125,16 +125,11 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
     }, [sidebarWidth, sidebarBoxRef, sidebarContentRef]);
 
     const contentBackground = useColorModeValue("white", "gray.900");
-    const headerBackground = useColorModeValue(
-        useWindowFocusValue("primary.300", "primary.400"),
-        useWindowFocusValue("primary.700", "primary.800")
+    const headerBorderColor = useColorModeValue(
+        "gray.200",
+        useWindowFocusValue("whiteAlpha.200", "blackAlpha.600")
     );
-    const primaryColorIsGray =
-        useToken("colors", "primary.500") === useToken("colors", "gray.500");
-    const sidebarBackground = useColorModeValue(
-        "primary.100",
-        primaryColorIsGray ? "primary.800" : "primary.900"
-    );
+    const headerHeight = "48px";
 
     useWindowResizeListener(() => {
         const newSidebarFloating = shouldSidebarBeFloating();
@@ -150,139 +145,186 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
         shouldSidebarBeFloating,
     ]);
 
+    const sidebarOwnBackground = useColorModeValue("gray.100", "gray.800");
+    const sidebarBackground = isSidebarFloating
+        ? sidebarOwnBackground
+        : "transparent";
+    const sidebarHeaderBorderColor = useWindowFocusValue(
+        "transparent",
+        headerBorderColor
+    );
+
     const onClickContent = useCallback(() => {
         if (isSidebarFloating) {
             onRequestSidebarVisibilityChange?.(false);
         }
     }, [isSidebarFloating, onRequestSidebarVisibilityChange]);
 
+    const sidebarOpacity = useWindowFocusValue(
+        1.0,
+        isSidebarFloating ? 1.0 : 0.7
+    );
+    const headerBackground = useWindowFocusValue(
+        contentBackground,
+        "transparent"
+    );
+    const headerOpacity = useWindowFocusValue(1.0, 0.7);
+
     // TODO: make button offset work in Windows as well, on the other side
 
     return (
         <SidebarVisibleContext.Provider value={isSidebarVisible}>
-            <VStack
+            <HStack
+                spacing={0}
                 w="100vw"
                 h="100vh"
-                bg="green"
                 alignItems="stretch"
-                spacing={0}
+                position="relative"
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
             >
-                <HStack
-                    flex="0 0 30px"
-                    bg={headerBackground}
-                    spacing={0}
-                    justifyContent="space-between"
-                    alignItems="stretch"
-                    sx={{ WebkitAppRegion: "drag" }}
+                <Box
+                    flexGrow={0}
+                    flexShrink={0}
+                    flexBasis={isSidebarVisible ? sidebarWidth : 0}
+                    overflow="hidden"
+                    bg={sidebarBackground}
+                    ref={sidebarBoxRef}
+                    position={isSidebarFloating ? "absolute" : "relative"}
+                    top={isSidebarFloating ? headerHeight : "initial"}
+                    bottom={isSidebarFloating ? 0 : "initial"}
+                    left={isSidebarFloating ? 0 : "initial"}
+                    w={
+                        isSidebarFloating
+                            ? isSidebarVisible
+                                ? floatingSidebarWidth
+                                : 0
+                            : "initial"
+                    }
+                    zIndex={20}
+                    transitionDuration={isSidebarFloating ? "100ms" : "200ms"}
+                    transitionTimingFunction="ease-out"
+                    transitionProperty="flex-basis, width"
+                    boxShadow={isSidebarFloating ? "lg" : "none"}
+                    borderRight="1px solid"
+                    borderRightColor={headerBorderColor}
                 >
                     <Box
-                        flexGrow={0}
-                        flexShrink={10}
-                        flexBasis="250px"
-                        pl="85px"
-                        h="100%"
-                    >
-                        {toolbar}
-                    </Box>
-                    <Box
-                        flexGrow={1}
-                        flexShrink={11}
-                        flexBasis="300px"
-                        overflow="hidden"
-                        h="100%"
-                    >
-                        {title}
-                    </Box>
-                    <Box
-                        flexGrow={0}
-                        flexShrink={10}
-                        flexBasis="250px"
-                        overflow="hidden"
-                        textAlign="end"
-                        h="100%"
-                    >
-                        {search}
-                    </Box>
-                </HStack>
-                <HStack
-                    spacing={0}
-                    flex="1 0 0"
-                    alignItems="stretch"
-                    position="relative"
-                    h={0}
-                >
-                    <Box
-                        w="100%"
-                        h="3px"
+                        display={isSidebarFloating ? "none" : "block"}
                         position="absolute"
-                        bgGradient="linear(to-b, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0))"
-                        zIndex={30}
+                        w={2}
+                        h="100%"
+                        cursor="col-resize"
+                        onPointerDown={onVSeparatorPointerDown}
+                        top="0"
+                        right="0"
+                        ref={vSeparatorBoxRef}
+                        zIndex={1}
                     ></Box>
+                    {!isSidebarFloating && (
+                        <Box
+                            h={headerHeight}
+                            w={sidebarWidth}
+                            top={0}
+                            left={0}
+                            borderBottom="1px solid"
+                            borderBottomColor={sidebarHeaderBorderColor}
+                            boxSizing="content-box"
+                            sx={{ WebkitAppRegion: "drag" }}
+                            opacity={headerOpacity}
+                            position="absolute"
+                        ></Box>
+                    )}
                     <Box
-                        flexGrow={0}
-                        flexShrink={0}
-                        flexBasis={isSidebarVisible ? sidebarWidth : 0}
-                        bg={sidebarBackground}
-                        overflow="hidden"
-                        ref={sidebarBoxRef}
-                        position={isSidebarFloating ? "absolute" : "relative"}
-                        top={isSidebarFloating ? 0 : "initial"}
-                        left={isSidebarFloating ? 0 : "initial"}
-                        h={isSidebarFloating ? "100%" : "initial"}
                         w={
                             isSidebarFloating
-                                ? isSidebarVisible
-                                    ? floatingSidebarWidth
-                                    : 0
-                                : "initial"
+                                ? floatingSidebarWidth
+                                : sidebarWidth
                         }
-                        zIndex={20}
-                        transitionDuration={
-                            isSidebarFloating ? "100ms" : "200ms"
-                        }
-                        transitionTimingFunction="ease-out"
-                        transitionProperty="flex-basis, width"
-                        boxShadow={isSidebarFloating ? "lg" : "none"}
+                        ref={sidebarContentRef}
+                        position="absolute"
+                        top={isSidebarFloating ? 0 : headerHeight}
+                        bottom={0}
+                        right={0}
+                        overflow="hidden"
+                        opacity={sidebarOpacity}
+                        pt="1px"
+                    >
+                        {sidebar}
+                    </Box>
+                </Box>
+                <VStack
+                    flex="1 0 0"
+                    overflow="hidden"
+                    alignItems="stretch"
+                    spacing={0}
+                >
+                    <HStack
+                        flex="0 0 0"
+                        flexBasis={headerHeight}
+                        bg={headerBackground}
+                        borderBottom="1px solid"
+                        borderBottomColor={headerBorderColor}
+                        spacing={0}
+                        justifyContent="space-between"
+                        alignItems="stretch"
+                        opacity={headerOpacity}
+                        sx={{ WebkitAppRegion: "drag" }}
                     >
                         <Box
-                            display={isSidebarFloating ? "none" : "block"}
-                            position="absolute"
-                            w={2}
-                            h="100%"
-                            cursor="col-resize"
-                            onPointerDown={onVSeparatorPointerDown}
-                            top="0"
-                            right="0"
-                            ref={vSeparatorBoxRef}
-                            zIndex={1}
-                        ></Box>
-                        <Box
-                            w={
-                                isSidebarFloating
-                                    ? floatingSidebarWidth
-                                    : sidebarWidth
+                            flexGrow={0}
+                            flexShrink={10}
+                            flexBasis={0}
+                            pr={2}
+                            pl={
+                                !isSidebarVisible || isSidebarFloating
+                                    ? "80px"
+                                    : 2
                             }
-                            ref={sidebarContentRef}
-                            h="100%"
-                            position="absolute"
-                            right={0}
+                        >
+                            {toolbar}
+                        </Box>
+                        <Box
+                            flexGrow={1}
+                            flexShrink={11}
+                            flexBasis="300px"
                             overflow="hidden"
                         >
-                            {sidebar}
+                            {title}
                         </Box>
-                    </Box>
-                    <Box
+                        <Box
+                            flexGrow={0}
+                            flexShrink={10}
+                            flexBasis="250px"
+                            overflow="hidden"
+                            textAlign="end"
+                        >
+                            {search}
+                        </Box>
+                    </HStack>
+                    <VStack
+                        spacing={0}
                         flex="1 0 0"
                         bg={contentBackground}
-                        overflow="hidden"
-                        onClick={onClickContent}
+                        alignItems="stretch"
                     >
-                        {content}
-                    </Box>
-                </HStack>
-            </VStack>
+                        {isSidebarVisible && isSidebarFloating && (
+                            <Box
+                                position="absolute"
+                                w="100%"
+                                h="100%"
+                                onClick={onClickContent}
+                                opacity={0.7}
+                                bg={contentBackground}
+                                zIndex={1}
+                            ></Box>
+                        )}
+                        <Box flex="1 0 0" overflow="hidden">
+                            {content}
+                        </Box>
+                    </VStack>
+                </VStack>
+            </HStack>
         </SidebarVisibleContext.Provider>
     );
 };

@@ -352,7 +352,6 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
                         <>
                             {shouldShowBackButton && onBackPressed && (
                                 <Button
-                                    colorScheme="primary"
                                     variant="ghost"
                                     onClick={onBackPressed}
                                     leftIcon={<Icon as={AiFillCaretLeft} />}
@@ -371,7 +370,6 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
                                 </Button>
                             )}
                             <Button
-                                colorScheme="primary"
                                 onClick={onReview}
                                 rightIcon={<Icon as={AiFillCaretRight} />}
                                 isDisabled={originalValue === value}
@@ -383,7 +381,6 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
                     {phase === "review" && (
                         <>
                             <Button
-                                colorScheme="primary"
                                 variant="ghost"
                                 onClick={onBackToEditor}
                                 leftIcon={<Icon as={AiFillCaretLeft} />}
@@ -401,7 +398,6 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
                                 </Button>
                             )}
                             <Button
-                                colorScheme="primary"
                                 onClick={onApply}
                                 isLoading={isApplyInProgress}
                                 loadingText="Applying"

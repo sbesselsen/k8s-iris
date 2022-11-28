@@ -749,9 +749,9 @@ const WorkloadGroup: React.FC<{
     const group = useStoreValue((value) => value.groups[groupId], [groupId]);
     const showNamespace = useStoreValue((value) => value.showNamespace);
 
-    const groupEdgeBg = useColorModeValue("gray.100", "gray.700");
+    const groupEdgeBg = useColorModeValue("gray.100", "gray.800");
     const groupContentBg = useColorModeValue("white", "gray.900");
-    const headingColor = useColorModeValue("primary.500", "primary.400");
+    const headingColor = useColorModeValue("black", "white");
 
     const store = useStore();
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
@@ -845,11 +845,13 @@ const WorkloadGroup: React.FC<{
                     py={2}
                     bg="transparent"
                     h="auto"
+                    colorScheme="gray"
                     justifyContent="start"
                     fontSize="xs"
                     fontWeight="semibold"
                     textColor={headingColor}
                     textTransform="uppercase"
+                    variant="ghost"
                     onClick={toggleExpanded}
                     leftIcon={
                         <ChevronDownIcon
@@ -1152,11 +1154,7 @@ const WorkloadResourceRow: React.FC<WorkloadResourceRowProps> = (props) => {
         <>
             <Tr>
                 <Td {...commonTdProps} ps={2} verticalAlign="baseline">
-                    <Checkbox
-                        colorScheme="primary"
-                        isChecked={isSelected}
-                        onChange={onChange}
-                    />
+                    <Checkbox isChecked={isSelected} onChange={onChange} />
                 </Td>
                 <Td
                     {...commonTdProps}

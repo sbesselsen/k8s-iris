@@ -54,9 +54,7 @@ export const ClusterError: React.FC<{ error: Error }> = (props) => {
             pe={12}
             maxWidth="800px"
         >
-            <Heading textColor={"primary.500"}>
-                Error connecting to cluster
-            </Heading>
+            <Heading size="md">Error connecting to cluster</Heading>
             <Code variant="large" fontSize="sm" userSelect="text">
                 {error.message}
             </Code>
@@ -68,7 +66,6 @@ export const ClusterError: React.FC<{ error: Error }> = (props) => {
                 {supportsAppLogin && (
                     <Button
                         onClick={onClickLoginButton}
-                        colorScheme="primary"
                         isDisabled={isLoggingIn}
                     >
                         Log in

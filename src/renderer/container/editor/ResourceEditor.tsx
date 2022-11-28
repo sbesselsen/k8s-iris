@@ -6,7 +6,8 @@ import {
     EditIcon,
     RepeatIcon,
 } from "@chakra-ui/icons";
-import { FiTerminal } from "react-icons/fi";
+import { CgDetailsLess, CgDetailsMore } from "react-icons/cg";
+import { FiTerminal, FiCrosshair } from "react-icons/fi";
 import { RiTextWrap } from "react-icons/ri";
 import { MdOutlinePause, MdPlayArrow } from "react-icons/md";
 import {
@@ -25,7 +26,9 @@ import {
     Menu,
     MenuButton,
     MenuItem,
+    MenuItemOption,
     MenuList,
+    MenuOptionGroup,
     NumberDecrementStepper,
     NumberIncrementStepper,
     NumberInput,
@@ -50,6 +53,7 @@ import {
     Thead,
     Tr,
     useBreakpointValue,
+    useColorModeValue,
     useConst,
     useDisclosure,
     VStack,
@@ -384,7 +388,6 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
             bottomToolbar={
                 <Toolbar>
                     <Button
-                        colorScheme="primary"
                         leftIcon={<EditIcon />}
                         onClick={onClickEdit}
                         isDisabled={isDeleting}
@@ -392,7 +395,6 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
                         Edit
                     </Button>
                     <IconButton
-                        colorScheme="primary"
                         icon={<DeleteIcon />}
                         aria-label="Delete"
                         title="Delete"
@@ -416,7 +418,6 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
                     )}
                     {isRedeployable && (
                         <IconButton
-                            colorScheme="primary"
                             icon={<RepeatIcon />}
                             aria-label="Redeploy"
                             title="Redeploy"
@@ -486,7 +487,6 @@ const ShellButton: React.FC<{
     if (containers.length === 1) {
         return (
             <IconButton
-                colorScheme="primary"
                 icon={<Icon as={FiTerminal} />}
                 aria-label="Shell"
                 title="Shell"
@@ -499,7 +499,6 @@ const ShellButton: React.FC<{
         return (
             <Menu>
                 <MenuButton
-                    colorScheme="primary"
                     as={IconButton}
                     icon={<Icon as={FiTerminal} />}
                     aria-label="Shell"
@@ -543,7 +542,6 @@ const LogsButton: React.FC<{
     if (containers.length === 1) {
         return (
             <IconButton
-                colorScheme="primary"
                 icon={<Icon as={RiTextWrap} />}
                 aria-label="Logs"
                 title="Logs"
@@ -556,7 +554,6 @@ const LogsButton: React.FC<{
         return (
             <Menu>
                 <MenuButton
-                    colorScheme="primary"
                     as={IconButton}
                     icon={<Icon as={RiTextWrap} />}
                     aria-label="Logs"
@@ -595,7 +592,6 @@ const ScaleButton: React.FC<{
         <Popover isOpen={isOpen} onOpen={onOpen} onClose={onClose} isLazy>
             <PopoverTrigger>
                 <IconButton
-                    colorScheme="primary"
                     icon={<ArrowUpDownIcon />}
                     aria-label="Scale"
                     title="Scale"
@@ -821,16 +817,11 @@ const ScalePopoverContent: React.FC<{
             </PopoverBody>
             <PopoverFooter>
                 <HStack justifyContent="end">
-                    <Button
-                        colorScheme="primary"
-                        variant="ghost"
-                        onClick={onClose}
-                    >
+                    <Button variant="ghost" onClick={onClose}>
                         Cancel
                     </Button>
                     {!isLoadingHpas && !isAutoScaled && currentScale > 0 && (
                         <Button
-                            colorScheme="primary"
                             onClick={onClickPause}
                             isLoading={isPausing}
                             leftIcon={<Icon as={MdOutlinePause} />}
@@ -840,7 +831,6 @@ const ScalePopoverContent: React.FC<{
                     )}
                     {!isLoadingHpas && !isAutoScaled && currentScale === 0 && (
                         <Button
-                            colorScheme="primary"
                             onClick={onClickResume}
                             isLoading={isResuming}
                             leftIcon={<Icon as={MdPlayArrow} />}
@@ -850,7 +840,6 @@ const ScalePopoverContent: React.FC<{
                     )}
                     {!isLoadingHpas && !isAutoScaled && (
                         <Button
-                            colorScheme="primary"
                             isDisabled={
                                 targetScale === undefined ||
                                 currentScale === targetScale
@@ -862,9 +851,7 @@ const ScalePopoverContent: React.FC<{
                         </Button>
                     )}
                     {isAutoScaled && (
-                        <Button onClick={onClickOpenHpa} colorScheme="primary">
-                            Open HPA
-                        </Button>
+                        <Button onClick={onClickOpenHpa}>Open HPA</Button>
                     )}
                 </HStack>
             </PopoverFooter>
@@ -878,30 +865,32 @@ const ShowDetailsToggle: React.FC<{
 }> = (props) => {
     const { value, onChange } = props;
 
-    const onClickSimple = useCallback(() => {
-        onChange(false);
-    }, [onChange]);
-
-    const onClickDetailed = useCallback(() => {
-        onChange(true);
-    }, [onChange]);
+    const viewMode = value ? "detailed" : "simple";
+    const onChangeViewMode = useCallback(
+        (value: string) => {
+            onChange(value === "detailed");
+        },
+        [onChange]
+    );
 
     return (
         <Menu>
             <MenuButton
-                colorScheme="primary"
-                as={Button}
+                as={IconButton}
                 aria-label="View mode"
                 title="View mode"
-                fontWeight="normal"
-                variant="ghost"
-                rightIcon={<ChevronDownIcon />}
-            >
-                {value ? "Detailed view" : "Simple view"}
-            </MenuButton>
+                variant="solid"
+                icon={<Icon as={value ? CgDetailsMore : CgDetailsLess} />}
+            />
             <MenuList>
-                <MenuItem onClick={onClickSimple}>Simple view</MenuItem>
-                <MenuItem onClick={onClickDetailed}>Detailed view</MenuItem>
+                <MenuOptionGroup
+                    onChange={onChangeViewMode}
+                    value={viewMode}
+                    type="radio"
+                >
+                    <MenuItemOption value="simple">Simple</MenuItemOption>
+                    <MenuItemOption value="detailed">Detailed</MenuItemOption>
+                </MenuOptionGroup>
             </MenuList>
         </Menu>
     );
@@ -979,8 +968,10 @@ export const NewResourceEditor: React.FC<NewResourceEditorProps> = (props) => {
         [editorId, editorsStore, setAppRoute]
     );
 
+    const bg = useColorModeValue("white", "gray.900");
+
     return (
-        <VStack w="100%" h="100%" spacing={0} alignItems="stretch">
+        <VStack w="100%" h="100%" spacing={0} alignItems="stretch" bg={bg}>
             <Box px={2} py={2} flex="0 0 auto">
                 <ResourceTypeSelector
                     value={selectedResourceType}
@@ -1127,7 +1118,7 @@ const AssociatedPodRow: React.FC<{ object: K8sObject }> = (props) => {
                 </Selectable>
             </Td>
             <Td>
-                <ButtonGroup colorScheme="primary" size="xs">
+                <ButtonGroup size="xs">
                     <ShellButton
                         object={object}
                         isDisabled={isDeleting}
@@ -1448,7 +1439,6 @@ const PortForwardingRow: React.FC<PortForwardingRowProps> = (props) => {
                 <Td px={0} whiteSpace="nowrap">
                     {!portForward && isForwardable && (
                         <IconButton
-                            colorScheme="primary"
                             size="xs"
                             icon={<Icon as={AddIcon} />}
                             aria-label="Forward"
@@ -1458,7 +1448,6 @@ const PortForwardingRow: React.FC<PortForwardingRowProps> = (props) => {
                     )}
                     {portForward && (
                         <IconButton
-                            colorScheme="primary"
                             size="xs"
                             icon={<Icon as={DeleteIcon} />}
                             aria-label="Stop"
