@@ -253,7 +253,12 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                         {sidebar}
                     </Box>
                 </Box>
-                <VStack flex="1 0 0" alignItems="stretch" spacing={0}>
+                <VStack
+                    flex="1 0 0"
+                    overflow="hidden"
+                    alignItems="stretch"
+                    spacing={0}
+                >
                     <HStack
                         flex="0 0 0"
                         flexBasis={headerHeight}
