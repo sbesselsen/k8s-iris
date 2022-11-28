@@ -121,7 +121,7 @@ const TimelineItem: React.FC<TimelineItemProps> = (props) => {
             <Box
                 position="absolute"
                 left="-13px"
-                bg="primary.500"
+                bg="contextClue.500"
                 borderRadius="full"
                 borderWidth="2px"
                 borderColor={markerBorderColor}

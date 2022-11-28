@@ -1121,7 +1121,7 @@ const AssociatedPodRow: React.FC<{ object: K8sObject }> = (props) => {
                 </Selectable>
             </Td>
             <Td>
-                <ButtonGroup colorScheme="primary" size="xs">
+                <ButtonGroup size="xs">
                     <ShellButton
                         object={object}
                         isDisabled={isDeleting}
