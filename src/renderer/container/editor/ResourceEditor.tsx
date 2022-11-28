@@ -53,6 +53,7 @@ import {
     Thead,
     Tr,
     useBreakpointValue,
+    useColorModeValue,
     useConst,
     useDisclosure,
     VStack,
@@ -967,14 +968,10 @@ export const NewResourceEditor: React.FC<NewResourceEditorProps> = (props) => {
         [editorId, editorsStore, setAppRoute]
     );
 
+    const bg = useColorModeValue("white", "gray.900");
+
     return (
-        <VStack
-            w="100%"
-            h="100%"
-            spacing={0}
-            alignItems="stretch"
-            bg="gray.900"
-        >
+        <VStack w="100%" h="100%" spacing={0} alignItems="stretch" bg={bg}>
             <Box px={2} py={2} flex="0 0 auto">
                 <ResourceTypeSelector
                     value={selectedResourceType}
