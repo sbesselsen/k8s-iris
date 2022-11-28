@@ -120,14 +120,14 @@ const TimelineItem: React.FC<TimelineItemProps> = (props) => {
         <Box mb={4}>
             <Box
                 position="absolute"
-                left="-13px"
-                bg="contextClue.500"
+                left="-10px"
+                bg="gray.500"
                 borderRadius="full"
                 borderWidth="2px"
                 borderColor={markerBorderColor}
-                w="20px"
-                h="20px"
-                mt="3px"
+                w="14px"
+                h="14px"
+                mt="6px"
             />
             <Box position="absolute" left="15px" fontSize="xs" mt="4px">
                 <Selectable>
