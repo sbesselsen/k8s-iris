@@ -2,8 +2,8 @@ import { mode } from "@chakra-ui/theme-tools";
 
 const content = (props) => {
     const bgGradient = mode(
-        "linear(to-t, gray.200 0%, gray.100 4px)",
-        "linear(to-t, gray.700 0%, gray.800 4px)"
+        "linear(to-t, gray.200 0%, gray.100 4px, gray.100 70%, gray.200 180%)",
+        "linear(to-t, gray.700 -20%, gray.800 4px, gray.800 70%, gray.900 180%)"
     )(props);
 
     const borderColor = mode("gray.200", "gray.700")(props);
@@ -18,7 +18,6 @@ const content = (props) => {
         tab: {
             whiteSpace: "nowrap",
             marginLeft: "-1px",
-            py: 3,
             color: mode("gray.600", "gray.200")(props),
             borderLeft: "1px solid",
             borderRight: "1px solid",
@@ -27,7 +26,8 @@ const content = (props) => {
             fontWeight: "semibold",
             fontSize: props.size,
             textTransform: "uppercase",
-            px: 6,
+            px: 5,
+            py: 2,
             bgGradient,
             _selected: {
                 color: selectedColor,
