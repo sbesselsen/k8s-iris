@@ -20,7 +20,6 @@ export const Timeline: React.FC<TimelineProps> = (props) => {
     const lineColor = useColorModeValue("gray.200", "gray.600");
     const markerBorderColor = useColorModeValue("gray.200", "gray.700");
 
-    // TODO: sort events
     const sortedEvents = useMemo(() => {
         if (sort === "none") {
             return events;
@@ -60,7 +59,7 @@ export const Timeline: React.FC<TimelineProps> = (props) => {
                 position="absolute"
                 zIndex={0}
                 left="4px"
-                top="4px"
+                top="8px"
                 h="100%"
                 w="2px"
                 borderLeftWidth="2px"
@@ -72,7 +71,7 @@ export const Timeline: React.FC<TimelineProps> = (props) => {
                     position="absolute"
                     zIndex={0}
                     left="0"
-                    bottom="-4px"
+                    bottom="-8px"
                     h="2px"
                     w="10px"
                     bg={lineColor}

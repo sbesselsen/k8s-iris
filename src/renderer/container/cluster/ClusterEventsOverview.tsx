@@ -3,7 +3,7 @@ import React, { MutableRefObject, useMemo, useRef } from "react";
 import { ScrollBox } from "../../component/main/ScrollBox";
 
 import { useK8sListWatch } from "../../k8s/list-watch";
-import { Badge, Box, Text } from "@chakra-ui/react";
+import { Badge, Box, Spinner } from "@chakra-ui/react";
 import { Selectable } from "../../component/main/Selectable";
 import { useK8sNamespaces } from "../../context/k8s-namespaces";
 import { searchMatch } from "../../../common/util/search";
@@ -71,7 +71,15 @@ export const ClusterEventsOverview: React.FC = () => {
 
     return (
         <ScrollBox px={4} pt={3} pb={10} w="100%" ref={scrollBoxRef}>
-            <Timeline sort="none" pe={6} events={timelineEvents} />
+            {isLoadingEvents && <Spinner />}
+            {!isLoadingEvents && timelineEvents.length === 0 && (
+                <Box fontSize="sm" textColor="gray">
+                    No events.
+                </Box>
+            )}
+            {!isLoadingEvents && timelineEvents.length > 0 && (
+                <Timeline sort="none" pe={6} events={timelineEvents} />
+            )}
         </ScrollBox>
     );
 };
