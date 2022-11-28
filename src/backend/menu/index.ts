@@ -5,6 +5,7 @@ export type MenuManagerOptions = {
     createWindow: () => void;
     closeWindow: () => void;
     openDevTools: () => void;
+    reloadWindow: () => void;
 };
 
 export type MenuManager = {
@@ -12,7 +13,7 @@ export type MenuManager = {
 };
 
 export function createMenuManager(options: MenuManagerOptions): MenuManager {
-    const { createWindow, closeWindow, openDevTools } = options;
+    const { createWindow, closeWindow, openDevTools, reloadWindow } = options;
     const initialize = () => {
         // TODO: multiplatform testing
         const menuTemplate: MenuItemConstructorOptions[] = [
@@ -59,6 +60,13 @@ export function createMenuManager(options: MenuManagerOptions): MenuManager {
                         accelerator: "Option+Cmd+I",
                         click: () => {
                             openDevTools();
+                        },
+                    },
+                    {
+                        label: "Reload",
+                        accelerator: "Cmd+R",
+                        click: () => {
+                            reloadWindow();
                         },
                     },
                 ],

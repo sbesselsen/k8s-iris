@@ -15,6 +15,7 @@ import { isDev } from "../util/dev";
 export type WindowManager = {
     closeWindow(windowId?: string): void;
     createWindow(params?: WindowParameters): Promise<string>;
+    reloadWindow(windowId?: string): void;
     openDevTools(): void;
     setDefaultWindowParameters(params: WindowParameters): void;
     showDialog(options: DialogOptions): Promise<DialogResult>;
@@ -183,6 +184,13 @@ export function createWindowManager(): WindowManager {
         window?.close();
     };
 
+    const reloadWindow = (windowId?: string) => {
+        const window = windowId
+            ? windowHandles[windowId].window
+            : BrowserWindow.getFocusedWindow();
+        window?.reload();
+    };
+
     const openDevTools = () => {
         BrowserWindow.getFocusedWindow()?.webContents.openDevTools();
     };
@@ -212,6 +220,7 @@ export function createWindowManager(): WindowManager {
     return {
         closeWindow,
         createWindow,
+        reloadWindow,
         openDevTools,
         setDefaultWindowParameters,
         showDialog,

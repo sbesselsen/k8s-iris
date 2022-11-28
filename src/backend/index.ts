@@ -60,6 +60,9 @@ import { createWindowManager, WindowParameters } from "./window";
         openDevTools: () => {
             windowManager.openDevTools();
         },
+        reloadWindow: () => {
+            windowManager.reloadWindow();
+        },
     });
     const contextLockManager = createContextLockManager();
     const appearanceManager = createAppearanceManager();
