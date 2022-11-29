@@ -188,7 +188,7 @@ export function createWindowManager(): WindowManager {
         const window = windowId
             ? windowHandles[windowId].window
             : BrowserWindow.getFocusedWindow();
-        window?.reload();
+        window?.webContents.reloadIgnoringCache();
     };
 
     const openDevTools = () => {
