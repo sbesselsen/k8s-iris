@@ -125,11 +125,11 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
     }, [sidebarWidth, sidebarBoxRef, sidebarContentRef]);
 
     const contentBackground = useColorModeValue("white", "gray.900");
-    const headerBorderColor = useColorModeValue(
+    const headerHeight = "48px";
+    const sidebarBorderColor = useColorModeValue(
         "gray.200",
         useWindowFocusValue("whiteAlpha.200", "blackAlpha.600")
     );
-    const headerHeight = "48px";
 
     useWindowResizeListener(() => {
         const newSidebarFloating = shouldSidebarBeFloating();
@@ -149,10 +149,6 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
     const sidebarBackground = isSidebarFloating
         ? sidebarOwnBackground
         : "transparent";
-    const sidebarHeaderBorderColor = useWindowFocusValue(
-        "transparent",
-        headerBorderColor
-    );
 
     const onClickContent = useCallback(() => {
         if (isSidebarFloating) {
@@ -164,10 +160,7 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
         1.0,
         isSidebarFloating ? 1.0 : 0.7
     );
-    const headerBackground = useWindowFocusValue(
-        contentBackground,
-        "transparent"
-    );
+    const headerBackground = contentBackground;
     const headerOpacity = useWindowFocusValue(1.0, 0.7);
 
     // TODO: make button offset work in Windows as well, on the other side
@@ -206,8 +199,8 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                     transitionTimingFunction="ease-out"
                     transitionProperty="flex-basis, width"
                     boxShadow={isSidebarFloating ? "lg" : "none"}
-                    borderRight="1px solid"
-                    borderRightColor={headerBorderColor}
+                    borderRight={isSidebarFloating ? "0" : "1px solid"}
+                    borderRightColor={sidebarBorderColor}
                 >
                     <Box
                         display={isSidebarFloating ? "none" : "block"}
@@ -227,8 +220,6 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                             w={sidebarWidth}
                             top={0}
                             left={0}
-                            borderBottom="1px solid"
-                            borderBottomColor={sidebarHeaderBorderColor}
                             boxSizing="content-box"
                             sx={{ WebkitAppRegion: "drag" }}
                             opacity={headerOpacity}
@@ -263,12 +254,9 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                         flex="0 0 0"
                         flexBasis={headerHeight}
                         bg={headerBackground}
-                        borderBottom="1px solid"
-                        borderBottomColor={headerBorderColor}
                         spacing={0}
                         justifyContent="space-between"
                         alignItems="stretch"
-                        opacity={headerOpacity}
                         sx={{ WebkitAppRegion: "drag" }}
                     >
                         <Box
@@ -281,6 +269,7 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                                     ? "80px"
                                     : 2
                             }
+                            opacity={headerOpacity}
                         >
                             {toolbar}
                         </Box>
@@ -289,6 +278,7 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                             flexShrink={11}
                             flexBasis="300px"
                             overflow="hidden"
+                            opacity={headerOpacity}
                         >
                             {title}
                         </Box>
@@ -298,6 +288,7 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                             flexBasis="250px"
                             overflow="hidden"
                             textAlign="end"
+                            opacity={headerOpacity}
                         >
                             {search}
                         </Box>

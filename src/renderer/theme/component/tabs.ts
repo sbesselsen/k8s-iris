@@ -14,6 +14,8 @@ const content = (props) => {
     return {
         tablist: {
             bgGradient,
+            borderTop: "1px solid",
+            borderColor,
         },
         tab: {
             whiteSpace: "nowrap",

@@ -2,10 +2,12 @@ import { Box, BoxProps, forwardRef, HStack } from "@chakra-ui/react";
 import React, {
     ReactNode,
     useCallback,
-    useEffect,
+    useImperativeHandle,
+    useLayoutEffect,
     useRef,
     useState,
 } from "react";
+import { useWindowResizeListener } from "../../hook/window-resize";
 
 export type ScrollBoxProps = BoxProps & {
     bottomToolbar?: ReactNode;
@@ -13,6 +15,11 @@ export type ScrollBoxProps = BoxProps & {
 
 export const ScrollBox = forwardRef<ScrollBoxProps, "div">((props, ref) => {
     const { bottomToolbar, ...boxProps } = props;
+
+    const scrollBoxRef = useRef<HTMLDivElement | null>(null);
+    useImperativeHandle(ref, () => scrollBoxRef.current);
+
+    const topShadowRef = useRef<HTMLDivElement | null>(null);
 
     const bottomToolbarRef = useRef<HTMLDivElement>();
 
@@ -23,21 +30,52 @@ export const ScrollBox = forwardRef<ScrollBoxProps, "div">((props, ref) => {
         );
     }, [bottomToolbarRef, setBottomToolbarSpace]);
 
-    useEffect(() => {
+    const updateScrollShadows = useCallback(() => {
+        const elem = scrollBoxRef.current;
+        if (!elem) {
+            return;
+        }
+        if (topShadowRef.current) {
+            const scrolledDown = elem.scrollTop > 0;
+            topShadowRef.current.style.opacity = scrolledDown ? "1" : "0";
+        }
+    }, [scrollBoxRef, topShadowRef]);
+
+    useLayoutEffect(() => {
         updateBottomToolbarSpace();
-        window.addEventListener("resize", updateBottomToolbarSpace);
-        return () => {
-            window.removeEventListener("resize", updateBottomToolbarSpace);
-        };
-    }, [updateBottomToolbarSpace]);
+        updateScrollShadows();
+    }, [updateBottomToolbarSpace, updateScrollShadows]);
+
+    const onScroll = useCallback(() => {
+        updateScrollShadows();
+    }, [updateScrollShadows]);
+
+    useWindowResizeListener(() => {
+        updateBottomToolbarSpace();
+        updateScrollShadows();
+    }, [updateScrollShadows]);
 
     return (
         <Box flex="1 0 0" position="relative" overflow="hidden" display="flex">
             <Box
+                pointerEvents="none"
+                top={0}
+                left={0}
+                right={0}
+                bgGradient="linear(to-b, blackAlpha.200 0%, transparent 100%)"
+                h="6px"
+                position="absolute"
+                transition="100ms opacity ease-in-out"
+                zIndex={1}
+                opacity={0}
+                ref={topShadowRef}
+            ></Box>
+            <Box
                 flex="1 0 0"
                 overflow="hidden scroll"
+                onScroll={onScroll}
                 sx={{ scrollbarGutter: "stable" }}
-                ref={ref}
+                ref={scrollBoxRef}
                 {...boxProps}
                 {...(bottomToolbar
                     ? { pb: `${bottomToolbarSpace + 10}px` }
