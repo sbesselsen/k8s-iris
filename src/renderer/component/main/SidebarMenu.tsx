@@ -65,7 +65,7 @@ export const SidebarMainMenu: React.FC<SidebarMainMenuProps> = (props) => {
     );
 
     return (
-        <VStack pt={2} px={2} spacing={0} alignItems="stretch">
+        <VStack px={2} spacing={0} alignItems="stretch">
             {items.map((item) => (
                 <SidebarMenuButton
                     key={item.id}

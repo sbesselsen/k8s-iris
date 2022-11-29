@@ -383,8 +383,6 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
     }
     return (
         <ScrollBox
-            px={4}
-            py={2}
             bottomToolbar={
                 <Toolbar>
                     <Button
@@ -438,7 +436,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
             }
         >
             <VStack spacing={4} alignItems="stretch">
-                <HStack alignItems="baseline" pt={2}>
+                <HStack alignItems="baseline">
                     <K8sObjectHeading
                         kind={kind}
                         apiVersion={apiVersion}
@@ -972,7 +970,7 @@ export const NewResourceEditor: React.FC<NewResourceEditorProps> = (props) => {
 
     return (
         <VStack w="100%" h="100%" spacing={0} alignItems="stretch" bg={bg}>
-            <Box px={2} py={2} flex="0 0 auto">
+            <Box px={4} py={2} flex="0 0 auto">
                 <ResourceTypeSelector
                     value={selectedResourceType}
                     onChange={setSelectedResourceType}

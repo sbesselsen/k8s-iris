@@ -84,7 +84,7 @@ export const ResourceAllOverview: React.FC = () => {
 
     return (
         <VStack flex="1 0 0" spacing={0} alignItems="stretch">
-            <HStack px={2} py={2} flex="0 0 auto">
+            <HStack px={4} py={2} flex="0 0 auto">
                 <ResourceTypeSelector
                     value={selectedResourceType}
                     onChange={onSelectResourceType}
@@ -92,9 +92,8 @@ export const ResourceAllOverview: React.FC = () => {
                 />
             </HStack>
             <ScrollBox
-                px={4}
-                py={2}
                 flex="1 0 0"
+                py={2}
                 bottomToolbar={
                     <ResourcesToolbar
                         resourceType={selectedResourceType}
@@ -133,8 +132,6 @@ export const ResourceTypeOverview: React.FC<{
     return (
         <VStack flex="1 0 0" spacing={0} alignItems="stretch">
             <ScrollBox
-                px={4}
-                py={2}
                 flex="1 0 0"
                 bottomToolbar={
                     <ResourcesToolbar

@@ -16,6 +16,7 @@ import {
     Th,
     Tr,
     useColorModeValue,
+    VStack,
 } from "@chakra-ui/react";
 import { Selectable } from "../../component/main/Selectable";
 import { K8sObject } from "../../../common/k8s/client";
@@ -65,8 +66,6 @@ export const ClusterInfoOverview: React.FC = () => {
 
     return (
         <ScrollBox
-            px={4}
-            py={2}
             bottomToolbar={
                 <Toolbar>
                     <Button
@@ -79,92 +78,99 @@ export const ClusterInfoOverview: React.FC = () => {
                 </Toolbar>
             }
         >
-            <Heading textColor={headingColor} size="sm" mb={2} isTruncated>
-                Cluster
-            </Heading>
-            <Table size="sm" sx={{ tableLayout: "fixed" }}>
-                <Tbody>
-                    <Tr>
-                        <StatTh>Name</StatTh>
-                        <StatTd>
-                            <Selectable>{title}</Selectable>
-                        </StatTd>
-                    </Tr>
-                    {contextInfo?.cluster !== contextInfo?.name && (
-                        <Tr>
-                            <StatTh>Cluster</StatTh>
-                            <StatTd>{contextInfo.cluster}</StatTd>
-                        </Tr>
-                    )}
-                    {contextInfo?.user !== contextInfo?.name && (
-                        <Tr>
-                            <StatTh>User</StatTh>
-                            <StatTd>{contextInfo.user}</StatTd>
-                        </Tr>
-                    )}
-                    <Tr>
-                        <StatTh>Nodes</StatTh>
-                        <StatTd>
-                            <Selectable>{nodes?.items.length ?? ""}</Selectable>
-                        </StatTd>
-                    </Tr>
-                </Tbody>
-            </Table>
+            <VStack alignItems="stretch" spacing={6}>
+                <VStack alignItems="stretch" spacing={1}>
+                    <Heading isTruncated>Cluster</Heading>
+                    <Table size="sm" sx={{ tableLayout: "fixed" }}>
+                        <Tbody>
+                            <Tr>
+                                <StatTh>Name</StatTh>
+                                <StatTd>
+                                    <Selectable>{title}</Selectable>
+                                </StatTd>
+                            </Tr>
+                            {contextInfo?.cluster !== contextInfo?.name && (
+                                <Tr>
+                                    <StatTh>Cluster</StatTh>
+                                    <StatTd>{contextInfo.cluster}</StatTd>
+                                </Tr>
+                            )}
+                            {contextInfo?.user !== contextInfo?.name && (
+                                <Tr>
+                                    <StatTh>User</StatTh>
+                                    <StatTd>{contextInfo.user}</StatTd>
+                                </Tr>
+                            )}
+                            <Tr>
+                                <StatTh>Nodes</StatTh>
+                                <StatTd>
+                                    <Selectable>
+                                        {nodes?.items.length ?? ""}
+                                    </Selectable>
+                                </StatTd>
+                            </Tr>
+                        </Tbody>
+                    </Table>
+                </VStack>
 
-            <Heading
-                textColor={headingColor}
-                size="sm"
-                mt={6}
-                mb={2}
-                isTruncated
-            >
-                Capacity
-            </Heading>
-            {nodes && <CapacityTable nodes={nodes?.items} />}
+                <VStack alignItems="stretch" spacing={1}>
+                    <Heading isTruncated>Capacity</Heading>
+                    {nodes && <CapacityTable nodes={nodes?.items} />}
+                </VStack>
 
-            <Heading
-                textColor={headingColor}
-                size="sm"
-                mt={6}
-                mb={2}
-                isTruncated
-            >
-                {cloudProviderTitle}
-            </Heading>
+                <VStack alignItems="stretch" spacing={1}>
+                    <Heading isTruncated>{cloudProviderTitle}</Heading>
 
-            <Table size="sm" sx={{ tableLayout: "fixed" }}>
-                <Tbody>
-                    {contextInfo?.cloudInfo?.cloudService && (
-                        <Tr>
-                            <StatTh>Service</StatTh>
-                            <StatTd>
-                                {cloudServiceNames[
-                                    contextInfo.cloudInfo.cloudService
-                                ] ?? contextInfo.cloudInfo.cloudService}
-                            </StatTd>
-                        </Tr>
-                    )}
-                    {contextInfo.cloudInfo?.region && (
-                        <Tr>
-                            <StatTh>Region</StatTh>
-                            <StatTd>{contextInfo.cloudInfo?.region}</StatTd>
-                        </Tr>
-                    )}
+                    <Table size="sm" sx={{ tableLayout: "fixed" }}>
+                        <Tbody>
+                            {contextInfo?.cloudInfo?.cloudService && (
+                                <Tr>
+                                    <StatTh>Service</StatTh>
+                                    <StatTd>
+                                        {cloudServiceNames[
+                                            contextInfo.cloudInfo.cloudService
+                                        ] ?? contextInfo.cloudInfo.cloudService}
+                                    </StatTd>
+                                </Tr>
+                            )}
+                            {contextInfo.cloudInfo?.region && (
+                                <Tr>
+                                    <StatTh>Region</StatTh>
+                                    <StatTd>
+                                        {contextInfo.cloudInfo?.region}
+                                    </StatTd>
+                                </Tr>
+                            )}
 
-                    {contextInfo.cloudInfo?.accounts?.map((account, index) => (
-                        <Tr key={account.accountId + ":" + account.accountName}>
-                            <StatTh>{index === 0 ? "Account" : ""}</StatTh>
-                            <StatTd>
-                                <Selectable>
-                                    {[account.accountId, account.accountName]
-                                        .filter((t) => t)
-                                        .join(" / ")}
-                                </Selectable>
-                            </StatTd>
-                        </Tr>
-                    ))}
-                </Tbody>
-            </Table>
+                            {contextInfo.cloudInfo?.accounts?.map(
+                                (account, index) => (
+                                    <Tr
+                                        key={
+                                            account.accountId +
+                                            ":" +
+                                            account.accountName
+                                        }
+                                    >
+                                        <StatTh>
+                                            {index === 0 ? "Account" : ""}
+                                        </StatTh>
+                                        <StatTd>
+                                            <Selectable>
+                                                {[
+                                                    account.accountId,
+                                                    account.accountName,
+                                                ]
+                                                    .filter((t) => t)
+                                                    .join(" / ")}
+                                            </Selectable>
+                                        </StatTd>
+                                    </Tr>
+                                )
+                            )}
+                        </Tbody>
+                    </Table>
+                </VStack>
+            </VStack>
         </ScrollBox>
     );
 };

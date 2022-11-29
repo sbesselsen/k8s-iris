@@ -125,8 +125,6 @@ export const ClusterPortForwardsOverview: React.FC<{}> = () => {
 
     return (
         <ScrollBox
-            px={4}
-            py={2}
             flex="1 0 0"
             bottomToolbar={
                 <PortForwardsToolbar

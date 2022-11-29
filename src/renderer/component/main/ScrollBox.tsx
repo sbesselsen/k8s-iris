@@ -87,6 +87,8 @@ export const ScrollBox = forwardRef<ScrollBoxProps, "div">((props, ref) => {
                 onScroll={onScroll}
                 sx={{ scrollbarGutter: "stable" }}
                 ref={scrollBoxRef}
+                px={4}
+                py={4}
                 {...boxProps}
                 {...(bottomToolbar
                     ? { pb: `${bottomToolbarSpace + 10}px` }

@@ -52,9 +52,9 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
             [innerValue, onChange, setInnerValue]
         );
 
-        const searchBackground = useColorModeValue("gray.100", "gray.800");
+        const searchBackground = useColorModeValue("gray.50", "gray.800");
         const searchFocusedBackground = useColorModeValue(
-            "gray.200",
+            "gray.100",
             "gray.700"
         );
         const itemTextColor = useColorModeValue("black", "white");

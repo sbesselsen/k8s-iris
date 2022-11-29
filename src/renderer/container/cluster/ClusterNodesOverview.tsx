@@ -74,7 +74,7 @@ export const ClusterNodesOverview: React.FC = (props) => {
     );
 
     return (
-        <ScrollBox px={4} pt={3} pb={10} w="100%">
+        <ScrollBox pb={10} w="100%">
             <Table
                 size="sm"
                 sx={{ tableLayout: "fixed" }}

@@ -70,7 +70,7 @@ export const ClusterEventsOverview: React.FC = () => {
     }, [events, query, scrollBoxRef]);
 
     return (
-        <ScrollBox px={4} pt={3} pb={10} w="100%" ref={scrollBoxRef}>
+        <ScrollBox pb={10} w="100%" ref={scrollBoxRef}>
             {isLoadingEvents && <Spinner />}
             {!isLoadingEvents && timelineEvents.length === 0 && (
                 <Box fontSize="sm" textColor="gray">

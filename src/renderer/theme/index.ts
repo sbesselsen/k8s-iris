@@ -1,6 +1,7 @@
 import { extendTheme, ThemeConfig } from "@chakra-ui/react";
 import { Button } from "./component/button";
 import { Checkbox } from "./component/checkbox";
+import { Heading } from "./component/heading";
 import { Tabs } from "./component/tabs";
 
 const config: ThemeConfig = {
@@ -47,6 +48,7 @@ export const theme = extendTheme({
                 },
             },
         },
+        Heading,
         Tabs,
     },
 });
