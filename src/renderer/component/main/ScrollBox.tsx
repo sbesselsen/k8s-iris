@@ -1,4 +1,10 @@
-import { Box, BoxProps, forwardRef, HStack } from "@chakra-ui/react";
+import {
+    Box,
+    BoxProps,
+    forwardRef,
+    HStack,
+    useColorModeValue,
+} from "@chakra-ui/react";
 import React, {
     ReactNode,
     useCallback,
@@ -55,6 +61,11 @@ export const ScrollBox = forwardRef<ScrollBoxProps, "div">((props, ref) => {
         updateScrollShadows();
     }, [updateScrollShadows]);
 
+    const shadowGradient = useColorModeValue(
+        "linear(to-b, blackAlpha.200 0%, transparent 100%)",
+        "linear(to-b, blackAlpha.700 0%, transparent 100%)"
+    );
+
     return (
         <Box flex="1 0 0" position="relative" overflow="hidden" display="flex">
             <Box
@@ -62,7 +73,7 @@ export const ScrollBox = forwardRef<ScrollBoxProps, "div">((props, ref) => {
                 top={0}
                 left={0}
                 right={0}
-                bgGradient="linear(to-b, blackAlpha.200 0%, transparent 100%)"
+                bgGradient={shadowGradient}
                 h="6px"
                 position="absolute"
                 transition="100ms opacity ease-in-out"

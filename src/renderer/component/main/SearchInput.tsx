@@ -12,7 +12,6 @@ import React, {
     useEffect,
     useState,
 } from "react";
-import { useWindowFocusValue } from "../../hook/window-focus";
 
 export type SearchInputProps = {
     value: string;
@@ -53,13 +52,10 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
             [innerValue, onChange, setInnerValue]
         );
 
-        const searchBackground = useColorModeValue(
-            "blackAlpha.100",
-            "whiteAlpha.200"
-        );
+        const searchBackground = useColorModeValue("gray.100", "gray.800");
         const searchFocusedBackground = useColorModeValue(
-            "blackAlpha.200",
-            "whiteAlpha.300"
+            "gray.200",
+            "gray.700"
         );
         const itemTextColor = useColorModeValue("black", "white");
         const itemPlaceholderColor = useColorModeValue("gray.600", "gray.100");

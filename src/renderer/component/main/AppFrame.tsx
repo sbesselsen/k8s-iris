@@ -16,7 +16,7 @@ import React, {
     useRef,
     useState,
 } from "react";
-import { useWindowFocusValue } from "../../hook/window-focus";
+import { useWindowFocus, useWindowFocusValue } from "../../hook/window-focus";
 import { useWindowResizeListener } from "../../hook/window-resize";
 
 const SidebarVisibleContext = createContext(true);
@@ -126,10 +126,7 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
 
     const contentBackground = useColorModeValue("white", "gray.900");
     const headerHeight = "48px";
-    const sidebarBorderColor = useColorModeValue(
-        "gray.200",
-        useWindowFocusValue("whiteAlpha.200", "blackAlpha.600")
-    );
+    const sidebarBorderColor = useColorModeValue("gray.200", "black");
 
     useWindowResizeListener(() => {
         const newSidebarFloating = shouldSidebarBeFloating();
@@ -146,9 +143,9 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
     ]);
 
     const sidebarOwnBackground = useColorModeValue("gray.100", "gray.800");
-    const sidebarBackground = isSidebarFloating
-        ? sidebarOwnBackground
-        : "transparent";
+    const isFocused = useWindowFocus();
+    const sidebarBackground =
+        isSidebarFloating || !isFocused ? sidebarOwnBackground : "transparent";
 
     const onClickContent = useCallback(() => {
         if (isSidebarFloating) {

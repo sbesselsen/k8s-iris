@@ -3,10 +3,11 @@ import { mode } from "@chakra-ui/theme-tools";
 const content = (props) => {
     const bgGradient = mode(
         "linear(to-t, gray.200 0%, gray.100 4px, gray.100 70%, gray.200 180%)",
-        "linear(to-t, gray.700 -20%, gray.800 4px, gray.800 70%, gray.900 180%)"
+        "linear(to-t, gray.800 0, gray.800 70%, gray.900 180%)"
     )(props);
 
     const borderColor = mode("gray.200", "gray.700")(props);
+    const topBorderColor = mode("gray.200", "black")(props);
 
     const selectedBg = mode("white", "gray.900")(props);
     const selectedColor = mode("black", "white")(props);
@@ -15,7 +16,7 @@ const content = (props) => {
         tablist: {
             bgGradient,
             borderTop: "1px solid",
-            borderColor,
+            borderColor: topBorderColor,
         },
         tab: {
             whiteSpace: "nowrap",
@@ -39,7 +40,7 @@ const content = (props) => {
                 },
             },
             _hover: {
-                bg: "blackAlpha.200",
+                bg: mode("blackAlpha.200", "blackAlpha.300")(props),
             },
             _active: {},
             _disabled: {},
