@@ -126,7 +126,7 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
 
     const contentBackground = useColorModeValue("white", "gray.900");
     const headerHeight = "48px";
-    const sidebarBorderColor = useColorModeValue("gray.200", "black");
+    const sidebarBorderColor = useColorModeValue("gray.200", "gray.950");
 
     useWindowResizeListener(() => {
         const newSidebarFloating = shouldSidebarBeFloating();

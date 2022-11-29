@@ -70,7 +70,7 @@ export function initializeMonaco() {
             },
         ],
         colors: {
-            "editor.background": "#191919",
+            "editor.background": "#242424",
         },
     });
 

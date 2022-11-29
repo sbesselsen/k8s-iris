@@ -1,19 +1,8 @@
-import {
-    Box,
-    HStack,
-    Tab,
-    TabList,
-    TabPanel,
-    TabPanels,
-    Tabs,
-    useColorModeValue,
-    useToken,
-} from "@chakra-ui/react";
+import { Tab, TabList, TabPanel, TabPanels, Tabs } from "@chakra-ui/react";
 import React, { ReactNode, useCallback, useMemo, useRef } from "react";
 import { HibernateContainer } from "../../context/hibernate";
 import { ParamNamespace } from "../../context/param";
 import { useModifierKeyRef } from "../../hook/keyboard";
-import { useWindowFocusValue } from "../../hook/window-focus";
 import { LazyComponent } from "./LazyComponent";
 
 export type ContentTab = {

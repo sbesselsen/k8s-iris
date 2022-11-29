@@ -63,7 +63,7 @@ export const ScrollBox = forwardRef<ScrollBoxProps, "div">((props, ref) => {
 
     const shadowGradient = useColorModeValue(
         "linear(to-b, blackAlpha.200 0%, transparent 100%)",
-        "linear(to-b, blackAlpha.700 0%, transparent 100%)"
+        "linear(to-b, blackAlpha.600 0%, transparent 100%)"
     );
 
     return (
@@ -76,7 +76,7 @@ export const ScrollBox = forwardRef<ScrollBoxProps, "div">((props, ref) => {
                 bgGradient={shadowGradient}
                 h="6px"
                 position="absolute"
-                transition="100ms opacity ease-in-out"
+                transition="200ms opacity ease-in-out"
                 zIndex={1}
                 opacity={0}
                 ref={topShadowRef}

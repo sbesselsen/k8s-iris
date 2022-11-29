@@ -7,7 +7,7 @@ const content = (props) => {
     )(props);
 
     const borderColor = mode("gray.200", "gray.700")(props);
-    const topBorderColor = mode("gray.200", "black")(props);
+    const topBorderColor = mode("gray.200", "gray.950")(props);
 
     const selectedBg = mode("white", "gray.900")(props);
     const selectedColor = mode("black", "white")(props);

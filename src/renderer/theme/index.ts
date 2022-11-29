@@ -24,8 +24,9 @@ export const theme = extendTheme({
             500: grayTint(500),
             600: grayTint(600),
             700: grayTint(700),
-            800: grayTint(800),
-            900: grayTint(900),
+            800: grayTint(780),
+            900: grayTint(860),
+            950: grayTint(880),
         },
     },
     components: {
