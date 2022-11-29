@@ -27,14 +27,25 @@ export function createAppearanceManager(): AppearanceManager {
                 // Dark/light mode changed.
             }
         );
+
+        let currentAccentColor = getAccentColor();
         systemPreferences.subscribeNotification(
             "AppleColorPreferencesChangedNotification",
             () => {
-                // Accent color changed.
-                setTimeout(() => {
-                    const accentColor = getAccentColor();
-                    accentColorWatchers.forEach((l) => l(accentColor));
-                }, 100);
+                for (const ms of [100, 1000]) {
+                    // Accent color changed.
+                    // We check twice because sometimes getAccentColor() still reports
+                    // the old value after 100ms.
+                    setTimeout(() => {
+                        const newAccentColor = getAccentColor();
+                        if (newAccentColor !== currentAccentColor) {
+                            currentAccentColor = newAccentColor;
+                            accentColorWatchers.forEach((l) =>
+                                l(newAccentColor)
+                            );
+                        }
+                    }, ms);
+                }
             }
         );
     }
