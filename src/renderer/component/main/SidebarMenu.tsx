@@ -491,12 +491,7 @@ const SidebarEditorsMenuButton: React.FC<SidebarEditorsMenuButtonProps> = (
 
     const icon = (
         <Box p={2} onClick={onClickCloseCallback} lineHeight={0}>
-            <CloseIcon
-                verticalAlign="middle"
-                w={iconSize}
-                h={iconSize}
-                color={isSelected ? "white" : "gray.500"}
-            />
+            <CloseIcon verticalAlign="middle" w={iconSize} h={iconSize} />
         </Box>
     );
 
