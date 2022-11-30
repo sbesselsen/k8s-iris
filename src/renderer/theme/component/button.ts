@@ -54,6 +54,9 @@ const sidebar = (props) => {
                 color: "white",
             },
         },
+        "& > div": {
+            flexGrow: 100,
+        },
         "& .chakra-button__icon": {
             transitionProperty: "none",
             color: colorMode === "light" ? `gray.600` : `gray.100`,
@@ -86,6 +89,9 @@ const sidebarGhost = (props) => {
             "& .chakra-button__icon": {
                 color: "white",
             },
+        },
+        "& > div": {
+            flexGrow: 100,
         },
         "& .chakra-button__icon": {
             transitionProperty: "none",
