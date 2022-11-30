@@ -145,7 +145,8 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
     const sidebarOwnBackground = useColorModeValue("gray.100", "gray.800");
     const isFocused = useWindowFocus();
     const sidebarBackground =
-        isSidebarFloating || !isFocused ? sidebarOwnBackground : "transparent";
+        isSidebarFloating || isFocused ? "transparent" : sidebarOwnBackground;
+    const sidebarFloatingBrightness = useColorModeValue("95%", "150%");
 
     const onClickContent = useCallback(() => {
         if (isSidebarFloating) {
@@ -177,7 +178,7 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                     flexGrow={0}
                     flexShrink={0}
                     flexBasis={isSidebarVisible ? sidebarWidth : 0}
-                    overflow="hidden"
+                    overflow={isSidebarFloating ? "visible" : "hidden"}
                     bg={sidebarBackground}
                     ref={sidebarBoxRef}
                     position={isSidebarFloating ? "absolute" : "relative"}
@@ -195,9 +196,16 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                     transitionDuration={isSidebarFloating ? "100ms" : "200ms"}
                     transitionTimingFunction="ease-out"
                     transitionProperty="flex-basis, width"
-                    boxShadow={isSidebarFloating ? "lg" : "none"}
                     borderRight={isSidebarFloating ? "0" : "1px solid"}
                     borderRightColor={sidebarBorderColor}
+                    {...(isSidebarFloating
+                        ? {
+                              backdropFilter: "auto",
+                              backdropBlur: "20px",
+                              backdropSaturate: "150%",
+                              backdropBrightness: sidebarFloatingBrightness,
+                          }
+                        : {})}
                 >
                     <Box
                         display={isSidebarFloating ? "none" : "block"}
@@ -209,6 +217,21 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                         top="0"
                         right="0"
                         ref={vSeparatorBoxRef}
+                        zIndex={1}
+                    ></Box>
+                    <Box
+                        display={
+                            isSidebarFloating && isSidebarVisible
+                                ? "block"
+                                : "none"
+                        }
+                        position="absolute"
+                        w={2}
+                        bgGradient="linear(to-r, blackAlpha.300, transparent)"
+                        h="100%"
+                        top="0"
+                        right={-2}
+                        pointerEvents="none"
                         zIndex={1}
                     ></Box>
                     {!isSidebarFloating && (
@@ -236,7 +259,7 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                         right={0}
                         overflow="hidden"
                         opacity={sidebarOpacity}
-                        pt="1px"
+                        pt={isSidebarFloating ? 2 : "1px"}
                     >
                         {sidebar}
                     </Box>
