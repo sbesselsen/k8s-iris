@@ -1,4 +1,9 @@
 import { CloudK8sContextInfo } from "../cloud/k8s";
+import {
+    ContextMenuOptions,
+    ContextMenuResult,
+    ContextMenuTemplate,
+} from "../contextmenu";
 import { IpcRendererSocketHooks } from "../ipc/renderer";
 import {
     K8sApplyOptions,
@@ -158,5 +163,11 @@ export type IpcCalls = {
             params: undefined,
             receive: (error: any, message?: undefined | string) => void
         ): { stop: () => void };
+    };
+    contextMenu: {
+        popup(params: {
+            menuTemplate: ContextMenuTemplate;
+            options?: ContextMenuOptions;
+        }): Promise<ContextMenuResult>;
     };
 };

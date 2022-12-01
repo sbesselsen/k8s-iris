@@ -38,6 +38,7 @@ const watchContextLock = ipcSubscriber("contextLock:watch");
 const openForContext = ipcSocketOpener("shell:openForContext");
 const getAccentColor = ipcInvoker("appAppearance:getAccentColor");
 const watchAccentColor = ipcSubscriber("appAppearance:watchAccentColor");
+const contextMenuPopup = ipcInvoker("contextMenu:popup");
 
 contextBridge.exposeInMainWorld("charm", {
     app: {
@@ -80,5 +81,8 @@ contextBridge.exposeInMainWorld("charm", {
     appearance: {
         getAccentColor,
         watchAccentColor,
+    },
+    contextMenu: {
+        popup: contextMenuPopup,
     },
 } as IpcCalls);

@@ -9,6 +9,8 @@ import { wireCloudIpc } from "./cloud/ipc";
 import { cloudShellWrapper } from "./cloud/shell";
 import { createContextLockManager } from "./context-lock";
 import { wireContextLockIpc } from "./context-lock/ipc";
+import { createContextMenuManager } from "./contextmenu";
+import { wireContextMenuIpc } from "./contextmenu/ipc";
 import { createClientManager } from "./k8s";
 import { wireK8sClientIpc } from "./k8s/ipc";
 import { k8sShellWrapper } from "./k8s/shell";
@@ -66,6 +68,7 @@ import { createWindowManager, WindowParameters } from "./window";
     });
     const contextLockManager = createContextLockManager();
     const appearanceManager = createAppearanceManager();
+    const contextMenuManager = createContextMenuManager();
 
     // Initialize the main menu.
     menuManager.initialize();
@@ -77,6 +80,7 @@ import { createWindowManager, WindowParameters } from "./window";
     wireOsIpc(osManager);
     wireContextLockIpc(contextLockManager);
     wireAppearanceIpc(appearanceManager);
+    wireContextMenuIpc(contextMenuManager);
 
     ipcHandle("app:createWindow", (params?: WindowParameters) => {
         windowManager.createWindow(params);
