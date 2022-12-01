@@ -26,9 +26,7 @@ import {
     Menu,
     MenuButton,
     MenuItem,
-    MenuItemOption,
     MenuList,
-    MenuOptionGroup,
     NumberDecrementStepper,
     NumberIncrementStepper,
     NumberInput,
@@ -111,6 +109,10 @@ import { ResourceEditorLink } from "../resources/ResourceEditorLink";
 import { generateBadges, ResourceBadge } from "../../k8s/badges";
 import { formatDeveloperDateTime } from "../../util/date";
 import { isSetLike } from "../../../common/k8s/util";
+import {
+    ContextMenuButton,
+    MenuItem as ContextMenuItem,
+} from "../../component/main/ContextMenuButton";
 
 export type ResourceEditorProps = {
     editorResource: K8sObjectIdentifier;
@@ -864,33 +866,35 @@ const ShowDetailsToggle: React.FC<{
     const { value, onChange } = props;
 
     const viewMode = value ? "detailed" : "simple";
-    const onChangeViewMode = useCallback(
-        (value: string) => {
-            onChange(value === "detailed");
+    const onMenuAction = useCallback(
+        ({ actionId }: { actionId: string }) => {
+            onChange(actionId === "detailed");
         },
         [onChange]
     );
 
     return (
-        <Menu>
-            <MenuButton
-                as={IconButton}
-                aria-label="View mode"
-                title="View mode"
-                variant="solid"
-                icon={<Icon as={value ? CgDetailsMore : CgDetailsLess} />}
+        <ContextMenuButton
+            as={IconButton}
+            aria-label="View mode"
+            title="View mode"
+            variant="solid"
+            onMenuAction={onMenuAction}
+            icon={<Icon as={value ? CgDetailsMore : CgDetailsLess} />}
+        >
+            <ContextMenuItem
+                label="Simple"
+                actionId="simple"
+                type="radio"
+                checked={viewMode === "simple"}
             />
-            <MenuList>
-                <MenuOptionGroup
-                    onChange={onChangeViewMode}
-                    value={viewMode}
-                    type="radio"
-                >
-                    <MenuItemOption value="simple">Simple</MenuItemOption>
-                    <MenuItemOption value="detailed">Detailed</MenuItemOption>
-                </MenuOptionGroup>
-            </MenuList>
-        </Menu>
+            <ContextMenuItem
+                label="Detailed"
+                actionId="detailed"
+                type="radio"
+                checked={viewMode === "detailed"}
+            />
+        </ContextMenuButton>
     );
 };
 
