@@ -478,10 +478,17 @@ const ShellButton: React.FC<{
             (object as any).spec?.containers?.map((container) => ({
                 name: container.name,
                 onClick: () => {
-                    onClick(container.name);
+                    onClick?.(container.name);
                 },
             })) ?? [],
         [object, onClick]
+    );
+
+    const onMenuAction = useCallback(
+        ({ actionId }: { actionId: string }) => {
+            containers.find((c) => c.name === actionId)?.onClick();
+        },
+        [containers]
     );
 
     if (containers.length === 1) {
@@ -497,26 +504,24 @@ const ShellButton: React.FC<{
         );
     } else {
         return (
-            <Menu>
-                <MenuButton
-                    as={IconButton}
-                    icon={<Icon as={FiTerminal} />}
-                    aria-label="Shell"
-                    title="Shell"
-                    fontWeight="normal"
-                    isDisabled={isDisabled}
-                />
-                <MenuList>
-                    {containers.map((container) => (
-                        <MenuItem
-                            key={container.name}
-                            onClick={container.onClick}
-                        >
-                            {container.name}
-                        </MenuItem>
-                    ))}
-                </MenuList>
-            </Menu>
+            <ContextMenuButton
+                px={1}
+                as={IconButton}
+                icon={<Icon as={FiTerminal} />}
+                aria-label="Shell"
+                title="Shell"
+                fontWeight="normal"
+                isDisabled={isDisabled}
+                onMenuAction={onMenuAction}
+            >
+                {containers.map((container) => (
+                    <ContextMenuItem
+                        key={container.name}
+                        actionId={container.name}
+                        label={container.name}
+                    />
+                ))}
+            </ContextMenuButton>
         );
     }
 };
@@ -533,10 +538,17 @@ const LogsButton: React.FC<{
             (object as any).spec?.containers?.map((container) => ({
                 name: container.name,
                 onClick: () => {
-                    onClick(container.name);
+                    onClick?.(container.name);
                 },
             })) ?? [],
         [object, onClick]
+    );
+
+    const onMenuAction = useCallback(
+        ({ actionId }: { actionId: string }) => {
+            containers.find((c) => c.name === actionId)?.onClick();
+        },
+        [containers]
     );
 
     if (containers.length === 1) {
@@ -552,26 +564,24 @@ const LogsButton: React.FC<{
         );
     } else {
         return (
-            <Menu>
-                <MenuButton
-                    as={IconButton}
-                    icon={<Icon as={RiTextWrap} />}
-                    aria-label="Logs"
-                    title="Logs"
-                    fontWeight="normal"
-                    isDisabled={isDisabled}
-                />
-                <MenuList>
-                    {containers.map((container) => (
-                        <MenuItem
-                            key={container.name}
-                            onClick={container.onClick}
-                        >
-                            {container.name}
-                        </MenuItem>
-                    ))}
-                </MenuList>
-            </Menu>
+            <ContextMenuButton
+                px={1}
+                as={IconButton}
+                icon={<Icon as={RiTextWrap} />}
+                aria-label="Logs"
+                title="Logs"
+                fontWeight="normal"
+                isDisabled={isDisabled}
+                onMenuAction={onMenuAction}
+            >
+                {containers.map((container) => (
+                    <ContextMenuItem
+                        key={container.name}
+                        actionId={container.name}
+                        label={container.name}
+                    />
+                ))}
+            </ContextMenuButton>
         );
     }
 };
