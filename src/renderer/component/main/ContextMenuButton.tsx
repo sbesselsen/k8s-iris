@@ -1,4 +1,9 @@
-import { Button, ButtonProps } from "@chakra-ui/react";
+import {
+    Button,
+    ButtonProps,
+    forwardRef,
+    IconButtonProps,
+} from "@chakra-ui/react";
 import React, {
     MouseEventHandler,
     PropsWithChildren,
@@ -13,13 +18,17 @@ import {
 } from "../../../common/contextmenu";
 import { useIpcCall } from "../../hook/ipc";
 
-export type ContextMenuButtonProps = ButtonProps & {
-    label?: ReactNode;
-    onMenuAction?: (result: { actionId: string }) => void;
-    onMenuClose?: (result: ContextMenuResult) => void;
-};
+export type ContextMenuButtonProps = ButtonProps &
+    IconButtonProps & {
+        label?: ReactNode;
+        onMenuAction?: (result: { actionId: string }) => void;
+        onMenuClose?: (result: ContextMenuResult) => void;
+    };
 
-export const ContextMenuButton: React.FC<ContextMenuButtonProps> = (props) => {
+export const ContextMenuButton: React.FC<ContextMenuButtonProps> = forwardRef<
+    ContextMenuButtonProps,
+    "button"
+>((props, ref) => {
     const {
         label,
         onMenuAction,
@@ -69,11 +78,15 @@ export const ContextMenuButton: React.FC<ContextMenuButtonProps> = (props) => {
     );
 
     return (
-        <Button {...buttonProps} isActive={isMenuActive} onClick={onClick}>
-            {label}
-        </Button>
+        <Button
+            {...buttonProps}
+            isActive={isMenuActive}
+            onClick={onClick}
+            children={label}
+            ref={ref}
+        />
     );
-};
+});
 
 export type MenuItemProps = Omit<ContextMenuItemConstructorOptions, "submenu">;
 

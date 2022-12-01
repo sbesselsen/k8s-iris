@@ -4,11 +4,6 @@ import {
     HStack,
     Icon,
     IconButton,
-    Menu,
-    MenuButton,
-    MenuItemOption,
-    MenuList,
-    MenuOptionGroup,
     useColorModeValue,
 } from "@chakra-ui/react";
 
@@ -25,6 +20,10 @@ import {
     useContextLock,
     useContextLockSetter,
 } from "../../context/context-lock";
+import {
+    ContextMenuButton,
+    MenuItem,
+} from "../../component/main/ContextMenuButton";
 
 export const AppToolbar: React.FC = () => {
     const { canGoBack, canGoForward, goBack, goForward } = useAppRouteHistory();
@@ -59,11 +58,9 @@ export const AppToolbar: React.FC = () => {
 
     const isLocked = useContextLock();
     const setLock = useContextLockSetter();
-    const onChangeLocked = useCallback(
-        (status: string | string[]) => {
-            if (typeof status === "string") {
-                setLock(status === "locked");
-            }
+    const onLockAction = useCallback(
+        ({ actionId }: { actionId: string }) => {
+            setLock(actionId === "lock");
         },
         [setLock]
     );
@@ -106,32 +103,31 @@ export const AppToolbar: React.FC = () => {
                 />
             </ButtonGroup>
             <ButtonGroup variant="ghost" size="sm">
-                <Menu>
-                    <MenuButton
-                        as={IconButton}
-                        icon={<Icon as={isLocked ? FiLock : FiUnlock} />}
-                        aria-label="Lock/unlock cluster"
-                        title="Lock/unlock cluster"
-                        color={buttonColor}
-                        fontWeight="normal"
-                        _focus={{}}
-                        _focusVisible={{ boxShadow: "outline" }}
+                <ContextMenuButton
+                    as={IconButton}
+                    px={1}
+                    icon={<Icon as={isLocked ? FiLock : FiUnlock} />}
+                    aria-label="Lock/unlock cluster"
+                    title="Lock/unlock cluster"
+                    color={buttonColor}
+                    fontWeight="normal"
+                    onMenuAction={onLockAction}
+                    _focus={{}}
+                    _focusVisible={{ boxShadow: "outline" }}
+                >
+                    <MenuItem
+                        label="Locked"
+                        type="radio"
+                        actionId="lock"
+                        checked={isLocked}
                     />
-                    <MenuList zIndex={50}>
-                        <MenuOptionGroup
-                            onChange={onChangeLocked}
-                            value={isLocked ? "locked" : "unlocked"}
-                            type="radio"
-                        >
-                            <MenuItemOption value="locked">
-                                Locked
-                            </MenuItemOption>
-                            <MenuItemOption value="unlocked">
-                                Unlocked
-                            </MenuItemOption>
-                        </MenuOptionGroup>
-                    </MenuList>
-                </Menu>
+                    <MenuItem
+                        label="Unlocked"
+                        type="radio"
+                        actionId="unlock"
+                        checked={!isLocked}
+                    />
+                </ContextMenuButton>
             </ButtonGroup>
         </HStack>
     );
