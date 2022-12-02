@@ -7,11 +7,13 @@ import {
     useControllableState,
 } from "@chakra-ui/react";
 import {
+    createContextMenuService,
     defaultFontFamily,
     defaultFontSize,
     initializeMonaco,
     recalcFont,
 } from "./monaco-shared";
+import { useIpcCall } from "../../hook/ipc";
 
 export type MonacoCodeEditorProps = {
     originalValue?: string;
@@ -56,24 +58,38 @@ export const MonacoDiffEditor: React.FC<MonacoCodeEditorProps> = (props) => {
     });
 
     const editorValueRef = useRef<string>();
+    const popupContextMenu = useIpcCall((ipc) => ipc.contextMenu.popup);
 
     useEffect(() => {
         const isNew = !editorRef.current;
         if (!containerRef.current) {
             return;
         }
+        const contextMenuService = createContextMenuService({
+            popup: (menuTemplate, options) =>
+                popupContextMenu({ menuTemplate, options }),
+            onClick: (actionId) => {
+                editorInstance.trigger(undefined, actionId, undefined);
+            },
+        });
         const {
             language = "text/plain",
             jumpToFirstChange = true,
             ...editorOptions
         } = optionsConst ?? {};
-        const editorInstance = editor.createDiffEditor(containerRef.current, {
-            theme,
-            automaticLayout: true,
-            fontFamily: defaultFontFamily,
-            fontSize: defaultFontSize,
-            ...editorOptions,
-        });
+        const editorInstance = editor.createDiffEditor(
+            containerRef.current,
+            {
+                theme,
+                automaticLayout: true,
+                fontFamily: defaultFontFamily,
+                fontSize: defaultFontSize,
+                ...editorOptions,
+            },
+            {
+                contextMenuService,
+            }
+        );
         recalcFont(optionsConst.fontFamily ?? defaultFontFamily);
         const originalModel = editor.createModel(originalValue, language);
         const modifiedModel = editor.createModel(value, language);
@@ -112,6 +128,7 @@ export const MonacoDiffEditor: React.FC<MonacoCodeEditorProps> = (props) => {
         editorValueRef,
         optionsConst,
         editorRef,
+        popupContextMenu,
     ]);
 
     useEffect(() => {

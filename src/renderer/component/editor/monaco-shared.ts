@@ -1,4 +1,10 @@
 import { editor, languages } from "monaco-editor";
+import {
+    ContextMenuItemConstructorOptions,
+    ContextMenuOptions,
+    ContextMenuResult,
+    ContextMenuTemplate,
+} from "../../../common/contextmenu";
 // import JSONWorker from "url:monaco-editor/esm/vs/language/json/json.worker.js";
 // import CSSWorker from "url:monaco-editor/esm/vs/language/css/css.worker.js";
 // import HTMLWorker from "url:monaco-editor/esm/vs/language/html/html.worker.js";
@@ -135,4 +141,90 @@ function initializeLogLanguage() {
             ],
         },
     });
+}
+
+export type MonacoContextMenuService = {
+    showContextMenu: (params: any) => void;
+};
+
+export function createContextMenuService({
+    popup,
+    onClick,
+}: {
+    popup: (
+        menuTemplate: ContextMenuTemplate,
+        options?: ContextMenuOptions
+    ) => Promise<ContextMenuResult>;
+    onClick: (actionId: string) => void;
+}): MonacoContextMenuService {
+    function menuTemplateFromParams(params: any): ContextMenuTemplate {
+        return params
+            .getActions()
+            .map((action): ContextMenuItemConstructorOptions => {
+                if (action._id === "vs.actions.separator") {
+                    return { type: "separator" };
+                }
+                if (action.id === "editor.action.clipboardCutAction") {
+                    return { role: "cut", accelerator: "CommandOrControl+X" };
+                }
+                if (action.id === "editor.action.clipboardCopyAction") {
+                    return { role: "copy", accelerator: "CommandOrControl+C" };
+                }
+                if (action.id === "editor.action.clipboardPasteAction") {
+                    return { role: "paste", accelerator: "CommandOrControl+V" };
+                }
+                const keyBinding = params.getKeyBinding(action);
+                let accelerator: string | undefined;
+                if (keyBinding) {
+                    if (
+                        keyBinding._getElectronAccelerator &&
+                        keyBinding._parts
+                    ) {
+                        for (const part of keyBinding._parts) {
+                            const keyText =
+                                keyBinding._getElectronAccelerator(part);
+                            if (keyText) {
+                                accelerator = keyText;
+                            }
+                            if (part.ctrlKey || part.metaKey) {
+                                accelerator = `CommandOrControl+${accelerator}`;
+                            }
+                            if (part.shiftKey) {
+                                accelerator = `Shift+${accelerator}`;
+                            }
+                            if (part.altKey) {
+                                accelerator = `Option+${accelerator}`;
+                            }
+                            break; // If you want to use "chords" that's your business but keep that shit outta here
+                        }
+                    } else {
+                        console.error(
+                            "keyBinding does not have ._getElectronAccelerator or ._parts"
+                        );
+                    }
+                }
+                return {
+                    actionId: action.id,
+                    label: action.label,
+                    enabled: action.enabled,
+                    accelerator,
+                    registerAccelerator: false,
+                };
+            })
+            .filter((x) => x !== null);
+    }
+
+    function showContextMenu(params: any) {
+        const menuTemplate = menuTemplateFromParams(params);
+        popup(menuTemplate).then((result) => {
+            if (result.actionId) {
+                onClick(result.actionId);
+                // params.onHide(false);
+            } else {
+                params.onHide(true);
+            }
+        });
+    }
+
+    return { showContextMenu };
 }

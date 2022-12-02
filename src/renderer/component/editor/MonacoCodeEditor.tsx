@@ -7,11 +7,13 @@ import {
     useControllableState,
 } from "@chakra-ui/react";
 import {
+    createContextMenuService,
     defaultFontFamily,
     defaultFontSize,
     initializeMonaco,
     recalcFont,
 } from "./monaco-shared";
+import { useIpcCall } from "../../hook/ipc";
 
 export type MonacoCodeEditorProps = {
     defaultValue?: string;
@@ -51,20 +53,34 @@ export const MonacoCodeEditor: React.FC<MonacoCodeEditorProps> = (props) => {
     });
 
     const editorValueRef = useRef<string>();
+    const popupContextMenu = useIpcCall((ipc) => ipc.contextMenu.popup);
 
     useEffect(() => {
         const isNew = !editorRef.current;
         if (!containerRef.current) {
             return;
         }
-        const editorInstance = editor.create(containerRef.current, {
-            value: stateValue ?? "",
-            theme,
-            automaticLayout: true,
-            fontFamily: defaultFontFamily,
-            fontSize: defaultFontSize,
-            ...optionsConst,
+        const contextMenuService = createContextMenuService({
+            popup: (menuTemplate, options) =>
+                popupContextMenu({ menuTemplate, options }),
+            onClick: (actionId) => {
+                editorInstance.trigger(undefined, actionId, undefined);
+            },
         });
+        const editorInstance = editor.create(
+            containerRef.current,
+            {
+                value: stateValue ?? "",
+                theme,
+                automaticLayout: true,
+                fontFamily: defaultFontFamily,
+                fontSize: defaultFontSize,
+                ...optionsConst,
+            },
+            {
+                contextMenuService,
+            }
+        );
         recalcFont(optionsConst.fontFamily ?? defaultFontFamily);
         editorRef.current = editorInstance;
         editorInstance.onDidChangeModelContent(() => {
@@ -88,6 +104,7 @@ export const MonacoCodeEditor: React.FC<MonacoCodeEditorProps> = (props) => {
         editorValueRef,
         optionsConst,
         editorRef,
+        popupContextMenu,
     ]);
 
     useEffect(() => {
