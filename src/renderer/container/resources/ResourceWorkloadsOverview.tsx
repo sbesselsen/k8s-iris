@@ -600,6 +600,33 @@ function computeHelmGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
             return groupId;
         }
         if (
+            resource.metadata.annotations?.[
+                "objectset.rio.cattle.io/owner-namespace"
+            ] &&
+            resource.metadata.annotations?.[
+                "objectset.rio.cattle.io/owner-name"
+            ]
+        ) {
+            const namespace =
+                resource.metadata.annotations[
+                    "objectset.rio.cattle.io/owner-namespace"
+                ];
+            const instance =
+                resource.metadata.annotations?.[
+                    "objectset.rio.cattle.io/owner-name"
+                ];
+            if (!namespacesByInstance[instance]) {
+                namespacesByInstance[instance] = {};
+            }
+            namespacesByInstance[instance][namespace] = namespace;
+            const groupId = `${namespace}:${instance}`;
+
+            if (!groupInfo[groupId]) {
+                groupInfo[groupId] = { instance, namespace };
+            }
+            return groupId;
+        }
+        if (
             resource.metadata.namespace &&
             resource.metadata.labels?.["app.kubernetes.io/instance"]
         ) {
