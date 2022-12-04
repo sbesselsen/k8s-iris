@@ -16,7 +16,7 @@ export function cloudShellWrapper(
                 contextInfo,
             ]);
             const augmentedContext = augmentedContexts[contextInfo.name];
-            if (augmentedContext.cloudProvider === "aws") {
+            if (augmentedContext?.cloudProvider === "aws") {
                 for (const account of augmentedContext.accounts ?? []) {
                     if (account.accountName) {
                         const profile = account.accountName;
