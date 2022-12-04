@@ -333,10 +333,40 @@ function useMonitorWorkloads() {
     useK8sListWatchesListener(specs, listWatchOptions, [namespaces]);
 }
 
+type WorkloadResourceGroupGenerator = (
+    resources: K8sObject[]
+) => WorkloadResourceGroup[];
+
 function computeGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
-    const allGroups = [
-        ...computeHelmGroups(resources),
-        ...computePodSetGroups(resources),
+    const generators: WorkloadResourceGroupGenerator[] = [
+        computeHelmGroups,
+        computePodSetGroups,
+        computeDefaultGroups,
+    ];
+
+    let remainingResources: K8sObject[] = resources;
+    const outputGroups: WorkloadResourceGroup[] = [];
+    for (const generator of generators) {
+        const groups = generator(remainingResources).filter((group) => {
+            const newRemainingResources: K8sObject[] = [];
+            let groupIsNonEmpty = false;
+            for (const resource of remainingResources) {
+                if (group.contains(resource)) {
+                    groupIsNonEmpty = true;
+                } else {
+                    newRemainingResources.push(resource);
+                }
+            }
+            remainingResources = newRemainingResources;
+            return groupIsNonEmpty;
+        });
+        outputGroups.push(...groups);
+    }
+    return outputGroups;
+}
+
+function computeDefaultGroups(): WorkloadResourceGroup[] {
+    return [
         {
             id: "helm-release-data",
             title: "Helm release data",
@@ -374,21 +404,6 @@ function computeGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
             shouldDefaultExpand: true,
         },
     ];
-    let remainingResources: K8sObject[] = resources;
-    const necessaryGroups = allGroups.filter((group) => {
-        const newRemainingResources: K8sObject[] = [];
-        let groupIsNonEmpty = false;
-        for (const resource of remainingResources) {
-            if (group.contains(resource)) {
-                groupIsNonEmpty = true;
-            } else {
-                newRemainingResources.push(resource);
-            }
-        }
-        remainingResources = newRemainingResources;
-        return groupIsNonEmpty;
-    });
-    return necessaryGroups;
 }
 
 function computePodSetGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
@@ -455,16 +470,8 @@ function computePodSetGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
                 return resourceId;
             }
         }
-        for (const [groupId, group] of Object.entries(groupInfo)) {
-            if (
-                matchesLabelSelector(
-                    resource.metadata.labels ?? {},
-                    group.labelSelector
-                )
-            ) {
-                return groupId;
-            }
-            if (resource.apiVersion === "v1" && resource.kind === "Service") {
+        if (resource.apiVersion === "v1" && resource.kind === "Service") {
+            for (const [groupId, group] of Object.entries(groupInfo)) {
                 if (
                     matchesLabelSelector(
                         (resource as any)?.spec?.selector ?? {},
