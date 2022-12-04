@@ -3,6 +3,5 @@
 /node_modules
 /renderer-dev
 /.vscode
-/*-darwin-x64
-/*-darwin-arm64
+/Iris-darwin-*
 *.DS_Store

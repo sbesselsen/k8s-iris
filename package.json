@@ -11,7 +11,7 @@
         "format": "prettier --config .prettierrc 'src/**/*.ts' --write",
         "dev": "parcel build --target backend --target preload && concurrently 'parcel serve --dist-dir=renderer-dev --target renderer-dev' 'WRITABLE_CONTEXTS=colima,colima-prod npm run start'",
         "test": "parcel build && ELECTRON_DEV=0 npm run start",
-        "clean": "rimraf .parcel-cache dist Iris-darwin-x64 Iris-darwin-arm64",
+        "clean": "rimraf .parcel-cache dist Iris-darwin-x64 Iris-darwin-arm64 Iris-darwin-universal",
         "package": "npm run clean; npm run build; node scripts/package.js",
         "rebuild": "electron-rebuild -f -w node-pty",
         "postinstall": "electron-rebuild -f -w node-pty"
@@ -39,6 +39,7 @@
     "devDependencies": {
         "@chakra-ui/icons": "^1.1.1",
         "@chakra-ui/react": "^1.8.8",
+        "@electron/universal": "^1.3.4",
         "@emotion/react": "^11.9.0",
         "@emotion/styled": "^11.6.0",
         "@types/color": "^3.0.3",
