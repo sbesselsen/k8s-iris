@@ -885,6 +885,7 @@ const ShowDetailsToggle: React.FC<{
 
     return (
         <ContextMenuButton
+            px={1}
             as={IconButton}
             aria-label="View mode"
             title="View mode"
