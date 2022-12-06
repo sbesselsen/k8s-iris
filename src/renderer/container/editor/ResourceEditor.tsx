@@ -215,6 +215,9 @@ export const ResourceEditor: React.FC<ResourceEditorProps> = (props) => {
             ...(editorResource.namespace
                 ? { namespaces: [editorResource.namespace] }
                 : {}),
+            fieldSelector: [
+                { name: "metadata.name", value: editorResource.name },
+            ],
         },
         {},
         [editorResource]
