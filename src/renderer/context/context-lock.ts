@@ -119,17 +119,9 @@ export function useContextLockHelpers(): {
                         type: "warning",
                         message: "This cluster is in read-only mode.",
                         detail: "You can only continue after you unlock the cluster.",
-                        buttons: [
-                            "Continue and Unlock",
-                            "Continue Once",
-                            "Cancel",
-                        ],
-                        defaultId: 2,
+                        buttons: ["Unlock and Continue", "Cancel"],
+                        defaultId: 1,
                     });
-                    if (result.response === 1) {
-                        // Continue once but don't unlock.
-                        return true;
-                    }
                     if (result.response === 0) {
                         // Continue and unlock.
                         setLock(false);
