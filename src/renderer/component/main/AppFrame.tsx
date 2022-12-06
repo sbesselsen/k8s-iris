@@ -325,9 +325,9 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                                 w="100%"
                                 h="100%"
                                 onClick={onClickContent}
-                                opacity={0.7}
+                                opacity={0.9}
                                 bg={contentBackground}
-                                zIndex={1}
+                                zIndex={10}
                             ></Box>
                         )}
                         <Box flex="1 0 0" overflow="hidden">
