@@ -34,7 +34,7 @@ export function deploymentStatusBadges(resource: K8sObject): ResourceBadge[] {
         return badges;
     }
 
-    const conditions = (resource as any)?.status?.conditions;
+    const conditions = (resource as any)?.status?.conditions ?? [];
     const unavailableCondition = conditions.find(
         (c) => c.type === "Available" && c.status === "False"
     );
