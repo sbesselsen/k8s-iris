@@ -18,6 +18,7 @@ import React, {
     ElementType,
     KeyboardEvent,
     MouseEvent,
+    MouseEventHandler,
     ReactNode,
     useCallback,
     useMemo,
@@ -32,6 +33,7 @@ import {
 import { searchMatch } from "../../../common/util/search";
 import { ResourceContextMenu } from "../../container/resources/ResourceContextMenu";
 import { useAppSearch } from "../../context/search";
+import { useIpcCall } from "../../hook/ipc";
 import { useModifierKeyRef } from "../../hook/keyboard";
 import { useMultiSelectUpdater } from "../../hook/multi-select";
 
@@ -483,6 +485,20 @@ const SidebarEditorsMenuButton: React.FC<SidebarEditorsMenuButtonProps> = (
 
     const iconSize = 2;
 
+    const popup = useIpcCall((ipc) => ipc.contextMenu.popup);
+    const onContextMenu: MouseEventHandler = useCallback(() => {
+        if (!onClose) {
+            return;
+        }
+        popup({
+            menuTemplate: [{ label: "Close", actionId: "close" }],
+        }).then(({ actionId }) => {
+            if (actionId === "close") {
+                onClose();
+            }
+        });
+    }, [onClose, popup]);
+
     const onClickCloseCallback = useCallback(
         (e: MouseEvent) => {
             e.stopPropagation();
@@ -537,6 +553,7 @@ const SidebarEditorsMenuButton: React.FC<SidebarEditorsMenuButtonProps> = (
             onClick={onSelect}
             onKeyDown={onKeyDown}
             onMouseDown={onMouseDown}
+            onContextMenu={onContextMenu}
             isActive={isSelected}
         >
             {item.name}
