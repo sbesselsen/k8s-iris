@@ -30,6 +30,7 @@ import {
     AppNamespacesSelection,
 } from "../../../common/route/app-route";
 import { searchMatch } from "../../../common/util/search";
+import { ResourceContextMenu } from "../../container/resources/ResourceContextMenu";
 import { useAppSearch } from "../../context/search";
 import { useModifierKeyRef } from "../../hook/keyboard";
 import { useMultiSelectUpdater } from "../../hook/multi-select";
@@ -279,16 +280,18 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                     borderColor={checkboxBorderColor}
                     flexShrink={0}
                 />
-                <Box
-                    fontSize="sm"
-                    onClick={onClickSingleNamespace[name]}
-                    flexGrow={1}
-                    textColor={itemTextColor}
-                    isTruncated
-                    pe={2}
-                >
-                    {name}
-                </Box>
+                <ResourceContextMenu object={namespace}>
+                    <Box
+                        fontSize="sm"
+                        onClick={onClickSingleNamespace[name]}
+                        flexGrow={1}
+                        textColor={itemTextColor}
+                        isTruncated
+                        pe={2}
+                    >
+                        {name}
+                    </Box>
+                </ResourceContextMenu>
             </HStack>
         );
     };
