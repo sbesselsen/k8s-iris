@@ -67,12 +67,18 @@ export function updateResourceListByVersion(
 export function resourceIdentifier(
     obj: K8sObject | K8sObjectIdentifier
 ): string {
-    if ("metadata" in obj) {
+    if (isK8sObject(obj)) {
         return `${obj.apiVersion}:${obj.kind}:${obj.metadata.namespace ?? ""}:${
             obj.metadata.name
         }`;
     }
     return `${obj.apiVersion}:${obj.kind}:${obj.namespace ?? ""}:${obj.name}`;
+}
+
+export function isK8sObject(
+    obj: K8sObject | K8sObjectIdentifier
+): obj is K8sObject {
+    return "metadata" in obj;
 }
 
 export function toK8sObjectIdentifier(
@@ -191,4 +197,40 @@ export function isSetLike(object: K8sResourceTypeIdentifier) {
         );
     }
     return false;
+}
+
+export function uiLabelForObjects(
+    resources: Array<K8sObject | K8sObjectIdentifier>
+): { label: string } {
+    if (resources.length === 0) {
+        return { label: "(none)" };
+    }
+    const namesByKind: Record<string, string[]> = {};
+    for (const resource of resources) {
+        const identifier = toK8sObjectIdentifier(resource);
+        if (!namesByKind[identifier.kind]) {
+            namesByKind[identifier.kind] = [];
+        }
+        namesByKind[identifier.kind].push(identifier.name);
+    }
+    const kinds = Object.keys(namesByKind);
+
+    function labelNames(names: string[]): string {
+        const maxNamed = 5;
+        if (names.length <= maxNamed) {
+            return names.join(", ");
+        }
+        return (
+            labelNames(names.slice(0, maxNamed)) +
+            `, … (+${names.length - maxNamed})`
+        );
+    }
+
+    if (kinds.length === 1) {
+        return { label: labelNames(namesByKind[kinds[0]]) };
+    }
+    const kindLabels = kinds.map(
+        (kind) => kind.toLocaleLowerCase() + " " + labelNames(namesByKind[kind])
+    );
+    return { label: kindLabels.join("; ") };
 }
