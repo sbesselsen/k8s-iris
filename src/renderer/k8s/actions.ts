@@ -53,6 +53,163 @@ export function useK8sDeleteAction(): (
     );
 }
 
+export function useK8sPauseAction(): (
+    resources: Array<K8sObject>
+) => Promise<{ willPause: boolean }> {
+    const client = useK8sClient();
+
+    const showDialog = useDialog();
+    const { checkContextLock } = useContextLockHelpers();
+
+    return useCallback(
+        async (resources) => {
+            if (resources.length === 0) {
+                return { willPause: false };
+            }
+            if (!(await checkContextLock())) {
+                return { willPause: false };
+            }
+            const { label } = uiLabelForObjects(resources);
+            const result = await showDialog({
+                title: "Are you sure?",
+                type: "question",
+                message:
+                    "Pausing workloads will switch them off and make them unavailable.",
+                detail: `Are you sure you want to pause ${label}?`,
+                buttons: ["Pause", "Cancel"],
+            });
+            if (result.response === 1) {
+                return { willPause: false };
+            }
+            const errors: string[] = [];
+            await Promise.all(
+                resources.map(async (resource) => {
+                    const originalScale =
+                        (resource as any)?.spec?.replicas ?? 1;
+                    if (originalScale === 0) {
+                        return;
+                    }
+                    try {
+                        await client.apply({
+                            ...resource,
+                            metadata: {
+                                ...resource.metadata,
+                                annotations: {
+                                    ...resource.metadata.annotations,
+                                    "irisapp.dev/original-replicas":
+                                        String(originalScale),
+                                },
+                            },
+                            spec: {
+                                ...(resource as any).spec,
+                                replicas: 0,
+                            },
+                        } as K8sObject);
+                    } catch (e) {
+                        errors.push(e.message);
+                    }
+                })
+            );
+            if (errors.length > 0) {
+                console.error("Errors while scaling", errors);
+                showDialog({
+                    title: "Error while scaling",
+                    type: "error",
+                    message: "An error occurred while applying the new scale:",
+                    detail:
+                        errors.length === 1
+                            ? errors[0]
+                            : errors.map((e) => `- ${e}`).join("\n"),
+                    buttons: ["OK"],
+                });
+            }
+            return { willPause: true };
+        },
+        [client, checkContextLock, showDialog]
+    );
+}
+
+export function useK8sResumeAction(): (
+    resources: Array<K8sObject>
+) => Promise<{ willResume: boolean }> {
+    const client = useK8sClient();
+
+    const showDialog = useDialog();
+    const { checkContextLock } = useContextLockHelpers();
+
+    return useCallback(
+        async (resources) => {
+            if (resources.length === 0) {
+                return { willResume: false };
+            }
+            if (!(await checkContextLock())) {
+                return { willResume: false };
+            }
+            const errors: string[] = [];
+            await Promise.all(
+                resources.map(async (resource) => {
+                    let targetScale = 1;
+                    if (
+                        (resource as any)?.metadata?.annotations?.[
+                            "irisapp.dev/original-replicas"
+                        ]
+                    ) {
+                        const originalScale = parseInt(
+                            (resource as any).metadata.annotations[
+                                "irisapp.dev/original-replicas"
+                            ],
+                            10
+                        );
+                        if (originalScale > 0 && !isNaN(originalScale)) {
+                            targetScale = originalScale;
+                        }
+                    }
+
+                    // Never let resume scal something *down*.
+                    const currentScale = (resource as any).spec?.replicas;
+                    if (currentScale > 1) {
+                        targetScale = currentScale;
+                    }
+
+                    const annotations = { ...resource.metadata.annotations };
+                    delete annotations["irisapp.dev/original-replicas"];
+
+                    try {
+                        await client.apply({
+                            ...resource,
+                            metadata: {
+                                ...resource.metadata,
+                                annotations,
+                            },
+                            spec: {
+                                ...(resource as any).spec,
+                                replicas: targetScale,
+                            },
+                        } as K8sObject);
+                    } catch (e) {
+                        errors.push(e.message);
+                    }
+                })
+            );
+            if (errors.length > 0) {
+                console.error("Errors while scaling", errors);
+                showDialog({
+                    title: "Error while scaling",
+                    type: "error",
+                    message: "An error occurred while applying the new scale:",
+                    detail:
+                        errors.length === 1
+                            ? errors[0]
+                            : errors.map((e) => `- ${e}`).join("\n"),
+                    buttons: ["OK"],
+                });
+            }
+            return { willResume: true };
+        },
+        [client, checkContextLock, showDialog]
+    );
+}
+
 export function useK8sRedeployAction(): (
     resources: Array<K8sObject>
 ) => Promise<{ willRedeploy: boolean }> {
