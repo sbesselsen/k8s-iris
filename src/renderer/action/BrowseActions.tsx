@@ -2,20 +2,17 @@ import React, { useCallback, useMemo } from "react";
 import { Action, ActionGroup } from ".";
 import { K8sObject, K8sObjectIdentifier } from "../../common/k8s/client";
 import { toK8sObjectIdentifier } from "../../common/k8s/util";
-import { useAppEditorsStore } from "../context/editors";
 import { useAppRouteGetter, useAppRouteSetter } from "../context/route";
 import { useIpcCall } from "../hook/ipc";
 
-export const OpenActions: React.FC<{
+export const BrowseActions: React.FC<{
     objects: Array<K8sObject | K8sObjectIdentifier>;
 }> = ({ objects }) => {
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
     const getAppRoute = useAppRouteGetter();
     const setAppRoute = useAppRouteSetter();
 
-    const appEditorsStore = useAppEditorsStore();
-
-    const allowOpen = useMemo(
+    const allowBrowse = useMemo(
         () =>
             objects.length === 1 &&
             objects.every(
@@ -24,7 +21,7 @@ export const OpenActions: React.FC<{
         [objects]
     );
 
-    const onClickOpen = useCallback(() => {
+    const onClickBrowse = useCallback(() => {
         const identifier = toK8sObjectIdentifier(objects[0]);
         setAppRoute((route) => ({
             ...route,
@@ -38,7 +35,7 @@ export const OpenActions: React.FC<{
         }));
     }, [objects, setAppRoute]);
 
-    const onClickOpenInNewWindow = useCallback(() => {
+    const onClickBrowseInNewWindow = useCallback(() => {
         const identifier = toK8sObjectIdentifier(objects[0]);
         const route = getAppRoute();
         createWindow({
@@ -55,17 +52,17 @@ export const OpenActions: React.FC<{
         });
     }, [objects, createWindow, getAppRoute]);
 
-    if (!allowOpen) {
+    if (!allowBrowse) {
         return null;
     }
 
     return (
         <ActionGroup>
-            <Action id="open" label="Open" onClick={onClickOpen} />
+            <Action id="browse" label="Browse" onClick={onClickBrowse} />
             <Action
-                id="openInNewWindow"
-                label="Open in New Window"
-                onClick={onClickOpenInNewWindow}
+                id="browseInNewWindow"
+                label="Browse in New Window"
+                onClick={onClickBrowseInNewWindow}
             />
         </ActionGroup>
     );

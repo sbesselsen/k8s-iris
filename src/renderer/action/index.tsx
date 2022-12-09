@@ -10,7 +10,7 @@ import React, {
 import { K8sObject, K8sObjectIdentifier } from "../../common/k8s/client";
 import { create, createStore } from "../util/state";
 import { EditActions } from "./EditActions";
-import { OpenActions } from "./OpenActions";
+import { BrowseActions } from "./BrowseActions";
 
 type ActionStore = {
     actions: Array<ActionTemplate & { groupId: string }>;
@@ -46,7 +46,7 @@ export const ActionsCollector: React.FC<{
 
     return (
         <ActionStoreContext.Provider value={store}>
-            <OpenActions objects={objects} />
+            <BrowseActions objects={objects} />
             <EditActions objects={objects} />
         </ActionStoreContext.Provider>
     );
