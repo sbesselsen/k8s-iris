@@ -11,6 +11,7 @@ import { K8sObject, K8sObjectIdentifier } from "../../common/k8s/client";
 import { create, createStore } from "../util/state";
 import { EditActions } from "./EditActions";
 import { BrowseActions } from "./BrowseActions";
+import { ContextMenuResult } from "../../common/contextmenu";
 
 type ActionStore = {
     actions: Array<ActionTemplate & { groupId: string }>;
@@ -52,6 +53,8 @@ export const ActionsCollector: React.FC<{
     );
 };
 
+export type ActionClickResult = Omit<ContextMenuResult, "actionId">;
+
 export type ActionTemplate = {
     id: string;
     label: string;
@@ -59,7 +62,7 @@ export type ActionTemplate = {
     enabled?: boolean;
     checked?: boolean;
     toolTip?: string;
-    onClick: () => void | Promise<void>;
+    onClick: (result: ActionClickResult) => void | Promise<void>;
 };
 
 export const Action: React.FC<ActionTemplate> = (props) => {

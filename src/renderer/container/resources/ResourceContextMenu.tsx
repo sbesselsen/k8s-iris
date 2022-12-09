@@ -7,7 +7,11 @@ import React, {
 } from "react";
 import { ContextMenuTemplate } from "../../../common/contextmenu";
 import { K8sObject, K8sObjectIdentifier } from "../../../common/k8s/client";
-import { ActionsCollector, ActionTemplate } from "../../action";
+import {
+    ActionClickResult,
+    ActionsCollector,
+    ActionTemplate,
+} from "../../action";
 import { useIpcCall } from "../../hook/ipc";
 
 export type ResourceContextMenuProps = PropsWithChildren<{
@@ -31,8 +35,10 @@ export const ResourceContextMenu: React.FC<ResourceContextMenuProps> = (
                 return;
             }
             const menuTemplate: ContextMenuTemplate = [];
-            const actionHandlers: Record<string, () => void | Promise<void>> =
-                {};
+            const actionHandlers: Record<
+                string,
+                (result: ActionClickResult) => void | Promise<void>
+            > = {};
             for (const actionGroup of actions) {
                 for (const action of actionGroup) {
                     const { onClick, ...menuItemProps } = action;
@@ -48,9 +54,9 @@ export const ResourceContextMenu: React.FC<ResourceContextMenuProps> = (
 
             popup({
                 menuTemplate,
-            }).then(({ actionId }) => {
-                if (actionId) {
-                    actionHandlers[actionId]?.();
+            }).then((result) => {
+                if (result.actionId) {
+                    actionHandlers[result.actionId]?.(result);
                 }
             });
         },

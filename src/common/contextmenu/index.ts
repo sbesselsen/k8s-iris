@@ -17,4 +17,8 @@ export type ContextMenuOptions = {
 
 export type ContextMenuResult = {
     actionId?: string;
+    ctrlKey?: boolean;
+    metaKey?: boolean;
+    shiftKey?: boolean;
+    altKey?: boolean;
 };

@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo } from "react";
-import { Action, ActionGroup } from ".";
+import { Action, ActionClickResult, ActionGroup } from ".";
 import { K8sObject, K8sObjectIdentifier } from "../../common/k8s/client";
 import { toK8sObjectIdentifier } from "../../common/k8s/util";
 import { useAppRouteGetter, useAppRouteSetter } from "../context/route";
@@ -21,36 +21,39 @@ export const BrowseActions: React.FC<{
         [objects]
     );
 
-    const onClickBrowse = useCallback(() => {
-        const identifier = toK8sObjectIdentifier(objects[0]);
-        setAppRoute((route) => ({
-            ...route,
-            activeEditor: null,
-            namespaces: {
-                mode: "selected",
-                selected: [identifier.name],
-            },
-            menuItem: "resources",
-            menuTab: { ...route.menuTab, resources: "workloads" },
-        }));
-    }, [objects, setAppRoute]);
-
-    const onClickBrowseInNewWindow = useCallback(() => {
-        const identifier = toK8sObjectIdentifier(objects[0]);
-        const route = getAppRoute();
-        createWindow({
-            route: {
-                ...route,
-                activeEditor: null,
-                namespaces: {
-                    mode: "selected",
-                    selected: [identifier.name],
-                },
-                menuItem: "resources",
-                menuTab: { ...route.menuTab, resources: "workloads" },
-            },
-        });
-    }, [objects, createWindow, getAppRoute]);
+    const onClickBrowse = useCallback(
+        (result: ActionClickResult) => {
+            const identifier = toK8sObjectIdentifier(objects[0]);
+            if (result.metaKey) {
+                const route = getAppRoute();
+                createWindow({
+                    route: {
+                        ...route,
+                        activeEditor: null,
+                        isSidebarVisible: false,
+                        namespaces: {
+                            mode: "selected",
+                            selected: [identifier.name],
+                        },
+                        menuItem: "resources",
+                        menuTab: { ...route.menuTab, resources: "workloads" },
+                    },
+                });
+            } else {
+                setAppRoute((route) => ({
+                    ...route,
+                    activeEditor: null,
+                    namespaces: {
+                        mode: "selected",
+                        selected: [identifier.name],
+                    },
+                    menuItem: "resources",
+                    menuTab: { ...route.menuTab, resources: "workloads" },
+                }));
+            }
+        },
+        [objects, createWindow, getAppRoute, setAppRoute]
+    );
 
     if (!allowBrowse) {
         return null;
@@ -59,11 +62,6 @@ export const BrowseActions: React.FC<{
     return (
         <ActionGroup>
             <Action id="browse" label="Browse" onClick={onClickBrowse} />
-            <Action
-                id="browseInNewWindow"
-                label="Browse in New Window"
-                onClick={onClickBrowseInNewWindow}
-            />
         </ActionGroup>
     );
 };

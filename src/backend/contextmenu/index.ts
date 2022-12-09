@@ -42,27 +42,39 @@ export function createContextMenuManager(): ContextMenuManager {
 
 function hookupActions(
     menuTemplate: ContextMenuTemplate
-): [Array<MenuItemConstructorOptions>, Promise<{ actionId: string }>] {
+): [
+    Array<MenuItemConstructorOptions>,
+    Promise<ContextMenuResult & { actionId: string }>
+] {
     let processedTemplate: Array<MenuItemConstructorOptions> = [];
-    const actionPromise = new Promise<{ actionId: string }>((resolve) => {
-        function processItem(
-            item: ContextMenuItemConstructorOptions
-        ): MenuItemConstructorOptions {
-            const processedItem: MenuItemConstructorOptions = { ...item };
-            const { actionId, submenu } = item;
-            if (actionId) {
-                processedItem.click = () => {
-                    resolve({ actionId });
-                };
+    const actionPromise = new Promise<ContextMenuResult & { actionId: string }>(
+        (resolve) => {
+            function processItem(
+                item: ContextMenuItemConstructorOptions
+            ): MenuItemConstructorOptions {
+                const processedItem: MenuItemConstructorOptions = { ...item };
+                const { actionId, submenu } = item;
+                if (actionId) {
+                    processedItem.click = (_item, _window, e) => {
+                        const { ctrlKey, metaKey, shiftKey, altKey } = e;
+                        resolve({
+                            actionId,
+                            ctrlKey,
+                            metaKey,
+                            shiftKey,
+                            altKey,
+                        });
+                    };
+                }
+                if (submenu) {
+                    processedItem.submenu = item.submenu?.map(processItem);
+                }
+                return processedItem;
             }
-            if (submenu) {
-                processedItem.submenu = item.submenu?.map(processItem);
-            }
-            return processedItem;
-        }
 
-        processedTemplate = menuTemplate.map(processItem);
-    });
+            processedTemplate = menuTemplate.map(processItem);
+        }
+    );
 
     return [processedTemplate, actionPromise];
 }
