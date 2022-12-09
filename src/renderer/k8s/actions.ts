@@ -8,7 +8,7 @@ import { useK8sClient } from "./client";
 
 export function useK8sDeleteAction(): (
     resources: Array<K8sObject>
-) => Promise<void> {
+) => Promise<{ willDelete: boolean }> {
     const client = useK8sClient();
 
     const showDialog = useDialog();
@@ -19,17 +19,17 @@ export function useK8sDeleteAction(): (
     return useCallback(
         async (resources: Array<K8sObject>) => {
             if (resources.length === 0) {
-                return;
+                return { willDelete: false };
             }
             if (!(await checkContextLock())) {
-                return;
+                return { willDelete: false };
             }
             const { label } = uiLabelForObjects(resources);
             const result = await showDialog({
-                title: "Confirm deletion",
+                title: "Confirm delete",
                 message: "Are you sure?",
                 detail: `Are you sure you want to delete ${label}?`,
-                buttons: ["Yes", "No"],
+                buttons: ["Delete", "Cancel"],
             });
             if (result.response === 0) {
                 await Promise.all(
@@ -45,8 +45,43 @@ export function useK8sDeleteAction(): (
                         resources.some((r) => !isEditorForResource(e, r))
                     )
                 );
+                return { willDelete: true };
             }
+            return { willDelete: false };
         },
         [appEditorStore, checkContextLock, client, showDialog]
+    );
+}
+
+export function useK8sRedeployAction(): (
+    resources: Array<K8sObject>
+) => Promise<{ willRedeploy: boolean }> {
+    const client = useK8sClient();
+
+    const showDialog = useDialog();
+    const { checkContextLock } = useContextLockHelpers();
+
+    return useCallback(
+        async (resources: Array<K8sObject>) => {
+            if (resources.length === 0) {
+                return { willRedeploy: false };
+            }
+            if (!(await checkContextLock())) {
+                return { willRedeploy: false };
+            }
+            const { label } = uiLabelForObjects(resources);
+            const result = await showDialog({
+                title: "Confirm redeploy",
+                message: "Are you sure?",
+                detail: `Are you sure you want to redeploy ${label}?`,
+                buttons: ["Redeploy", "Cancel"],
+            });
+            if (result.response === 0) {
+                await Promise.all(resources.map((r) => client.redeploy(r)));
+                return { willRedeploy: true };
+            }
+            return { willRedeploy: false };
+        },
+        [checkContextLock, client, showDialog]
     );
 }

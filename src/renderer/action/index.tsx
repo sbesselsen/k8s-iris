@@ -12,6 +12,7 @@ import { create, createStore } from "../util/state";
 import { EditActions } from "./EditActions";
 import { BrowseActions } from "./BrowseActions";
 import { ContextMenuResult } from "../../common/contextmenu";
+import { LifecycleActions } from "./LifecycleActions";
 
 type ActionStore = {
     actions: Array<ActionTemplate & { groupId: string }>;
@@ -49,6 +50,7 @@ export const ActionsCollector: React.FC<{
         <ActionStoreContext.Provider value={store}>
             <BrowseActions objects={objects} />
             <EditActions objects={objects} />
+            <LifecycleActions objects={objects} />
         </ActionStoreContext.Provider>
     );
 };

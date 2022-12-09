@@ -113,6 +113,7 @@ import {
     ContextMenuButton,
     MenuItem as ContextMenuItem,
 } from "../../component/main/ContextMenuButton";
+import { useK8sDeleteAction, useK8sRedeployAction } from "../../k8s/actions";
 
 export type ResourceEditorProps = {
     editorResource: K8sObjectIdentifier;
@@ -263,20 +264,19 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
 
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
     const metaKeyPressedRef = useModifierKeyRef("Meta");
-    const client = useK8sClient();
-    const showDialog = useDialog();
 
     const openEditor = useEditorOpener();
 
     const { checkContextLock } = useContextLockHelpers();
-
-    const appEditorStore = useAppEditorsStore();
 
     const [showDetails, setShowDetails] = useState(false);
     const [mode, setMode] = useAppParam<"view" | "edit">("editorMode", "view");
     const [isDeleting, setIsDeleting] = useState(false);
 
     const [expandedItems, setExpandedItems] = useState<string[]>([]);
+
+    const deleteResource = useK8sDeleteAction();
+    const redeploy = useK8sRedeployAction();
 
     const onCancelEdit = useCallback(() => {
         setMode("view");
@@ -290,38 +290,13 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
             setMode("edit");
         }
     }, [createWindow, metaKeyPressedRef, setMode]);
-    const onClickDelete = useCallback(() => {
-        (async () => {
-            if (!(await checkContextLock())) {
-                return;
-            }
-            const result = await showDialog({
-                title: "Confirm deletion",
-                message: "Are you sure?",
-                detail: `Are you sure you want to delete ${object.kind.toLocaleLowerCase()} ${
-                    object.metadata.name
-                }?`,
-                buttons: ["Yes", "No"],
-            });
-            if (result.response === 0) {
-                setIsDeleting(true);
-                await client.remove(object, { waitForCompletion: false });
-
-                // Close the editor.
-                // TODO: some kind of bus for updates to objects, so we can do this in a central place?
-                appEditorStore.set((editors) =>
-                    editors.filter((e) => !isEditorForResource(e, object))
-                );
-            }
-        })();
-    }, [
-        appEditorStore,
-        checkContextLock,
-        client,
-        object,
-        setIsDeleting,
-        showDialog,
-    ]);
+    const onClickDelete = useCallback(async () => {
+        if (object) {
+            setIsDeleting(true);
+            await deleteResource([object]);
+            setIsDeleting(false);
+        }
+    }, [object, setIsDeleting]);
 
     const onClickShell = useCallback(
         async (containerName: string) => {
@@ -341,22 +316,11 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
     const [isRedeploying, setRedeploying] = useState(false);
     const onClickRedeploy = useCallback(async () => {
         if (object) {
-            if (!(await checkContextLock())) {
-                return;
-            }
-            const result = await showDialog({
-                title: "Are you sure?",
-                type: "question",
-                message: `Are you sure you want to redeploy ${object.metadata.name}?`,
-                buttons: ["Yes", "No"],
-            });
-            if (result.response === 0) {
-                setRedeploying(true);
-                client?.redeploy(object);
-                setRedeploying(false);
-            }
+            setRedeploying(true);
+            await redeploy([object]);
+            setRedeploying(false);
         }
-    }, [client, object, setRedeploying, showDialog, checkContextLock]);
+    }, [object, redeploy, setRedeploying]);
 
     // TODO: wire the log button and the shell button to an associated pod
     const isLoggable = object?.apiVersion === "v1" && object.kind === "Pod";
