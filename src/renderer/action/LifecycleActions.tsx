@@ -1,5 +1,5 @@
 import React, { useCallback } from "react";
-import { Action, ActionGroup } from ".";
+import { Action, ActionClickResult, ActionGroup } from ".";
 import { K8sObject, K8sObjectIdentifier } from "../../common/k8s/client";
 import { isK8sObject, isSetLike } from "../../common/k8s/util";
 import {
@@ -8,66 +8,99 @@ import {
     useK8sResumeAction,
 } from "../k8s/actions";
 
-export const LifecycleActions: React.FC<{
-    objects: Array<K8sObject | K8sObjectIdentifier>;
-}> = ({ objects }) => {
-    const allAreSets = objects.every(isSetLike);
-    const allAreObjects = objects.every(isK8sObject);
-    const allCanScale = objects.every((r) => r.kind !== "DaemonSet");
-    const canPause =
-        allCanScale &&
-        allAreSets &&
-        allAreObjects &&
-        objects.some((o) => (o as any)?.spec?.replicas > 0);
-    const canResume =
-        allCanScale &&
-        allAreSets &&
-        allAreObjects &&
-        objects.some((o) => (o as any)?.spec?.replicas === 0);
-    const canRedeploy = allAreSets && allAreObjects;
+export const LifecycleActions: React.FC<{}> = () => {
+    const isPauseVisible = useCallback(
+        (resources: Array<K8sObject | K8sObjectIdentifier>) => {
+            const allAreSets = resources.every(isSetLike);
+            const allAreObjects = resources.every(isK8sObject);
+            const allCanScale = resources.every((r) => r.kind !== "DaemonSet");
+            return (
+                allCanScale &&
+                allAreSets &&
+                allAreObjects &&
+                resources.some((o) => (o as any)?.spec?.replicas > 0)
+            );
+        },
+        []
+    );
+    const isResumeVisible = useCallback(
+        (resources: Array<K8sObject | K8sObjectIdentifier>) => {
+            const allAreSets = resources.every(isSetLike);
+            const allAreObjects = resources.every(isK8sObject);
+            const allCanScale = resources.every((r) => r.kind !== "DaemonSet");
+            return (
+                allCanScale &&
+                allAreSets &&
+                allAreObjects &&
+                resources.some((o) => (o as any)?.spec?.replicas === 0)
+            );
+        },
+        []
+    );
+    const isRedeployVisible = useCallback(
+        (resources: Array<K8sObject | K8sObjectIdentifier>) => {
+            const allAreSets = resources.every(isSetLike);
+            const allAreObjects = resources.every(isK8sObject);
+            return allAreSets && allAreObjects;
+        },
+        []
+    );
 
     const pause = useK8sPauseAction();
     const resume = useK8sResumeAction();
     const redeploy = useK8sRedeployAction();
 
-    const onClickPause = useCallback(() => {
-        if (canPause) {
-            pause(objects);
-        }
-    }, [canPause, objects, pause]);
+    const onClickPause = useCallback(
+        (result: ActionClickResult) => {
+            const { resources } = result;
+            if (resources.every(isK8sObject)) {
+                pause(resources);
+            }
+        },
+        [pause]
+    );
 
-    const onClickResume = useCallback(() => {
-        if (canResume) {
-            resume(objects);
-        }
-    }, [canResume, objects, resume]);
+    const onClickResume = useCallback(
+        (result: ActionClickResult) => {
+            const { resources } = result;
+            if (resources.every(isK8sObject)) {
+                resume(resources);
+            }
+        },
+        [resume]
+    );
 
-    const onClickRedeploy = useCallback(() => {
-        if (canRedeploy) {
-            redeploy(objects);
-        }
-    }, [canRedeploy, objects, redeploy]);
+    const onClickRedeploy = useCallback(
+        (result: ActionClickResult) => {
+            const { resources } = result;
+            if (resources.every(isK8sObject)) {
+                redeploy(resources);
+            }
+        },
+        [redeploy]
+    );
 
     return (
         <>
             <ActionGroup>
-                {canPause && (
-                    <Action id="pause" label="Pause" onClick={onClickPause} />
-                )}
-                {canResume && (
-                    <Action
-                        id="resume"
-                        label="Resume"
-                        onClick={onClickResume}
-                    />
-                )}
-                {canRedeploy && (
-                    <Action
-                        id="redeploy"
-                        label="Redeploy"
-                        onClick={onClickRedeploy}
-                    />
-                )}
+                <Action
+                    id="pause"
+                    label="Pause"
+                    isVisible={isPauseVisible}
+                    onClick={onClickPause}
+                />
+                <Action
+                    id="resume"
+                    label="Resume"
+                    isVisible={isResumeVisible}
+                    onClick={onClickResume}
+                />
+                <Action
+                    id="redeploy"
+                    label="Redeploy"
+                    isVisible={isRedeployVisible}
+                    onClick={onClickRedeploy}
+                />
             </ActionGroup>
         </>
     );

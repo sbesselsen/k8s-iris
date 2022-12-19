@@ -15,25 +15,52 @@ import {
 import { useIpcCall } from "../../hook/ipc";
 
 export type ResourceContextMenuProps = PropsWithChildren<{
-    object: K8sObject | K8sObjectIdentifier;
+    object?:
+        | K8sObject
+        | K8sObjectIdentifier
+        | (() => K8sObject | K8sObjectIdentifier);
+    objects?:
+        | Array<K8sObject | K8sObjectIdentifier>
+        | (() => Array<K8sObject | K8sObjectIdentifier>);
 }>;
 
 export const ResourceContextMenu: React.FC<ResourceContextMenuProps> = (
     props
 ) => {
-    const { object, children } = props;
-    const objects = useMemo(() => [object], [object]);
+    const { object, objects, children } = props;
+    const getResources = useCallback(() => {
+        if (typeof objects === "function") {
+            return objects();
+        }
+        if (objects) {
+            return objects;
+        }
+        if (typeof object === "function") {
+            return [object()];
+        }
+        if (object) {
+            return [object];
+        }
+        return [];
+    }, [object, objects]);
 
     const popup = useIpcCall((ipc) => ipc.contextMenu.popup);
-    const getActionsRef = useRef<() => Array<Array<ActionTemplate>>>(() => []);
+    const getActionsRef = useRef<
+        (
+            resources: Array<K8sObject | K8sObjectIdentifier>
+        ) => Array<Array<ActionTemplate>>
+    >(() => []);
 
     const onContextMenu: MouseEventHandler = useCallback(
         (e) => {
             e.preventDefault();
-            const actions = getActionsRef.current?.();
+            const resources = getResources();
+            const actions = getActionsRef.current?.(resources);
             if (!actions || actions.length === 0) {
                 return;
             }
+            e.stopPropagation();
+
             const menuTemplate: ContextMenuTemplate = [];
             const actionHandlers: Record<
                 string,
@@ -41,7 +68,7 @@ export const ResourceContextMenu: React.FC<ResourceContextMenuProps> = (
             > = {};
             for (const actionGroup of actions) {
                 for (const action of actionGroup) {
-                    const { onClick, ...menuItemProps } = action;
+                    const { onClick, isVisible, ...menuItemProps } = action;
                     menuTemplate.push({
                         ...menuItemProps,
                         actionId: action.id,
@@ -56,11 +83,11 @@ export const ResourceContextMenu: React.FC<ResourceContextMenuProps> = (
                 menuTemplate,
             }).then((result) => {
                 if (result.actionId) {
-                    actionHandlers[result.actionId]?.(result);
+                    actionHandlers[result.actionId]?.({ ...result, resources });
                 }
             });
         },
-        [getActionsRef, popup]
+        [getActionsRef, getResources, popup]
     );
 
     const mappedChildren = React.Children.map(children, (child: any) =>
@@ -72,7 +99,7 @@ export const ResourceContextMenu: React.FC<ResourceContextMenuProps> = (
     return (
         <>
             {mappedChildren}
-            <ActionsCollector objects={objects} getActionsRef={getActionsRef} />
+            <ActionsCollector getActionsRef={getActionsRef} />
         </>
     );
 };

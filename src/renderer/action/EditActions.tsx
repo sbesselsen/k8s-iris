@@ -8,9 +8,7 @@ import { useAppRouteGetter, useAppRouteSetter } from "../context/route";
 import { useIpcCall } from "../hook/ipc";
 import { useK8sDeleteAction } from "../k8s/actions";
 
-export const EditActions: React.FC<{
-    objects: Array<K8sObject | K8sObjectIdentifier>;
-}> = ({ objects }) => {
+export const EditActions: React.FC<{}> = () => {
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
     const getAppRoute = useAppRouteGetter();
     const setAppRoute = useAppRouteSetter();
@@ -19,9 +17,10 @@ export const EditActions: React.FC<{
 
     const onClickEdit = useCallback(
         (result: ActionClickResult) => {
-            const identifiers = objects.map(toK8sObjectIdentifier);
+            const { resources } = result;
+            const identifiers = resources.map(toK8sObjectIdentifier);
             const newEditors: AppEditor[] = identifiers.map(resourceEditor);
-            if (objects.length === 1 && !result.altKey) {
+            if (resources.length === 1 && !result.altKey) {
                 if (result.metaKey) {
                     createWindow({
                         route: {
@@ -46,29 +45,37 @@ export const EditActions: React.FC<{
                 });
             }
         },
-        [objects, appEditorsStore, createWindow, getAppRoute, setAppRoute]
+        [appEditorsStore, createWindow, getAppRoute, setAppRoute]
+    );
+
+    const deleteIsVisible = useCallback(
+        (resources: Array<K8sObject | K8sObjectIdentifier>) =>
+            resources.every(isK8sObject),
+        []
     );
 
     const deleteFn = useK8sDeleteAction();
-    const canDelete = objects.every(isK8sObject);
 
-    const onClickDelete = useCallback(() => {
-        if (objects.every(isK8sObject)) {
-            deleteFn(objects);
-        }
-    }, [deleteFn, objects]);
+    const onClickDelete = useCallback(
+        (result: ActionClickResult) => {
+            const { resources } = result;
+            if (resources.every(isK8sObject)) {
+                deleteFn(resources);
+            }
+        },
+        [deleteFn]
+    );
 
     return (
         <>
             <ActionGroup>
                 <Action id="edit" label="Edit" onClick={onClickEdit} />
-                {canDelete && (
-                    <Action
-                        id="delete"
-                        label="Delete"
-                        onClick={onClickDelete}
-                    />
-                )}
+                <Action
+                    id="delete"
+                    label="Delete"
+                    isVisible={deleteIsVisible}
+                    onClick={onClickDelete}
+                />
             </ActionGroup>
         </>
     );

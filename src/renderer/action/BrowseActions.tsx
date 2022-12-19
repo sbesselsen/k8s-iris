@@ -5,25 +5,23 @@ import { toK8sObjectIdentifier } from "../../common/k8s/util";
 import { useAppRouteGetter, useAppRouteSetter } from "../context/route";
 import { useIpcCall } from "../hook/ipc";
 
-export const BrowseActions: React.FC<{
-    objects: Array<K8sObject | K8sObjectIdentifier>;
-}> = ({ objects }) => {
+export const BrowseActions: React.FC<{}> = () => {
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
     const getAppRoute = useAppRouteGetter();
     const setAppRoute = useAppRouteSetter();
 
-    const allowBrowse = useMemo(
-        () =>
-            objects.length === 1 &&
-            objects.every(
+    const isVisible = useCallback(
+        (resources: Array<K8sObject | K8sObjectIdentifier>) =>
+            resources.length === 1 &&
+            resources.every(
                 (obj) => obj.kind === "Namespace" && obj.apiVersion === "v1"
             ),
-        [objects]
+        []
     );
 
     const onClickBrowse = useCallback(
         (result: ActionClickResult) => {
-            const identifier = toK8sObjectIdentifier(objects[0]);
+            const identifier = toK8sObjectIdentifier(result.resources[0]);
             if (result.metaKey) {
                 const route = getAppRoute();
                 createWindow({
@@ -52,16 +50,17 @@ export const BrowseActions: React.FC<{
                 }));
             }
         },
-        [objects, createWindow, getAppRoute, setAppRoute]
+        [createWindow, getAppRoute, setAppRoute]
     );
-
-    if (!allowBrowse) {
-        return null;
-    }
 
     return (
         <ActionGroup>
-            <Action id="browse" label="Browse" onClick={onClickBrowse} />
+            <Action
+                id="browse"
+                label="Browse"
+                isVisible={isVisible}
+                onClick={onClickBrowse}
+            />
         </ActionGroup>
     );
 };

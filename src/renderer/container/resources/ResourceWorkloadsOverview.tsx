@@ -58,6 +58,7 @@ import {
 } from "../../k8s/list-watch";
 import { formatDeveloperDateTime } from "../../util/date";
 import { create } from "../../util/state";
+import { ResourceContextMenu } from "./ResourceContextMenu";
 import { ResourceEditorLink } from "./ResourceEditorLink";
 import { ResourcesToolbar } from "./ResourcesToolbar";
 
@@ -748,22 +749,33 @@ const GroupedResourcesOverview: React.FC<{}> = () => {
         [sortedGroups, query]
     );
 
+    const getSelectedObjects = useCallback(() => {
+        const { selectedResourceKeys, allResourcesByType } = store.get();
+        return Object.values(allResourcesByType).flatMap((group) =>
+            group.resources.filter((r) =>
+                selectedResourceKeys.has(toK8sObjectIdentifierString(r))
+            )
+        );
+    }, [store]);
+
     return (
-        <VStack alignItems="stretch" spacing={2}>
-            {filteredGroups.map((group) => (
-                <WorkloadGroup groupId={group.id} key={group.id} />
-            ))}
-            {filteredGroups.length === 0 && !isAnythingLoading && (
-                <Box>
-                    <Text color="gray">No workloads selected.</Text>
-                </Box>
-            )}
-            {isAnythingLoading && (
-                <HStack justifyContent="center" py={10}>
-                    <Spinner />
-                </HStack>
-            )}
-        </VStack>
+        <ResourceContextMenu objects={getSelectedObjects}>
+            <VStack alignItems="stretch" spacing={2}>
+                {filteredGroups.map((group) => (
+                    <WorkloadGroup groupId={group.id} key={group.id} />
+                ))}
+                {filteredGroups.length === 0 && !isAnythingLoading && (
+                    <Box>
+                        <Text color="gray">No workloads selected.</Text>
+                    </Box>
+                )}
+                {isAnythingLoading && (
+                    <HStack justifyContent="center" py={10}>
+                        <Spinner />
+                    </HStack>
+                )}
+            </VStack>
+        </ResourceContextMenu>
     );
 };
 
