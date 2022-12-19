@@ -48,6 +48,7 @@ import {
 } from "../../k8s/details";
 import { useK8sListWatch } from "../../k8s/list-watch";
 import { formatDeveloperDateTime } from "../../util/date";
+import { ResourceContextMenu } from "./ResourceContextMenu";
 import { ResourceEditorLink } from "./ResourceEditorLink";
 import { ResourcesToolbar } from "./ResourcesToolbar";
 import { ResourceTypeSelector } from "./ResourceTypeSelector";
@@ -354,58 +355,66 @@ const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
 
     return (
         <Box>
-            <Table
-                size="sm"
-                sx={{ tableLayout: "fixed" }}
-                width="100%"
-                maxWidth="1000px"
-            >
-                <Thead>
-                    <Tr>
-                        <Th ps={2} width="40px">
-                            <Checkbox
-                                colorScheme="gray"
-                                isIndeterminate={
-                                    selectedResourceIdentifiers.length > 0 &&
-                                    selectedResourceIdentifiers.length <
-                                        sortedKeyedResources.length
-                                }
-                                isChecked={
-                                    selectedResourceIdentifiers.length > 0 &&
-                                    selectedResourceIdentifiers.length ===
-                                        sortedKeyedResources.length
-                                }
-                                onChange={onChangeSelectAll}
-                            />
-                        </Th>
-                        <Th ps={0}>Name</Th>
-                        {customDetails.filter(isResourceColumn).map((col) => (
-                            <Th
-                                key={col.id}
-                                width={40 * (col.widthUnits + 1) + "px"}
-                            >
-                                {col.header}
+            <ResourceContextMenu objects={selectedResourcesState}>
+                <Table
+                    size="sm"
+                    sx={{ tableLayout: "fixed" }}
+                    width="100%"
+                    maxWidth="1000px"
+                >
+                    <Thead>
+                        <Tr>
+                            <Th ps={2} width="40px">
+                                <Checkbox
+                                    colorScheme="gray"
+                                    isIndeterminate={
+                                        selectedResourceIdentifiers.length >
+                                            0 &&
+                                        selectedResourceIdentifiers.length <
+                                            sortedKeyedResources.length
+                                    }
+                                    isChecked={
+                                        selectedResourceIdentifiers.length >
+                                            0 &&
+                                        selectedResourceIdentifiers.length ===
+                                            sortedKeyedResources.length
+                                    }
+                                    onChange={onChangeSelectAll}
+                                />
                             </Th>
-                        ))}
-                        {showNamespace && <Th width="150px">Namespace</Th>}
-                        <Th width="150px">Created</Th>
-                    </Tr>
-                </Thead>
-                <Tbody>
-                    {sortedKeyedResources.map(({ key, resource }, index) => (
-                        <ResourceRow
-                            resource={resource}
-                            showNamespace={showNamespace}
-                            customDetails={customDetails}
-                            key={key}
-                            isSelected={selectedResourceIdentifiers.includes(
-                                key
-                            )}
-                            onChangeSelect={onSelectHandlers[key]}
-                        />
-                    ))}
-                </Tbody>
-            </Table>
+                            <Th ps={0}>Name</Th>
+                            {customDetails
+                                .filter(isResourceColumn)
+                                .map((col) => (
+                                    <Th
+                                        key={col.id}
+                                        width={40 * (col.widthUnits + 1) + "px"}
+                                    >
+                                        {col.header}
+                                    </Th>
+                                ))}
+                            {showNamespace && <Th width="150px">Namespace</Th>}
+                            <Th width="150px">Created</Th>
+                        </Tr>
+                    </Thead>
+                    <Tbody>
+                        {sortedKeyedResources.map(
+                            ({ key, resource }, index) => (
+                                <ResourceRow
+                                    resource={resource}
+                                    showNamespace={showNamespace}
+                                    customDetails={customDetails}
+                                    key={key}
+                                    isSelected={selectedResourceIdentifiers.includes(
+                                        key
+                                    )}
+                                    onChangeSelect={onSelectHandlers[key]}
+                                />
+                            )
+                        )}
+                    </Tbody>
+                </Table>
+            </ResourceContextMenu>
         </Box>
     );
 };
