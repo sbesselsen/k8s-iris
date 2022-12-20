@@ -60,6 +60,7 @@ import { LazyComponent } from "../../component/main/LazyComponent";
 import { HibernateContainer } from "../../context/hibernate";
 import { ErrorBoundary } from "../../component/util/ErrorBoundary";
 import { useLocalShellEditorOpener } from "../../hook/shell-opener";
+import { NoContextError } from "./NoContextError";
 
 const PodLogsEditor = React.lazy(async () => ({
     default: (await import("../editor/PodLogsEditor")).PodLogsEditor,
@@ -105,7 +106,7 @@ export const RootAppUI: React.FunctionComponent = () => {
     const kubeContext = useK8sContext();
     usePageTitle(kubeContext);
 
-    const [_loadingContextsInfo, contextsInfo] = useK8sContextsInfo();
+    const [isLoadingContextsInfo, contextsInfo] = useK8sContextsInfo();
     const isSidebarVisible = useAppRoute((route) => route.isSidebarVisible);
 
     const getAppRoute = useAppRouteGetter();
@@ -237,15 +238,18 @@ export const RootAppUI: React.FunctionComponent = () => {
     );
 
     const contextualColorTheme = useMemo(() => {
+        if (isLoadingContextsInfo) {
+            return null;
+        }
         const contextInfo = contextsInfo?.find(
             (ctx) => ctx.name === kubeContext
         );
         if (!contextInfo) {
-            return null;
+            return k8sAccountIdColor(null);
         }
         const accountId = contextInfo.cloudInfo?.accounts?.[0]?.accountId;
         return k8sAccountIdColor(accountId ?? null);
-    }, [contextsInfo, kubeContext]);
+    }, [contextsInfo, isLoadingContextsInfo, kubeContext]);
 
     const onRequestSidebarVisibilityChange = useCallback(
         (visible: boolean) => {
@@ -306,17 +310,21 @@ export const RootAppUI: React.FunctionComponent = () => {
                     </VStack>
                 }
                 content={
-                    namespacesError ? (
-                        <Box
-                            w="100%"
-                            height="100%"
-                            overflow="hidden scroll"
-                            sx={{ scrollbarGutter: "stable" }}
-                        >
-                            <ClusterError error={namespacesError} />
-                        </Box>
+                    kubeContext ? (
+                        namespacesError ? (
+                            <Box
+                                w="100%"
+                                height="100%"
+                                overflow="hidden scroll"
+                                sx={{ scrollbarGutter: "stable" }}
+                            >
+                                <ClusterError error={namespacesError} />
+                            </Box>
+                        ) : (
+                            <AppContent />
+                        )
                     ) : (
-                        <AppContent />
+                        <NoContextError />
                     )
                 }
             />

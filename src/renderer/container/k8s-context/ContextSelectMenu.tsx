@@ -203,7 +203,8 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
                         {!isLoading && (
                             <Fragment>
                                 {currentContextInfo?.localClusterName ??
-                                    kubeContext}
+                                    kubeContext ??
+                                    "(no context)"}
                             </Fragment>
                         )}
                     </HStack>
