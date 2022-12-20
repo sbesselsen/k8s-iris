@@ -1259,6 +1259,7 @@ export function createClient(
                     );
                     portForwardHandles[id] = {
                         stop() {
+                            socketEndFunctions?.forEach((f) => f());
                             server.close();
                         },
                     };
