@@ -48,6 +48,7 @@ import {
     K8sPortForwardStats,
     K8sPortForwardWatcher,
     K8sPortForwardWatch,
+    K8sVersion,
 } from "../../common/k8s/client";
 import {
     fetchApiList,
@@ -126,6 +127,7 @@ export function createClient(
     }
 
     const objectApi = kubeConfig.makeApiClient(k8s.KubernetesObjectApi);
+    const versionApi = kubeConfig.makeApiClient(k8s.VersionApi);
 
     // Allow retrying listWatch connections when signaled to do so from the outside.
     let retryConnectionsListeners: Array<() => void> = [];
@@ -1271,6 +1273,17 @@ export function createClient(
         portForwardHandles[id]?.stop();
     };
 
+    const getVersion = async (): Promise<K8sVersion> => {
+        const {
+            body: { major, minor, platform },
+        } = await versionApi.getCode();
+        return {
+            major,
+            minor,
+            platform,
+        };
+    };
+
     const getKubeConfig = () => kubeConfig;
 
     return {
@@ -1293,5 +1306,6 @@ export function createClient(
         retryConnections,
         listApiResourceTypes,
         getKubeConfig,
+        getVersion,
     };
 }

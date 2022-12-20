@@ -317,4 +317,9 @@ export const wireK8sClientIpc = (clientManager: K8sClientManager): void => {
         async ({ context, id }: { context: string; id: string }) =>
             clientManager.clientForContext(context).stopPortForward(id)
     );
+    ipcHandle(
+        "k8s:client:getVersion",
+        async ({ context }: { context: string }) =>
+            clientManager.clientForContext(context).getVersion()
+    );
 };

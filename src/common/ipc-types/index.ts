@@ -25,6 +25,7 @@ import {
     K8sRemoveOptions,
     K8sRemoveStatus,
     K8sResourceTypeInfo,
+    K8sVersion,
 } from "../k8s/client";
 import { AppRoute } from "../route/app-route";
 import { DialogOptions, DialogResult } from "../ui/dialog";
@@ -139,6 +140,7 @@ export type IpcCalls = {
             spec: K8sPortForwardSpec;
         }): Promise<K8sPortForwardEntry>;
         stopPortForward(params: { context: string; id: string }): Promise<void>;
+        getVersion(params: { context: string }): Promise<K8sVersion>;
     };
     contextLock: {
         set(params: { context: string; locked: boolean }): Promise<void>;

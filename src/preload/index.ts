@@ -30,6 +30,7 @@ const listPortForwards = ipcInvoker("k8s:client:listPortForwards");
 const watchPortForwards = ipcSubscriber("k8s:client:watchPortForwards");
 const portForward = ipcInvoker("k8s:client:portForward");
 const stopPortForward = ipcInvoker("k8s:client:stopPortForward");
+const getVersion = ipcInvoker("k8s:client:getVersion");
 const onWindowFocusChange = ipcEventSubscriber<boolean>(
     "app:window:focus-change"
 );
@@ -70,6 +71,7 @@ contextBridge.exposeInMainWorld("charm", {
         watchPortForwards,
         portForward,
         stopPortForward,
+        getVersion,
     },
     contextLock: {
         set: setContextLock,

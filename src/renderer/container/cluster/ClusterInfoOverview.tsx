@@ -15,7 +15,6 @@ import {
     Text,
     Th,
     Tr,
-    useColorModeValue,
     VStack,
 } from "@chakra-ui/react";
 import { Selectable } from "../../component/main/Selectable";
@@ -24,6 +23,7 @@ import { parseCpu, parseMemory } from "../../../common/k8s/util";
 import { Toolbar } from "../../component/main/Toolbar";
 import { FiTerminal } from "react-icons/fi";
 import { useLocalShellEditorOpener } from "../../hook/shell-opener";
+import { useK8sVersion } from "../../k8s/version";
 
 const cloudProviderNames: Record<string, string> = {
     aws: "AWS",
@@ -35,8 +35,6 @@ const cloudServiceNames: Record<string, string> = {
     colima: "colima",
     eks: "EKS",
 };
-
-let localShellIndex = 1;
 
 export const ClusterInfoOverview: React.FC = () => {
     const [_isLoadingNodes, nodes, _nodesError] = useK8sListWatch(
@@ -53,14 +51,16 @@ export const ClusterInfoOverview: React.FC = () => {
     const [_loadingContexts, contextsInfo] = useK8sContextsInfo();
     const contextInfo = contextsInfo.find((info) => info.name === context);
 
+    const [versionIsLoading, version] = useK8sVersion({
+        pollInterval: 30000,
+    });
+
     const title = contextInfo?.cluster ?? context;
 
     const cloudProviderTitle = contextInfo?.cloudInfo?.cloudProvider
         ? cloudProviderNames[contextInfo.cloudInfo.cloudProvider] ??
           contextInfo.cloudInfo.cloudProvider
         : "Cloud";
-
-    const headingColor = useColorModeValue("gray.800", "white");
 
     const onClickLocalShell = useLocalShellEditorOpener();
 
@@ -89,18 +89,31 @@ export const ClusterInfoOverview: React.FC = () => {
                                     <Selectable>{title}</Selectable>
                                 </StatTd>
                             </Tr>
-                            {contextInfo?.cluster !== contextInfo?.name && (
-                                <Tr>
-                                    <StatTh>Cluster</StatTh>
-                                    <StatTd>{contextInfo.cluster}</StatTd>
-                                </Tr>
-                            )}
-                            {contextInfo?.user !== contextInfo?.name && (
-                                <Tr>
-                                    <StatTh>User</StatTh>
-                                    <StatTd>{contextInfo.user}</StatTd>
-                                </Tr>
-                            )}
+                            <Tr>
+                                <StatTh>Version</StatTh>
+                                <StatTd>
+                                    {!versionIsLoading && version && (
+                                        <>
+                                            {version.major}.{version.minor} (
+                                            {version.platform})
+                                        </>
+                                    )}
+                                </StatTd>
+                            </Tr>
+                            {contextInfo &&
+                                contextInfo?.cluster !== contextInfo?.name && (
+                                    <Tr>
+                                        <StatTh>Cluster</StatTh>
+                                        <StatTd>{contextInfo.cluster}</StatTd>
+                                    </Tr>
+                                )}
+                            {contextInfo &&
+                                contextInfo?.user !== contextInfo?.name && (
+                                    <Tr>
+                                        <StatTh>User</StatTh>
+                                        <StatTd>{contextInfo.user}</StatTd>
+                                    </Tr>
+                                )}
                             <Tr>
                                 <StatTh>Nodes</StatTh>
                                 <StatTd>

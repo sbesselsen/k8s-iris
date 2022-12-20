@@ -59,6 +59,7 @@ export function useK8sClient(kubeContext?: string): K8sClient {
     const ipcWatchPortForwards = useIpcCall((ipc) => ipc.k8s.watchPortForwards);
     const ipcPortForward = useIpcCall((ipc) => ipc.k8s.portForward);
     const ipcStopPortForward = useIpcCall((ipc) => ipc.k8s.stopPortForward);
+    const ipcGetVersion = useIpcCall((ipc) => ipc.k8s.getVersion);
     const listWatchesRef = useRef<K8sObjectListWatch[]>([]);
 
     const getContextLock = useContextLockGetter();
@@ -306,6 +307,8 @@ export function useK8sClient(kubeContext?: string): K8sClient {
             };
         };
 
+        const getVersion = () => ipcGetVersion({ context });
+
         return {
             getContextLock,
             read,
@@ -325,6 +328,7 @@ export function useK8sClient(kubeContext?: string): K8sClient {
             watchPortForwards,
             portForward,
             stopPortForward,
+            getVersion,
         };
     }, [
         context,
@@ -344,6 +348,7 @@ export function useK8sClient(kubeContext?: string): K8sClient {
         ipcWatchPortForwards,
         ipcPortForward,
         ipcStopPortForward,
+        ipcGetVersion,
     ]);
 
     return client;

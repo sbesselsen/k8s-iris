@@ -187,6 +187,12 @@ export type K8sPortForwardEntry = {
     localPort: number;
 };
 
+export type K8sVersion = {
+    major: string;
+    minor: string;
+    platform: string;
+};
+
 export type K8sClient = {
     read(spec: K8sObject): Promise<K8sObject | null>;
     apply(spec: K8sObject, options?: K8sApplyOptions): Promise<K8sObject>;
@@ -218,4 +224,7 @@ export type K8sClient = {
     watchPortForwards(watcher: K8sPortForwardWatcher): K8sPortForwardWatch;
     portForward(spec: K8sPortForwardSpec): Promise<K8sPortForwardEntry>;
     stopPortForward(id: string): Promise<void>;
+
+    /* Meta */
+    getVersion(): Promise<K8sVersion>;
 };
