@@ -34,6 +34,8 @@ import { searchMatch } from "../../../common/util/search";
 import { useWithDelay } from "../../hook/async";
 import { k8sAccountIdColor } from "../../util/k8s-context-color";
 import { emptyAppRoute } from "../../../common/route/app-route";
+import { useAppEditorsStore } from "../../context/editors";
+import { useDialog } from "../../hook/dialog";
 
 type ContextOption = K8sContext &
     Partial<CloudK8sContextInfo> & {
@@ -47,6 +49,9 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
     (_props, ref) => {
         const kubeContext = useK8sContext();
         const setAppRoute = useAppRouteSetter();
+        const editorsStore = useAppEditorsStore();
+
+        const showDialog = useDialog();
 
         const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
 
@@ -78,8 +83,8 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
         }, [onDisclosureClose, setSearchValue]);
 
         const onSelectContext = useCallback(
-            (context: string) => {
-                if (metaKeyPressedRef.current) {
+            async (context: string) => {
+                function openInNewWindow() {
                     createWindow({
                         route: {
                             ...emptyAppRoute,
@@ -87,12 +92,53 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
                         },
                     });
                     onDisclosureClose();
-                } else {
+                }
+
+                function open() {
                     setAppRoute(() => ({ ...emptyAppRoute, context }));
                     onClose();
                 }
+
+                if (metaKeyPressedRef.current) {
+                    openInNewWindow();
+                } else {
+                    const numEditors = editorsStore.get().length;
+                    if (numEditors > 0) {
+                        const result = await showDialog({
+                            title: "Are you sure?",
+                            type: "question",
+                            message: `You have ${numEditors} editor${
+                                numEditors > 1 ? "s" : ""
+                            } open.`,
+                            detail: `Switching context will close all open editors and you will lose your changes.`,
+                            buttons: [
+                                "Open in New Window",
+                                "Close Editors and Switch",
+                                "Cancel",
+                            ],
+                            defaultId: 0,
+                        });
+                        switch (result.response) {
+                            case 0:
+                                openInNewWindow();
+                                break;
+                            case 1:
+                                open();
+                                break;
+                        }
+                    } else {
+                        open();
+                    }
+                }
             },
-            [createWindow, onClose, onDisclosureClose, setAppRoute]
+            [
+                createWindow,
+                editorsStore,
+                onClose,
+                onDisclosureClose,
+                setAppRoute,
+                showDialog,
+            ]
         );
 
         const contextOptions: ContextOption[] = useMemo(
