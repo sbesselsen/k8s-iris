@@ -1155,7 +1155,9 @@ const PortForwardingMenu: React.FC<{ object: K8sObject }> = (props) => {
                         const forwardable =
                             !port.protocol || port.protocol === "TCP";
                         ports.push({
-                            id: String(port.containerPort),
+                            id: String(
+                                port.containerPort + ":" + port.protocol
+                            ),
                             port: port.containerPort,
                             name: port.name ?? String(port.containerPort),
                             portForward: forwards.find(
