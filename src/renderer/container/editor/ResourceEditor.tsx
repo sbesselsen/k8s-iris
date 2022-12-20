@@ -1,13 +1,12 @@
 import {
     AddIcon,
     ArrowUpDownIcon,
-    ChevronDownIcon,
     DeleteIcon,
     EditIcon,
     RepeatIcon,
 } from "@chakra-ui/icons";
 import { CgDetailsLess, CgDetailsMore } from "react-icons/cg";
-import { FiTerminal, FiCrosshair } from "react-icons/fi";
+import { FiTerminal } from "react-icons/fi";
 import { RiTextWrap } from "react-icons/ri";
 import { MdOutlinePause, MdPlayArrow } from "react-icons/md";
 import {
@@ -22,11 +21,7 @@ import {
     Icon,
     IconButton,
     Input,
-    InputGroup,
-    Menu,
-    MenuButton,
-    MenuItem,
-    MenuList,
+    Link,
     NumberDecrementStepper,
     NumberIncrementStepper,
     NumberInput,
@@ -81,7 +76,6 @@ import { Toolbar } from "../../component/main/Toolbar";
 import { useContextLockHelpers } from "../../context/context-lock";
 import {
     resourceEditor,
-    isEditorForResource,
     useAppEditorsStore,
     logsEditor,
     shellEditor,
@@ -1334,6 +1328,8 @@ const PortForwardingRow: React.FC<PortForwardingRowProps> = (props) => {
     const [localPortString, setLocalPortString] = useState("");
     const [modeString, setModeString] = useState("localOnly");
 
+    const openInBrowser = useIpcCall((ipc) => ipc.app.openUrlInBrowser);
+
     const onClickAdd = useCallback(() => {
         onAdd?.(
             localPortString === "" ? undefined : parseInt(localPortString, 10),
@@ -1375,6 +1371,15 @@ const PortForwardingRow: React.FC<PortForwardingRowProps> = (props) => {
         [setModeString]
     );
 
+    const onClickLocalPort = useCallback(() => {
+        if (portForward) {
+            const looksLikeSecureLink = portForward.localPort % 1000 === 443;
+            const guessedProtocol = looksLikeSecureLink ? "https" : "http";
+            const url = `${guessedProtocol}://localhost:${portForward.localPort}`;
+            openInBrowser({ url });
+        }
+    }, [portForward]);
+
     return (
         <>
             <Tr>
@@ -1397,15 +1402,26 @@ const PortForwardingRow: React.FC<PortForwardingRowProps> = (props) => {
                     </HStack>
                 </Td>
                 <Td whiteSpace="nowrap">
-                    <Input
-                        placeholder="auto"
-                        size="sm"
-                        type="number"
-                        isDisabled={!!portForward}
-                        value={localPortString}
-                        onKeyDown={onInputKeyPress}
-                        onChange={onChangeLocalPort}
-                    />
+                    {portForward && (
+                        <Link
+                            size="xs"
+                            textDecoration="underline"
+                            onClick={onClickLocalPort}
+                            ps={2}
+                        >
+                            {localPortString}
+                        </Link>
+                    )}
+                    {!portForward && (
+                        <Input
+                            placeholder="auto"
+                            size="sm"
+                            type="number"
+                            value={localPortString}
+                            onKeyDown={onInputKeyPress}
+                            onChange={onChangeLocalPort}
+                        />
+                    )}
                 </Td>
                 <Td whiteSpace="nowrap">
                     <Select

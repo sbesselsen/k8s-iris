@@ -1,14 +1,9 @@
+import { DeleteIcon, Icon } from "@chakra-ui/icons";
 import {
-    ChevronDownIcon,
-    ChevronUpIcon,
-    DeleteIcon,
-    Icon,
-} from "@chakra-ui/icons";
-import {
-    Badge,
     Button,
     Checkbox,
     HStack,
+    Link,
     Table,
     Tbody,
     Td,
@@ -19,14 +14,7 @@ import {
     useBreakpointValue,
 } from "@chakra-ui/react";
 import { HiOutlineGlobeAlt } from "react-icons/hi";
-import React, {
-    ChangeEvent,
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-} from "react";
+import React, { ChangeEvent, useCallback, useMemo, useState } from "react";
 import {
     K8sObjectIdentifier,
     K8sPortForwardEntry,
@@ -46,6 +34,7 @@ import {
     PortForwardStats,
     usePeriodStats,
 } from "../../component/k8s/PortForwardStats";
+import { useIpcCall } from "../../hook/ipc";
 
 export const ClusterPortForwardsOverview: React.FC<{}> = () => {
     const client = useK8sClient();
@@ -247,6 +236,17 @@ const PortForwardRow: React.FC<PortForwardRowProps> = (props) => {
         [portForward]
     );
 
+    const openInBrowser = useIpcCall((ipc) => ipc.app.openUrlInBrowser);
+
+    const onClickLocalPort = useCallback(() => {
+        if (portForward) {
+            const looksLikeSecureLink = portForward.localPort % 1000 === 443;
+            const guessedProtocol = looksLikeSecureLink ? "https" : "http";
+            const url = `${guessedProtocol}://localhost:${portForward.localPort}`;
+            openInBrowser({ url });
+        }
+    }, [portForward]);
+
     return (
         <Tr>
             <Td ps={2} verticalAlign="baseline">
@@ -281,7 +281,14 @@ const PortForwardRow: React.FC<PortForwardRowProps> = (props) => {
                             title="Shared on the network"
                         />
                     )}
-                    <Selectable>{portForward.localPort}</Selectable>
+                    <Selectable>
+                        <Link
+                            textDecoration="underline"
+                            onClick={onClickLocalPort}
+                        >
+                            {portForward.localPort}
+                        </Link>
+                    </Selectable>
                 </HStack>
             </Td>
             {showStats && (
