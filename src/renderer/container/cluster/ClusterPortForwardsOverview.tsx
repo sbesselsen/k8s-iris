@@ -35,6 +35,8 @@ import {
     usePeriodStats,
 } from "../../component/k8s/PortForwardStats";
 import { useIpcCall } from "../../hook/ipc";
+import { ContextMenuTemplate } from "../../../common/contextmenu";
+import { useContextMenu } from "../../hook/context-menu";
 
 export const ClusterPortForwardsOverview: React.FC<{}> = () => {
     const client = useK8sClient();
@@ -217,6 +219,8 @@ const PortForwardRow: React.FC<PortForwardRowProps> = (props) => {
         stats,
     } = props;
 
+    const client = useK8sClient();
+
     const onChange = useCallback(
         (e: ChangeEvent<HTMLInputElement>) => {
             onChangeSelect?.(e.target.checked);
@@ -238,17 +242,84 @@ const PortForwardRow: React.FC<PortForwardRowProps> = (props) => {
 
     const openInBrowser = useIpcCall((ipc) => ipc.app.openUrlInBrowser);
 
-    const onClickLocalPort = useCallback(() => {
-        if (portForward) {
-            const looksLikeSecureLink = portForward.localPort % 1000 === 443;
-            const guessedProtocol = looksLikeSecureLink ? "https" : "http";
-            const url = `${guessedProtocol}://localhost:${portForward.localPort}`;
-            openInBrowser({ url });
+    const portForwardHostPort = useMemo(
+        () => (portForward ? `localhost:${portForward.localPort}` : null),
+        [portForward]
+    );
+    const portForwardUrl = useMemo(() => {
+        if (!portForward) {
+            return null;
         }
-    }, [portForward]);
+        const looksLikeSecureLink = portForward.localPort % 1000 === 443;
+        const guessedProtocol = looksLikeSecureLink ? "https" : "http";
+        return `${guessedProtocol}://localhost:${portForward.localPort}`;
+    }, [portForwardHostPort]);
+
+    const openLocalPortInBrowser = useCallback(() => {
+        if (portForwardUrl) {
+            openInBrowser({ url: portForwardUrl });
+        }
+    }, [openInBrowser, portForwardUrl]);
+
+    const onClickLocalPort = useCallback(() => {
+        openLocalPortInBrowser();
+    }, [openLocalPortInBrowser]);
+
+    const onClickStop = useCallback(() => {
+        client.stopPortForward(portForward.id);
+    }, [portForward, client]);
+
+    const contextMenuTemplate: ContextMenuTemplate = useMemo(
+        () =>
+            portForward
+                ? [
+                      { label: "Open in Browser", actionId: "openInBrowser" },
+                      { type: "separator" },
+                      { label: "Copy host:port", actionId: "copyHostPort" },
+                      { label: "Copy URL", actionId: "copyUrl" },
+                      { type: "separator" },
+                      { label: "Stop", actionId: "stop" },
+                  ]
+                : [],
+        []
+    );
+    const onContextMenuAction = useCallback(
+        ({ actionId }: { actionId: string }) => {
+            if (!portForward) {
+                return;
+            }
+            switch (actionId) {
+                case "openInBrowser":
+                    openLocalPortInBrowser();
+                    break;
+                case "copyHostPort":
+                    if (portForwardHostPort) {
+                        navigator.clipboard.writeText(portForwardHostPort);
+                    }
+                    break;
+                case "copyUrl":
+                    if (portForwardUrl) {
+                        navigator.clipboard.writeText(portForwardUrl);
+                    }
+                    break;
+                case "stop":
+                    onClickStop();
+                    break;
+            }
+        },
+        [
+            onClickStop,
+            openLocalPortInBrowser,
+            portForwardHostPort,
+            portForwardUrl,
+        ]
+    );
+    const onContextMenu = useContextMenu(contextMenuTemplate, {
+        onMenuAction: onContextMenuAction,
+    });
 
     return (
-        <Tr>
+        <Tr onContextMenu={onContextMenu}>
             <Td ps={2} verticalAlign="baseline">
                 <Checkbox isChecked={isSelected} onChange={onChange} />
             </Td>
@@ -315,27 +386,12 @@ const PortForwardsToolbar: React.FC<PortForwardsToolbarProps> = (props) => {
     const [isDeleting, setIsDeleting] = useState(false);
     const onClickDelete = useCallback(() => {
         (async () => {
-            if (!(await checkContextLock())) {
-                return;
-            }
-            const detail =
-                portForwards.length === 1
-                    ? `Are you sure you want to stop this port forward?`
-                    : `Are you sure you want to stop these ${portForwards.length.toLocaleString()} port forwards?`;
-            const result = await showDialog({
-                title: "Confirm deletion",
-                message: "Are you sure?",
-                detail,
-                buttons: ["Yes", "No"],
-            });
-            if (result.response === 0) {
-                setIsDeleting(true);
-                await Promise.all(
-                    portForwards.map((fwd) => client.stopPortForward(fwd.id))
-                );
-                onClearSelection?.();
-                setIsDeleting(false);
-            }
+            setIsDeleting(true);
+            await Promise.all(
+                portForwards.map((fwd) => client.stopPortForward(fwd.id))
+            );
+            onClearSelection?.();
+            setIsDeleting(false);
         })();
     }, [checkContextLock, portForwards, setIsDeleting, showDialog]);
 

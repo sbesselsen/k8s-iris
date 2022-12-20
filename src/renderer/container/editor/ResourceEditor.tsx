@@ -108,6 +108,8 @@ import {
     MenuItem as ContextMenuItem,
 } from "../../component/main/ContextMenuButton";
 import { useK8sDeleteAction, useK8sRedeployAction } from "../../k8s/actions";
+import { useContextMenu } from "../../hook/context-menu";
+import { ContextMenuTemplate } from "../../../common/contextmenu";
 
 export type ResourceEditorProps = {
     editorResource: K8sObjectIdentifier;
@@ -1371,18 +1373,81 @@ const PortForwardingRow: React.FC<PortForwardingRowProps> = (props) => {
         [setModeString]
     );
 
-    const onClickLocalPort = useCallback(() => {
-        if (portForward) {
-            const looksLikeSecureLink = portForward.localPort % 1000 === 443;
-            const guessedProtocol = looksLikeSecureLink ? "https" : "http";
-            const url = `${guessedProtocol}://localhost:${portForward.localPort}`;
-            openInBrowser({ url });
+    const portForwardHostPort = useMemo(
+        () => (portForward ? `localhost:${portForward.localPort}` : null),
+        [portForward]
+    );
+    const portForwardUrl = useMemo(() => {
+        if (!portForward) {
+            return null;
         }
-    }, [portForward]);
+        const looksLikeSecureLink = portForward.localPort % 1000 === 443;
+        const guessedProtocol = looksLikeSecureLink ? "https" : "http";
+        return `${guessedProtocol}://localhost:${portForward.localPort}`;
+    }, [portForwardHostPort]);
+
+    const openLocalPortInBrowser = useCallback(() => {
+        if (portForwardUrl) {
+            openInBrowser({ url: portForwardUrl });
+        }
+    }, [openInBrowser, portForwardUrl]);
+
+    const onClickLocalPort = useCallback(() => {
+        openLocalPortInBrowser();
+    }, [openLocalPortInBrowser]);
+
+    const contextMenuTemplate: ContextMenuTemplate = useMemo(
+        () =>
+            portForward
+                ? [
+                      { label: "Open in Browser", actionId: "openInBrowser" },
+                      { type: "separator" },
+                      { label: "Copy host:port", actionId: "copyHostPort" },
+                      { label: "Copy URL", actionId: "copyUrl" },
+                      { type: "separator" },
+                      { label: "Stop", actionId: "stop" },
+                  ]
+                : [],
+        []
+    );
+    const onContextMenuAction = useCallback(
+        ({ actionId }: { actionId: string }) => {
+            if (!portForward) {
+                return;
+            }
+            switch (actionId) {
+                case "openInBrowser":
+                    openLocalPortInBrowser();
+                    break;
+                case "copyHostPort":
+                    if (portForwardHostPort) {
+                        navigator.clipboard.writeText(portForwardHostPort);
+                    }
+                    break;
+                case "copyUrl":
+                    if (portForwardUrl) {
+                        navigator.clipboard.writeText(portForwardUrl);
+                    }
+                    break;
+                case "stop":
+                    onClickStop();
+                    break;
+            }
+        },
+        [
+            onClickStop,
+            openLocalPortInBrowser,
+            portForwardHostPort,
+            portForwardUrl,
+        ]
+    );
+    const onContextMenu = useContextMenu(contextMenuTemplate, {
+        onMenuAction: onContextMenuAction,
+    });
 
     return (
         <>
-            <Tr>
+            <Tr onContextMenu={onContextMenu}>
                 <Td ps={0} whiteSpace="nowrap">
                     <HStack>
                         {portForward && (
