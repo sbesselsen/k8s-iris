@@ -250,7 +250,7 @@ const PortForwardRow: React.FC<PortForwardRowProps> = (props) => {
         if (!portForward) {
             return null;
         }
-        const looksLikeSecureLink = portForward.localPort % 1000 === 443;
+        const looksLikeSecureLink = portForward.spec.podPort % 1000 === 443;
         const guessedProtocol = looksLikeSecureLink ? "https" : "http";
         return `${guessedProtocol}://localhost:${portForward.localPort}`;
     }, [portForwardHostPort]);
@@ -281,7 +281,7 @@ const PortForwardRow: React.FC<PortForwardRowProps> = (props) => {
                       { label: "Stop", actionId: "stop" },
                   ]
                 : [],
-        []
+        [portForward]
     );
     const onContextMenuAction = useCallback(
         ({ actionId }: { actionId: string }) => {
