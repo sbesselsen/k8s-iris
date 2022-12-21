@@ -93,10 +93,10 @@ export const ClusterInfoOverview: React.FC = () => {
                                 <StatTh>Version</StatTh>
                                 <StatTd>
                                     {!versionIsLoading && version && (
-                                        <>
+                                        <Selectable>
                                             {version.major}.{version.minor} (
                                             {version.platform})
-                                        </>
+                                        </Selectable>
                                     )}
                                 </StatTd>
                             </Tr>
@@ -104,14 +104,22 @@ export const ClusterInfoOverview: React.FC = () => {
                                 contextInfo?.cluster !== contextInfo?.name && (
                                     <Tr>
                                         <StatTh>Cluster</StatTh>
-                                        <StatTd>{contextInfo.cluster}</StatTd>
+                                        <StatTd>
+                                            <Selectable>
+                                                {contextInfo.cluster}
+                                            </Selectable>
+                                        </StatTd>
                                     </Tr>
                                 )}
                             {contextInfo &&
                                 contextInfo?.user !== contextInfo?.name && (
                                     <Tr>
                                         <StatTh>User</StatTh>
-                                        <StatTd>{contextInfo.user}</StatTd>
+                                        <StatTd>
+                                            <Selectable>
+                                                {contextInfo.user}
+                                            </Selectable>
+                                        </StatTd>
                                     </Tr>
                                 )}
                             <Tr>
@@ -140,9 +148,14 @@ export const ClusterInfoOverview: React.FC = () => {
                                 <Tr>
                                     <StatTh>Service</StatTh>
                                     <StatTd>
-                                        {cloudServiceNames[
-                                            contextInfo.cloudInfo.cloudService
-                                        ] ?? contextInfo.cloudInfo.cloudService}
+                                        <Selectable>
+                                            {cloudServiceNames[
+                                                contextInfo.cloudInfo
+                                                    .cloudService
+                                            ] ??
+                                                contextInfo.cloudInfo
+                                                    .cloudService}
+                                        </Selectable>
                                     </StatTd>
                                 </Tr>
                             )}
@@ -150,7 +163,9 @@ export const ClusterInfoOverview: React.FC = () => {
                                 <Tr>
                                     <StatTh>Region</StatTh>
                                     <StatTd>
-                                        {contextInfo.cloudInfo?.region}
+                                        <Selectable>
+                                            {contextInfo.cloudInfo?.region}
+                                        </Selectable>
                                     </StatTd>
                                 </Tr>
                             )}
