@@ -22,7 +22,7 @@ import React, {
 import { MenuInput } from "../../component/MenuInput";
 import { useK8sContext } from "../../context/k8s-context";
 import { useIpcCall } from "../../hook/ipc";
-import { useAppRouteSetter } from "../../context/route";
+import { useAppRouteGetter, useAppRouteSetter } from "../../context/route";
 import { useModifierKeyRef } from "../../hook/keyboard";
 import { ChevronDownIcon } from "@chakra-ui/icons";
 import { K8sContext } from "../../../common/k8s/client";
@@ -48,6 +48,7 @@ type ContextOption = K8sContext &
 export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
     (_props, ref) => {
         const kubeContext = useK8sContext();
+        const getAppRoute = useAppRouteGetter();
         const setAppRoute = useAppRouteSetter();
         const editorsStore = useAppEditorsStore();
 
@@ -101,34 +102,38 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
 
                 if (metaKeyPressedRef.current) {
                     openInNewWindow();
-                } else {
-                    const numEditors = editorsStore.get().length;
-                    if (numEditors > 0) {
-                        const result = await showDialog({
-                            title: "Are you sure?",
-                            type: "question",
-                            message: `You have ${numEditors} editor${
-                                numEditors > 1 ? "s" : ""
-                            } open.`,
-                            detail: `Switching context will close all open editors and you will lose your changes.`,
-                            buttons: [
-                                "Open in New Window",
-                                "Close Editors and Switch",
-                                "Cancel",
-                            ],
-                            defaultId: 0,
-                        });
-                        switch (result.response) {
-                            case 0:
-                                openInNewWindow();
-                                break;
-                            case 1:
-                                open();
-                                break;
-                        }
-                    } else {
+                    return;
+                }
+                if (context === getAppRoute().context) {
+                    // Do not switch at all if the context remains the same.
+                    return;
+                }
+                const numEditors = editorsStore.get().length;
+                if (numEditors === 0) {
+                    open();
+                    return;
+                }
+                const result = await showDialog({
+                    title: "Are you sure?",
+                    type: "question",
+                    message: `You have ${numEditors} editor${
+                        numEditors > 1 ? "s" : ""
+                    } open.`,
+                    detail: `Switching context will close all open editors and you will lose your changes.`,
+                    buttons: [
+                        "Open in New Window",
+                        "Close Editors and Switch",
+                        "Cancel",
+                    ],
+                    defaultId: 0,
+                });
+                switch (result.response) {
+                    case 0:
+                        openInNewWindow();
+                        break;
+                    case 1:
                         open();
-                    }
+                        break;
                 }
             },
             [
@@ -136,6 +141,7 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
                 editorsStore,
                 onClose,
                 onDisclosureClose,
+                getAppRoute,
                 setAppRoute,
                 showDialog,
             ]
