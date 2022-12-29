@@ -112,7 +112,7 @@ export const AppToolbar: React.FC = () => {
                     color={buttonColor}
                     fontWeight="normal"
                     onMenuAction={onLockAction}
-                    _focus={{}}
+                    _focus={{ boxShadow: "none" }}
                     _focusVisible={{ boxShadow: "outline" }}
                 >
                     <MenuItem

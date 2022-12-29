@@ -21,7 +21,9 @@ import { useIpcCall } from "../../hook/ipc";
 export type ContextMenuButtonProps = ButtonProps &
     IconButtonProps & {
         label?: ReactNode;
-        onMenuAction?: (result: { actionId: string }) => void;
+        onMenuAction?: (
+            result: { actionId: string } & ContextMenuResult
+        ) => void;
         onMenuClose?: (result: ContextMenuResult) => void;
     };
 
@@ -60,7 +62,9 @@ export const ContextMenuButton: React.FC<ContextMenuButtonProps> = forwardRef<
                 }).then((result) => {
                     onMenuClose?.(result);
                     if (result.actionId) {
-                        onMenuAction?.({ actionId: result.actionId });
+                        onMenuAction?.(
+                            result as { actionId: string } & ContextMenuResult
+                        );
                     }
                     setMenuActive(false);
                 });

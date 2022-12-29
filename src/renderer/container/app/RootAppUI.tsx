@@ -552,10 +552,37 @@ const AppNamespaces: React.FC<{
         [createWindow, getAppRoute, setAppRoute]
     );
 
+    const onClickAddNamespace = useCallback(
+        (options: { requestNewWindow: boolean }) => {
+            const { requestNewWindow } = options;
+            const editor = newResourceEditor({
+                apiVersion: "v1",
+                kind: "Namespace",
+            });
+            console.log({ requestNewWindow });
+            if (requestNewWindow) {
+                createWindow({
+                    route: {
+                        ...getAppRoute(),
+                        isSidebarVisible: false,
+                        activeEditor: editor,
+                    },
+                });
+            } else {
+                setAppRoute((route) => ({
+                    ...route,
+                    activeEditor: editor,
+                }));
+            }
+        },
+        [createWindow, getAppRoute, setAppRoute]
+    );
+
     return (
         <SidebarNamespacesMenu
             selection={namespacesSelection}
             onChangeSelection={onChangeNamespacesSelection}
+            onClickAddNamespace={onClickAddNamespace}
             isLoading={loadingNamespaces}
             namespaces={sortedNamespaces}
         />

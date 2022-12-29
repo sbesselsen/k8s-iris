@@ -1,11 +1,10 @@
-import { AddIcon, CloseIcon } from "@chakra-ui/icons";
+import { AddIcon, CloseIcon, SettingsIcon } from "@chakra-ui/icons";
 import {
     Box,
     Button,
     ButtonGroup,
     Checkbox,
     CheckboxGroup,
-    Collapse,
     Heading,
     Icon,
     useColorModeValue,
@@ -13,6 +12,7 @@ import {
     VStack,
     useToken,
     ButtonProps,
+    IconButton,
 } from "@chakra-ui/react";
 import React, {
     ElementType,
@@ -25,6 +25,7 @@ import React, {
 } from "react";
 import { FiTerminal } from "react-icons/fi";
 import { RiTextWrap } from "react-icons/ri";
+import { ContextMenuResult } from "../../../common/contextmenu";
 import { K8sObject } from "../../../common/k8s/client";
 import {
     AppEditor,
@@ -36,6 +37,7 @@ import { useAppSearch } from "../../context/search";
 import { useIpcCall } from "../../hook/ipc";
 import { useModifierKeyRef } from "../../hook/keyboard";
 import { useMultiSelectUpdater } from "../../hook/multi-select";
+import { ContextMenuButton, MenuItem } from "./ContextMenuButton";
 
 export type SidebarMainMenuItem = {
     id: string;
@@ -122,6 +124,7 @@ export type SidebarNamespacesMenuProps = {
     isLoading?: boolean;
     namespaces: K8sObject[] | undefined;
     selection: AppNamespacesSelection;
+    onClickAddNamespace: (options: { requestNewWindow: boolean }) => void;
     onChangeSelection: (
         selection: AppNamespacesSelection,
         options: { requestNewWindow: boolean; singleNamespaceClicked: boolean }
@@ -134,6 +137,7 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
     const {
         isLoading = false,
         onChangeSelection,
+        onClickAddNamespace,
         namespaces = [],
         selection,
     } = props;
@@ -298,19 +302,46 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
         );
     };
 
+    const onNamespacesMenuAction = useCallback(
+        ({ actionId, metaKey }: { actionId: string } & ContextMenuResult) => {
+            if (actionId === "new") {
+                onClickAddNamespace({
+                    requestNewWindow: metaKey ?? false,
+                });
+            }
+        },
+        [onClickAddNamespace]
+    );
+
     return (
         <VStack flex="1 0 0" alignItems="stretch">
-            <Heading
-                textColor={headingColor}
-                fontWeight="semibold"
-                fontSize="xs"
-                textTransform="uppercase"
-                px={4}
-            >
-                Namespaces
-            </Heading>
+            <HStack ps={4} pe={2} alignItems="center">
+                <Heading
+                    textColor={headingColor}
+                    fontWeight="semibold"
+                    fontSize="xs"
+                    textTransform="uppercase"
+                >
+                    Namespaces
+                </Heading>
+                <Box flex="1 0 0"></Box>
 
-            <Box px={4} flex="0 0 0">
+                <ContextMenuButton
+                    as={IconButton}
+                    icon={<SettingsIcon />}
+                    size="xs"
+                    aria-label="Namespaces Actions"
+                    variant="ghost"
+                    colorScheme="gray"
+                    onMenuAction={onNamespacesMenuAction}
+                    _focus={{ boxShadow: "none" }}
+                    _focusVisible={{ boxShadow: "outline" }}
+                >
+                    <MenuItem actionId="new" label="New..." />
+                </ContextMenuButton>
+            </HStack>
+
+            <HStack px={4} flex="0 0 0">
                 <ButtonGroup variant="outline" size="xs" isAttached>
                     <Button
                         mr="-1px"
@@ -353,7 +384,7 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                         Selected
                     </Button>
                 </ButtonGroup>
-            </Box>
+            </HStack>
             <Box
                 flex="1 0 0"
                 overflow="hidden scroll"
