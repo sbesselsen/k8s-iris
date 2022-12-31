@@ -71,7 +71,9 @@ store.subscribe((handles) => {
                     ].client.listApiResourceTypes();
                     setResultValue(types);
                     haveInitialList = true;
-                } catch (e) {}
+                } catch (e) {
+                    // Nothing.
+                }
                 if (stopped) {
                     return;
                 }
@@ -133,7 +135,7 @@ export function useK8sApiResourceTypes(): [
     K8sResourceTypeInfo[] | undefined,
     any | undefined
 ] {
-    const context = useK8sContext();
+    const context = useK8sContext() ?? "";
     const client = useK8sClient();
     const store = useStore();
 

@@ -27,7 +27,7 @@ export function useAsync<T>(
                     setValue([false, undefined, err]);
                 }
             });
-    }, [setValue, ...deps]);
+    }, [setValue, ...(deps ?? [])]);
     return value;
 }
 

@@ -100,6 +100,7 @@ export const ResourceContextMenu: React.FC<ResourceContextMenuProps> = (
                 const menuTemplate: ContextMenuTemplate = [];
                 for (const actionGroup of actions) {
                     for (const action of actionGroup) {
+                        // eslint-disable-next-line @typescript-eslint/no-unused-vars
                         const { onClick, isVisible, ...menuItemProps } = action;
                         menuTemplate.push({
                             ...menuItemProps,

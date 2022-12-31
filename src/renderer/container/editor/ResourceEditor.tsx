@@ -205,7 +205,7 @@ const detailSelectors: string[] = [
 export const ResourceEditor: React.FC<ResourceEditorProps> = (props) => {
     const { editorResource } = props;
 
-    const [isLoadingObjects, objects, _objectsError] = useK8sListWatch(
+    const [isLoadingObjects, objects] = useK8sListWatch(
         {
             apiVersion: editorResource.apiVersion,
             kind: editorResource.kind,
@@ -296,6 +296,9 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
 
     const onClickShell = useCallback(
         async (containerName: string) => {
+            if (!object) {
+                return;
+            }
             if (!(await checkContextLock())) {
                 return;
             }
@@ -305,6 +308,9 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
     );
     const onClickLogs = useCallback(
         (containerName: string) => {
+            if (!object) {
+                return;
+            }
             openEditor(logsEditor(object, containerName));
         },
         [openEditor, object]
@@ -438,7 +444,7 @@ const ShellButton: React.FC<{
 
     const containers = useMemo(
         () =>
-            (object as any).spec?.containers?.map((container) => ({
+            (object as any).spec?.containers?.map((container: any) => ({
                 name: container.name,
                 onClick: () => {
                     onClick?.(container.name);
@@ -449,7 +455,7 @@ const ShellButton: React.FC<{
 
     const onMenuAction = useCallback(
         ({ actionId }: { actionId: string }) => {
-            containers.find((c) => c.name === actionId)?.onClick();
+            containers.find((c: any) => c.name === actionId)?.onClick();
         },
         [containers]
     );
@@ -477,7 +483,7 @@ const ShellButton: React.FC<{
                 isDisabled={isDisabled}
                 onMenuAction={onMenuAction}
             >
-                {containers.map((container) => (
+                {containers.map((container: any) => (
                     <ContextMenuItem
                         key={container.name}
                         actionId={container.name}
@@ -498,7 +504,7 @@ const LogsButton: React.FC<{
 
     const containers = useMemo(
         () =>
-            (object as any).spec?.containers?.map((container) => ({
+            (object as any).spec?.containers?.map((container: any) => ({
                 name: container.name,
                 onClick: () => {
                     onClick?.(container.name);
@@ -509,7 +515,7 @@ const LogsButton: React.FC<{
 
     const onMenuAction = useCallback(
         ({ actionId }: { actionId: string }) => {
-            containers.find((c) => c.name === actionId)?.onClick();
+            containers.find((c: any) => c.name === actionId)?.onClick();
         },
         [containers]
     );
@@ -537,7 +543,7 @@ const LogsButton: React.FC<{
                 isDisabled={isDisabled}
                 onMenuAction={onMenuAction}
             >
-                {containers.map((container) => (
+                {containers.map((container: any) => (
                     <ContextMenuItem
                         key={container.name}
                         actionId={container.name}
@@ -590,7 +596,7 @@ const ScalePopoverContent: React.FC<{
     const client = useK8sClient();
     const showDialog = useDialog();
 
-    const [isLoadingHpas, hpas, hpasError] = useK8sListWatch(
+    const [isLoadingHpas, hpas] = useK8sListWatch(
         {
             apiVersion: "autoscaling/v2beta2",
             kind: "HorizontalPodAutoscaler",
@@ -687,7 +693,7 @@ const ScalePopoverContent: React.FC<{
                         replicas: targetScale,
                     },
                 } as K8sObject);
-            } catch (e) {
+            } catch (e: any) {
                 console.error("Error while scaling", { object, e });
                 showDialog({
                     title: "Error while scaling",
@@ -727,7 +733,7 @@ const ScalePopoverContent: React.FC<{
 
     const [isResuming, setIsResuming] = useState(false);
     const onClickResume = useCallback(async () => {
-        let targetScale = pausedScaleNumber ?? 1;
+        const targetScale = pausedScaleNumber ?? 1;
         setIsResuming(true);
         await scale(targetScale, {
             "irisapp.dev/original-replicas": null,
@@ -880,15 +886,13 @@ export type NewResourceEditorProps = {
 export const NewResourceEditor: React.FC<NewResourceEditorProps> = (props) => {
     const { editorId, resourceType } = props;
 
-    const [selectedResourceType, setSelectedResourceType] = useState<
-        K8sResourceTypeIdentifier | undefined
-    >(resourceType);
+    const [selectedResourceType, setSelectedResourceType] =
+        useState<K8sResourceTypeIdentifier | null>(resourceType ?? null);
 
     const namespaces = useK8sNamespaces();
     const namespacesConst = useConst(namespaces);
 
-    const [_isLoadingResourceTypes, resourceTypes, _resourceTypesError] =
-        useK8sApiResourceTypes();
+    const [, resourceTypes] = useK8sApiResourceTypes();
     const resourceTypeInfo = useMemo(
         () =>
             selectedResourceType
@@ -905,7 +909,7 @@ export const NewResourceEditor: React.FC<NewResourceEditorProps> = (props) => {
     const editorsStore = useAppEditorsStore();
     const setAppRoute = useAppRouteSetter();
 
-    const object: K8sObject = useMemo(
+    const object: K8sObject | null = useMemo(
         () =>
             selectedResourceType
                 ? {
@@ -970,12 +974,8 @@ export const NewResourceEditor: React.FC<NewResourceEditorProps> = (props) => {
 
 const AssociatedPods: React.FC<{ object: K8sObject }> = (props) => {
     const { object } = props;
-    const {
-        hasAssociatedPods,
-        isLoadingAssociatedPods,
-        associatedPods,
-        error,
-    } = useK8sAssociatedPods(object);
+    const { hasAssociatedPods, isLoadingAssociatedPods, associatedPods } =
+        useK8sAssociatedPods(object);
 
     if (!hasAssociatedPods) {
         return null;
@@ -1123,7 +1123,7 @@ const PortForwardingMenu: React.FC<{ object: K8sObject }> = (props) => {
 
     const [stats, setStats] = useState<Record<string, K8sPortForwardStats>>({});
 
-    const [loading, forwards, _forwardsError] = useK8sPortForwardsWatch(
+    const [loading, forwards] = useK8sPortForwardsWatch(
         {
             onStats(stats) {
                 setStats(stats);
@@ -1191,7 +1191,7 @@ const PortForwardingMenu: React.FC<{ object: K8sObject }> = (props) => {
                         podPort,
                         ...(localPort !== undefined ? { localPort } : {}),
                     });
-                } catch (e) {
+                } catch (e: any) {
                     console.error("Error port forwarding", e);
                     showDialog({
                         title: "Error forwarding port",

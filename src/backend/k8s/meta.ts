@@ -24,48 +24,47 @@ export async function fetchApiList(
     const opts = await kubeRequestOpts(kubeConfig);
 
     return new Promise((resolve, reject) => {
-        request.get(
-            kubeConfig.getCurrentCluster().server,
-            opts,
-            (err, res, body) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    try {
-                        const data = JSON.parse(body);
-                        if (
-                            data &&
-                            data.kind === "Status" &&
-                            data.status === "Failure"
-                        ) {
-                            reject(data);
-                            return;
-                        }
-                        const apis: K8sApi[] = [
-                            {
-                                version: "v1",
-                                apiVersion: "v1",
-                            },
-                        ];
-                        for (const path of data.paths) {
-                            const match = path.match(
-                                /\/apis\/([^\/]+)\/([^\/]+)/
-                            );
-                            if (match) {
-                                apis.push({
-                                    group: match[1],
-                                    version: match[2],
-                                    apiVersion: `${match[1]}/${match[2]}`,
-                                });
-                            }
-                        }
-                        resolve(apis);
-                    } catch (e) {
-                        reject(e);
+        const currentCluster = kubeConfig.getCurrentCluster();
+        if (!currentCluster) {
+            reject(new Error("No cluster selected"));
+            return;
+        }
+        request.get(currentCluster.server, opts, (err, res, body) => {
+            if (err) {
+                reject(err);
+            } else {
+                try {
+                    const data = JSON.parse(body);
+                    if (
+                        data &&
+                        data.kind === "Status" &&
+                        data.status === "Failure"
+                    ) {
+                        reject(data);
+                        return;
                     }
+                    const apis: K8sApi[] = [
+                        {
+                            version: "v1",
+                            apiVersion: "v1",
+                        },
+                    ];
+                    for (const path of data.paths) {
+                        const match = path.match(/\/apis\/([^/]+)\/([^/]+)/);
+                        if (match) {
+                            apis.push({
+                                group: match[1],
+                                version: match[2],
+                                apiVersion: `${match[1]}/${match[2]}`,
+                            });
+                        }
+                    }
+                    resolve(apis);
+                } catch (e) {
+                    reject(e);
                 }
             }
-        );
+        });
     });
 }
 
@@ -94,8 +93,14 @@ export async function fetchApiResourceList(
         pathParts.push(api.version);
         const path = pathParts.join("/");
 
+        const currentCluster = kubeConfig.getCurrentCluster();
+        if (!currentCluster) {
+            reject(new Error("No cluster selected"));
+            return;
+        }
+
         request.get(
-            `${kubeConfig.getCurrentCluster().server}/${path}`,
+            `${currentCluster.server}/${path}`,
             opts,
             (err, res, body) => {
                 if (err) {
@@ -112,7 +117,7 @@ export async function fetchApiResourceList(
                             return;
                         }
                         const resources: K8sApiResource[] = data.resources.map(
-                            (resource) => ({
+                            (resource: any) => ({
                                 api,
                                 name: resource.name,
                                 namespaced: resource.namespaced,

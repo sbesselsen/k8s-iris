@@ -148,7 +148,7 @@ export function deleteListObject<T extends K8sObject = K8sObject>(
 }
 
 export function parseCpu(cpu: string): number | null {
-    const match = cpu.match(/^([0-9\.]+)([a-z]?)$/);
+    const match = cpu.match(/^([0-9.]+)([a-z]?)$/);
     if (!match) {
         return null;
     }
@@ -169,12 +169,12 @@ export function parseMemory(
     memory: string,
     targetUnit: "Ki" | "Mi" | "Gi" | "Ti"
 ): number | null {
-    const match = memory.match(/^([0-9\.]+)([a-zA-Z]*)$/);
+    const match = memory.match(/^([0-9.]+)([a-zA-Z]*)$/);
     if (!match) {
         return null;
     }
     const number = 1 * (match[1] as any);
-    const sourceUnit = match[2];
+    const sourceUnit = match[2] as typeof targetUnit;
     const unitAdjustments: Record<typeof targetUnit, number> = {
         Ki: 1,
         Mi: 1024,

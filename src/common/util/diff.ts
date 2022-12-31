@@ -58,7 +58,7 @@ export function diff(a: unknown, b: unknown): Diff {
     return objectDiff(a, b);
 }
 
-function arrayDiff(a: unknown[], b: unknown[]): DiffArray {
+function arrayDiff(a: unknown[], b: unknown[]): DiffArray | null {
     const keysA = detectKeys(a);
     if (keysA.size > 0) {
         const keysB = detectKeys(b);
@@ -72,11 +72,15 @@ function arrayDiff(a: unknown[], b: unknown[]): DiffArray {
     return linearDiff(a, b, (itemA, itemB) => deepEqual(itemA, itemB));
 }
 
-function keyedArrayDiff(key: string, a: unknown[], b: unknown[]): DiffArray {
+function keyedArrayDiff(
+    key: string,
+    a: unknown[],
+    b: unknown[]
+): DiffArray | null {
     return linearDiff(
         a,
         b,
-        (itemA, itemB) => itemA && itemB && itemA[key] === itemB[key]
+        (itemA: any, itemB: any) => itemA && itemB && itemA[key] === itemB[key]
     );
 }
 
@@ -84,7 +88,7 @@ function linearDiff(
     a: unknown[],
     b: unknown[],
     isEqualRef: (itemA: unknown, itemB: unknown) => boolean
-): DiffArray {
+): DiffArray | null {
     type Entry = {
         indexA: number;
         indexB: number;
@@ -92,7 +96,7 @@ function linearDiff(
         nextEntry: Entry | null;
         action: "insert" | "delete" | "merge";
     };
-    const cache: Record<string, Entry> = {};
+    const cache: Record<string, Entry | null> = {};
     const maxSpan = 10;
     const partialLinearDiff = (
         indexA: number,
@@ -143,7 +147,7 @@ function linearDiff(
                         cache[cacheKey] = {
                             indexA,
                             indexB,
-                            cost: insertEntry.cost + 1,
+                            cost: (insertEntry?.cost ?? 0) + 1,
                             action: "insert",
                             nextEntry: insertEntry,
                         };
@@ -155,7 +159,7 @@ function linearDiff(
                         cache[cacheKey] = {
                             indexA,
                             indexB,
-                            cost: deleteEntry.cost + 1,
+                            cost: (deleteEntry?.cost ?? 0) + 1,
                             action: "delete",
                             nextEntry: deleteEntry,
                         };
@@ -209,7 +213,7 @@ function linearDiff(
         }
         return cache[cacheKey];
     };
-    let entry: Entry = partialLinearDiff(0, 0);
+    let entry: Entry | null = partialLinearDiff(0, 0);
     const diffs: Array<
         DiffArrayItemDelete | DiffArrayItemInsert | DiffArrayItemDescend
     > = [];
@@ -229,15 +233,17 @@ function linearDiff(
                 currentIndex++;
                 break;
             case "merge":
-                const subDiff = diff(a[indexA], b[indexB]);
-                if (subDiff !== null) {
-                    diffs.push({
-                        diff: "descend",
-                        index: currentIndex,
-                        subDiff: subDiff,
-                    });
+                {
+                    const subDiff = diff(a[indexA], b[indexB]);
+                    if (subDiff !== null) {
+                        diffs.push({
+                            diff: "descend",
+                            index: currentIndex,
+                            subDiff: subDiff,
+                        });
+                    }
+                    currentIndex++;
                 }
-                currentIndex++;
                 break;
         }
         entry = nextEntry;
@@ -262,10 +268,13 @@ function isSuitableKey(key: string, a: unknown[]): boolean {
         if (typeof item !== "object") {
             return false;
         }
+        if (!item) {
+            return false;
+        }
         if (!(key in item)) {
             return false;
         }
-        const value = item[key];
+        const value = (item as any)[key];
         if (value && typeof value === "object") {
             return false;
         }
@@ -285,14 +294,14 @@ function objectDiff(a: object, b: object): Diff {
     for (const key of keysB) {
         if (keysA.has(key)) {
             // Both objects have this key.
-            const d = diff(a[key], b[key]);
+            const d = diff((a as any)[key], (b as any)[key]);
             if (d) {
                 hasDiff = true;
                 diffs[key] = d;
             }
         } else {
             hasDiff = true;
-            const value = b[key];
+            const value = (b as any)[key];
             if (typeof value === "object" && !Array.isArray(value) && value) {
                 diffs[key] = objectDiff({}, value);
             } else {
@@ -361,18 +370,19 @@ function objectApply(a: unknown, diffs: Record<string, Diff>): unknown {
         if (diff === null) {
             continue;
         }
+        const aAsAny = a as any;
         switch (diff.diff) {
             case "array":
-                a[key] = arrayApply(a[key], diff.diffs);
+                aAsAny[key] = arrayApply(aAsAny[key], diff.diffs);
                 break;
             case "delete":
-                delete a[key];
+                delete aAsAny[key];
                 break;
             case "object":
-                a[key] = objectApply(a[key], diff.diffs);
+                aAsAny[key] = objectApply(aAsAny[key], diff.diffs);
                 break;
             case "value":
-                a[key] = diff.value;
+                aAsAny[key] = diff.value;
                 break;
         }
     }
@@ -444,6 +454,12 @@ function mergeDiffsInternal(
         case "array":
             if (b.diff === "array") {
                 return mergeArrayDiffs(a, b, path, resolveConflict, conflicts);
+            } else {
+                return handleConflict(
+                    { path, leftDiff: a, rightDiff: b },
+                    resolveConflict,
+                    conflicts
+                ) as Diff;
             }
             break;
         case "delete":
@@ -485,7 +501,7 @@ function mergeArrayDiffs(
     path: Array<string | number>,
     resolveConflict: MergeConflictResolver,
     conflicts: MergeConflict[]
-): DiffArray {
+): DiffArray | null {
     const aDiffs = [...a.diffs].sort((x, y) => x.index - y.index);
     const bDiffs = [...b.diffs].sort((x, y) => x.index - y.index);
     const outDiffs: Array<
@@ -494,16 +510,22 @@ function mergeArrayDiffs(
     let aOffset = 0;
     let bOffset = 0;
 
-    const operationOffsets = { delete: -1, insert: 1 };
+    const operationOffsets = { delete: -1, insert: 1, descend: 0 };
 
     while (aDiffs.length > 0 || bDiffs.length > 0) {
         if (aDiffs.length === 0) {
             // Apply the b diff.
-            const bDiff = bDiffs.shift();
+            const bDiff = bDiffs.shift() as
+                | DiffArrayItemDelete
+                | DiffArrayItemDescend
+                | DiffArrayItemInsert;
             outDiffs.push({ ...bDiff, index: bDiff.index + bOffset });
         } else if (bDiffs.length === 0) {
             // Apply the a diff.
-            const aDiff = aDiffs.shift();
+            const aDiff = aDiffs.shift() as
+                | DiffArrayItemDelete
+                | DiffArrayItemDescend
+                | DiffArrayItemInsert;
             outDiffs.push({ ...aDiff, index: aDiff.index + aOffset });
         } else {
             // Combine.

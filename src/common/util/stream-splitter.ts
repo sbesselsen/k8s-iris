@@ -5,7 +5,7 @@ export function streamSplitter(
     push(chunk: string): void;
     end(): void;
 } {
-    let currentPart = null;
+    let currentPart: string | null = null;
     return {
         push(chunk) {
             if (chunk.length === 0) {
@@ -18,7 +18,7 @@ export function streamSplitter(
             }
             const items = currentPart.split(separator);
             if (items.length > 0) {
-                currentPart = items.pop();
+                currentPart = items.pop() as string;
                 items.forEach(f);
             }
         },

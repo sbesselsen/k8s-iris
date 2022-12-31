@@ -35,7 +35,7 @@ export type K8sResourceDisplayRule = {
 
 export type K8sObjectViewerProps = {
     data: any;
-    displayRules?: K8sResourceDisplayRule[];
+    displayRules: K8sResourceDisplayRule[];
     expandedItems?: string[];
     onChangeExpandedItems?: (items: string[]) => void;
     defaultExpandedItems?: string[];
@@ -134,13 +134,6 @@ export const K8sInnerObjectViewer: React.FC<K8sInnerObjectViewerProps> = (
         () => Array.isArray(data) && isSimpleArray(data),
         [data]
     );
-    const keyField = useMemo(
-        () =>
-            Array.isArray(data) && !arrayIsSimple
-                ? displayRule.subKeyField ?? detectKeyField(data)
-                : undefined,
-        [arrayIsSimple, displayRule, data]
-    );
 
     if (displayRule.displayAs === "hidden") {
         return null;
@@ -208,7 +201,7 @@ export const K8sInnerObjectViewer: React.FC<K8sInnerObjectViewerProps> = (
         return null;
     }
 
-    let entries = Object.entries(data);
+    const entries = Object.entries(data);
     if (entries.length === 0) {
         return null;
     }
@@ -305,7 +298,7 @@ type K8sObjectMapProps = {
 
 function flattenObjectMapEntries(entries: ObjectMapEntry[]): ObjectMapEntry[] {
     const output: ObjectMapEntry[] = [];
-    for (let entry of entries) {
+    for (const entry of entries) {
         if (Array.isArray(entry.item) && !isSimpleArray(entry.item)) {
             // We need to flatten this item.
             for (let i = 0; i < entry.item.length; i++) {
@@ -457,7 +450,7 @@ function calcDisplayRule(
     if (rulesMap[cacheKey]) {
         return rulesMap[cacheKey];
     }
-    const pathOptions = [path.replace(/^.*\.([^\.]+)/, "..$1"), path];
+    const pathOptions = [path.replace(/^.*\.([^.]+)/, "..$1"), path];
     let rule = defaultDisplayRule;
     for (const pathOption of pathOptions) {
         if (rulesMap[pathOption]) {
@@ -516,44 +509,6 @@ export const K8sObjectHeading: React.FC<K8sObjectHeadingProps> = (props) => {
         </VStack>
     );
 };
-
-function detectKeyField<T>(items: T[]): keyof T | undefined {
-    let possibleKeyFields = [
-        "name",
-        "id",
-        "key",
-        "type",
-        "host",
-        "path",
-        "hostname",
-    ];
-    const keyValues: Record<string, string[]> = {};
-
-    for (const item of items) {
-        if (typeof item !== "object") {
-            return undefined;
-        }
-        possibleKeyFields = possibleKeyFields.filter((field) => {
-            if (!(field in item)) {
-                return false;
-            }
-            const value = item[field];
-            if (field in keyValues && keyValues[field].includes(value)) {
-                // Duplicate value; this is not a suitable key field.
-                return false;
-            }
-            if (!keyValues[field]) {
-                keyValues[field] = [];
-            }
-            keyValues[field].push(value);
-            return true;
-        });
-        if (possibleKeyFields.length === 0) {
-            break;
-        }
-    }
-    return possibleKeyFields[0] as any;
-}
 
 function isSimpleValue(obj: any): obj is SimpleValue {
     if (!obj) {

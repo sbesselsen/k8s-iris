@@ -15,13 +15,13 @@ function scrollToBottom(
     editorInstance: editor.IStandaloneCodeEditor,
     smooth = false
 ) {
-    const numberOfLines = editorInstance.getModel().getLineCount();
+    const numberOfLines = editorInstance.getModel()?.getLineCount() ?? 0;
     const position = editorInstance.getScrolledVisiblePosition({
         column: 1,
         lineNumber: numberOfLines,
     });
     const editorHeight = editorInstance.getContainerDomNode().clientHeight;
-    if (position.top > editorHeight - 50) {
+    if (position && position.top > editorHeight - 50) {
         // The bottom of the log is out of view.
         editorInstance.revealLine(
             numberOfLines,
@@ -31,11 +31,15 @@ function scrollToBottom(
 }
 
 function isLastLineVisible(editor: editor.IStandaloneCodeEditor): boolean {
-    const numberOfLines = editor.getModel().getLineCount();
+    const numberOfLines = editor.getModel()?.getLineCount() ?? 0;
     const position = editor.getScrolledVisiblePosition({
         column: 1,
         lineNumber: numberOfLines,
     });
+    if (!position) {
+        return false;
+    }
+
     const editorHeight = editor.getContainerDomNode().clientHeight;
 
     return position.top + position.height < editorHeight;
@@ -70,11 +74,16 @@ export const PodLogsEditor: React.FC<PodLogsEditorProps> = (props) => {
                 return;
             }
 
+            const model = editor.getModel();
+            if (!model) {
+                return;
+            }
+
             // Append the new lines.
-            const lineNumber = editor.getModel().getLineCount() + 1;
-            const prevValue = editor.getModel().getValue();
+            const lineNumber = model.getLineCount() + 1;
+            const prevValue = model.getValue();
             const stickToBottom = isLastLineVisible(editor);
-            editor.getModel().applyEdits([
+            model.applyEdits([
                 {
                     text: lines.join("\n") + "\n",
                     range: new Range(lineNumber, 1, lineNumber, 1),
@@ -146,7 +155,7 @@ export const PodLogsEditor: React.FC<PodLogsEditorProps> = (props) => {
 
     // Empty the editor if we change to a different container.
     useEffect(() => {
-        editorRef.current?.getModel().setValue("");
+        editorRef.current?.getModel()?.setValue("");
         logLinesRef.current = [];
     }, [name, namespace, containerName, editorRef, logLinesRef]);
 

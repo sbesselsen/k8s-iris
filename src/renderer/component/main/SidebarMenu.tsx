@@ -77,7 +77,7 @@ export const SidebarMainMenu: React.FC<SidebarMainMenuProps> = (props) => {
                     key={item.id}
                     item={item}
                     onSelect={onClickMenuItems[item.id]}
-                    isSelected={item.id && item.id === selection}
+                    isSelected={!!item.id && item.id === selection}
                 />
             ))}
         </VStack>
@@ -101,7 +101,7 @@ const SidebarMenuButton: React.FC<SidebarMenuButtonProps> = (props) => {
             h={iconSize}
             as={item.iconType}
         />
-    ) : null;
+    ) : undefined;
 
     const focusShadow = useToken("shadows", "outline");
 
@@ -136,7 +136,6 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
     props
 ) => {
     const {
-        isLoading = false,
         onChangeSelection,
         onClickAddNamespace,
         namespaces = [],
@@ -560,7 +559,6 @@ const SidebarEditorsMenuButton: React.FC<SidebarEditorsMenuButtonProps> = (
         if (item.type === "pod-logs") {
             return <Icon as={RiTextWrap} />;
         }
-        return null;
     }, [item]);
 
     return (

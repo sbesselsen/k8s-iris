@@ -1,4 +1,4 @@
-const solid = (props) => {
+const solid = (props: any) => {
     const { colorMode, colorScheme } = props;
     return {
         transitionProperty: "none",
@@ -19,7 +19,7 @@ const solid = (props) => {
     };
 };
 
-const ghost = (props) => {
+const ghost = (props: any) => {
     const { colorMode, colorScheme } = props;
     return {
         bg: "transparent",
@@ -36,7 +36,7 @@ const ghost = (props) => {
     };
 };
 
-const sidebar = (props) => {
+const sidebar = (props: any) => {
     const { colorMode, colorScheme } = props;
     return {
         bg: colorMode === "light" ? `blackAlpha.200` : `whiteAlpha.200`,
@@ -72,7 +72,7 @@ const sidebar = (props) => {
     };
 };
 
-const sidebarGhost = (props) => {
+const sidebarGhost = (props: any) => {
     const { colorMode, colorScheme } = props;
     return {
         bg: "transparent",

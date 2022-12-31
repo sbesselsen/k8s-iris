@@ -2,8 +2,13 @@
     "compilerOptions": {
         "esModuleInterop": true,
         "strict": true,
-        "jsx": "react",
-        "lib": ["es2019"]
+        "jsx": "react-jsx",
+        "lib": ["es2019"],
+        "target": "ES2019",
+        "moduleResolution": "node",
+        "skipLibCheck": true,
+        "module": "es2020"
     },
-    "include": ["src"]
+    "include": ["./src"],
+    "exclude": ["./dist", "./renderer-dev", "./node_modules"]
 }

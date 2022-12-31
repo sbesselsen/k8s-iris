@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useHibernate } from "../context/hibernate";
 
-let currentValues: Record<string, boolean> = {};
-let modifierKeyListeners: Record<string, Array<(value: boolean) => void>> = {};
+const currentValues: Record<string, boolean> = {};
+const modifierKeyListeners: Record<
+    string,
+    Array<(value: boolean) => void>
+> = {};
 let keyListeners: Array<
     (eventType: string, key: string, e: KeyboardEvent) => void
 > = [];

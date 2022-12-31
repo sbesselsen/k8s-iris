@@ -55,6 +55,9 @@ export function logsEditor(
     containerName: string
 ): AppEditor {
     const resourceIdentifier = toK8sObjectIdentifier(resource);
+    if (!resourceIdentifier.namespace) {
+        throw new Error("Can only create logs editor for namespaced resources");
+    }
     return {
         type: "pod-logs",
         id: `pod-logs:${resourceIdentifier.apiVersion}:${resourceIdentifier.kind}:${resourceIdentifier.namespace}:${resourceIdentifier.name}:${containerName}`,
@@ -69,6 +72,9 @@ export function shellEditor(
     containerName: string
 ): AppEditor {
     const resourceIdentifier = toK8sObjectIdentifier(resource);
+    if (!resourceIdentifier.namespace) {
+        throw new Error("Can only create logs editor for namespaced resources");
+    }
     return {
         type: "pod-shell",
         id: `pod-shell:${resourceIdentifier.apiVersion}:${resourceIdentifier.kind}:${resourceIdentifier.namespace}:${resourceIdentifier.name}:${containerName}`,

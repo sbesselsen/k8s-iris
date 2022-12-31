@@ -1,6 +1,6 @@
 import { mode } from "@chakra-ui/theme-tools";
 
-const content = (props) => {
+const content = (props: any) => {
     const bgGradient = mode(
         "linear(to-t, gray.200 0%, gray.100 4px, gray.100 70%, gray.200 180%)",
         "linear(to-t, gray.800 0, gray.800 70%, gray.900 180%)"

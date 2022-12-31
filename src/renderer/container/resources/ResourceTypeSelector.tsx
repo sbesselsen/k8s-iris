@@ -59,8 +59,7 @@ export const ResourceTypeSelector: React.FC<ResourceTypeSelectorProps> = (
         onChange: onChange as any,
     });
 
-    const [isLoadingResourceTypes, resourceTypes, _resourceTypesError] =
-        useK8sApiResourceTypes();
+    const [isLoadingResourceTypes, resourceTypes] = useK8sApiResourceTypes();
 
     const metaKeyPressedRef = useModifierKeyRef("Meta");
     const [searchValue, setSearchValue] = useState("");
@@ -69,7 +68,7 @@ export const ResourceTypeSelector: React.FC<ResourceTypeSelectorProps> = (
     const selectValue = useCallback(
         (type: K8sResourceTypeIdentifier | null) => {
             if (metaKeyPressedRef.current) {
-                onChange(type, true);
+                onChange?.(type, true);
             } else {
                 setStateValue(type);
             }
@@ -332,7 +331,7 @@ export const ResourceTypeSelector: React.FC<ResourceTypeSelectorProps> = (
                             isActive={
                                 stateValue?.apiVersion === type.apiVersion
                             }
-                            onClick={onClickVersionedTypes[index]}
+                            onClick={onClickVersionedTypes?.[index]}
                             _focus={{}}
                             _focusVisible={{
                                 boxShadow: focusShadow,

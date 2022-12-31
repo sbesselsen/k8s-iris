@@ -20,7 +20,10 @@ import {
     MergeConflict,
     mergeDiffs,
 } from "../../../common/util/diff";
-import { MonacoCodeEditor } from "../../component/editor/MonacoCodeEditor";
+import {
+    MonacoCodeEditor,
+    MonacoCodeEditorProps,
+} from "../../component/editor/MonacoCodeEditor";
 import { useContextLockHelpers } from "../../context/context-lock";
 import { useK8sClient } from "../../k8s/client";
 import { parseYaml, toYaml } from "../../../common/util/yaml";
@@ -59,7 +62,7 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
 
     const updateValueFromObject = useCallback(
         (object: K8sObject | undefined) => {
-            const newValue = toYaml(object);
+            const newValue = object === undefined ? "" : toYaml(object);
             setOriginalValue(newValue);
             setValue(newValue);
         },
@@ -83,7 +86,7 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
     }, []);
 
     useEffect(() => {
-        if (!objSameRef(object, editorObject)) {
+        if (object && (!editorObject || !objSameRef(object, editorObject))) {
             // Only change the editor object if it is different. Updates to the object at hand should not overwrite what's in the editor.
             setEditorObject(object);
         }
@@ -161,7 +164,7 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
                     title: "Invalid yaml",
                     type: "error",
                     message: "The yaml you are trying to apply is invalid.",
-                    detail: result.error ? String(result.error) : null,
+                    detail: result.error ? String(result.error) : undefined,
                     buttons: ["OK"],
                 });
             }
@@ -207,7 +210,7 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
                 setEditorObject(response);
                 setPhase("edit");
                 onAfterApply?.(response);
-            } catch (e) {
+            } catch (e: any) {
                 showDialog({
                     title: "Error applying",
                     type: "error",
@@ -238,7 +241,9 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
             switch (result.reason) {
                 case "no_diff":
                     // No local edits, so we can just overwrite the value.
-                    setEditorObject(object);
+                    if (object) {
+                        setEditorObject(object);
+                    }
                     break;
                 case "invalid_yaml":
                     showDialog({
@@ -246,7 +251,7 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
                         type: "error",
                         message:
                             "Cannot update your editor because your yaml is currently invalid.",
-                        detail: result.error ? String(result.error) : null,
+                        detail: result.error ? String(result.error) : undefined,
                         buttons: ["OK"],
                     });
                     break;
@@ -324,13 +329,17 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
             )}
             {phase === "review" && (
                 <MonacoDiffEditor
-                    options={{
-                        language: "yaml",
-                        minimap: { enabled: false },
-                        links: false,
-                        tabSize: 2,
-                        padding: { top: 5 },
-                    }}
+                    options={
+                        {
+                            language: "yaml",
+                            minimap: { enabled: false },
+                            links: false,
+                            tabSize: 2, // Not defined in the type, but pretty sure it works..?!
+                            padding: { top: 5 },
+                        } as MonacoCodeEditorProps["options"] & {
+                            tabSize: number;
+                        }
+                    }
                     originalValue={originalValue}
                     value={value}
                     onChange={setValue}
@@ -424,7 +433,11 @@ function addDefaultEditorActions(editor: monaco.editor.IStandaloneCodeEditor) {
             if (!selection) {
                 return;
             }
-            const b64 = editor.getModel().getValueInRange(selection);
+            const model = editor.getModel();
+            if (!model) {
+                return;
+            }
+            const b64 = model.getValueInRange(selection);
             editor.executeEdits("clipboard", [
                 {
                     range: selection,
@@ -445,7 +458,11 @@ function addDefaultEditorActions(editor: monaco.editor.IStandaloneCodeEditor) {
             if (!selection) {
                 return;
             }
-            const plain = editor.getModel().getValueInRange(selection);
+            const model = editor.getModel();
+            if (!model) {
+                return;
+            }
+            const plain = model.getValueInRange(selection);
             editor.executeEdits("clipboard", [
                 {
                     range: selection,
@@ -469,7 +486,11 @@ function addDefaultEditorActions(editor: monaco.editor.IStandaloneCodeEditor) {
             if (!selection) {
                 return;
             }
-            const b64 = editor.getModel().getValueInRange(selection);
+            const model = editor.getModel();
+            if (!model) {
+                return;
+            }
+            const b64 = model.getValueInRange(selection);
             navigator.clipboard.writeText(atob(b64));
         },
     });

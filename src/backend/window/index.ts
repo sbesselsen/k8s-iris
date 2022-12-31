@@ -3,7 +3,6 @@ import {
     BrowserWindowConstructorOptions,
     Menu,
     MenuItem,
-    nativeTheme,
     dialog,
 } from "electron";
 import * as path from "path";
@@ -203,15 +202,15 @@ export function createWindowManager(): WindowManager {
         options: DialogOptions
     ): Promise<DialogResult> => {
         const { attachToWindow = true, ...dialogOptions } = options;
-        let browserWindow: BrowserWindow;
+        let browserWindow: BrowserWindow | undefined;
         if (attachToWindow) {
-            const windowId = (options as any).windowId;
+            const windowId = options.windowId;
             browserWindow = windowId
                 ? windowHandles[windowId].window
                 : undefined;
         }
         const result = await dialog.showMessageBox(
-            browserWindow,
+            browserWindow as BrowserWindow, // While not marked as such, this argument is allowed to be undefined
             dialogOptions
         );
         return { response: result.response };

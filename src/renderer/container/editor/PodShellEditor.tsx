@@ -55,7 +55,7 @@ export const PodShellEditor: React.FC<PodShellEditorProps> = (props) => {
                     terminal.write(new Uint8Array(stderr));
                 }
             });
-            handler.onEnd((status) => {
+            handler.onEnd(() => {
                 terminal.writeln("\n\n(connection closed)");
             });
 

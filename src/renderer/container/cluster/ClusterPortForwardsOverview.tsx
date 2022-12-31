@@ -39,12 +39,10 @@ import { ContextMenuTemplate } from "../../../common/contextmenu";
 import { useContextMenu } from "../../hook/context-menu";
 
 export const ClusterPortForwardsOverview: React.FC<{}> = () => {
-    const client = useK8sClient();
-
     const [selectedForwardIds, setSelectedForwardIds] = useState<string[]>([]);
     const [stats, setStats] = useState<Record<string, K8sPortForwardStats>>({});
 
-    const [loading, forwards, _forwardsError] = useK8sPortForwardsWatch(
+    const [loading, forwards] = useK8sPortForwardsWatch(
         {
             onStats(stats) {
                 setStats(stats);
@@ -199,14 +197,6 @@ type PortForwardRowProps = {
     stats?: K8sPortForwardStats | null;
     isSelected?: boolean;
     onChangeSelect?: (selected: boolean) => void;
-};
-
-type PeriodStats = {
-    bytesDownPerSecond: number;
-    bytesUpPerSecond: number;
-    sumBytesDown: number;
-    sumBytesUp: number;
-    numConnections: number;
 };
 
 const PortForwardRow: React.FC<PortForwardRowProps> = (props) => {

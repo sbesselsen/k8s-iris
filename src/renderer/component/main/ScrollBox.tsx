@@ -6,6 +6,7 @@ import {
     useColorModeValue,
 } from "@chakra-ui/react";
 import React, {
+    MutableRefObject,
     ReactNode,
     useCallback,
     useImperativeHandle,
@@ -104,7 +105,7 @@ export const ScrollBox = forwardRef<ScrollBoxProps, "div">((props, ref) => {
                     pb={3}
                     justifyContent="center"
                     pointerEvents="none"
-                    ref={bottomToolbarRef}
+                    ref={bottomToolbarRef as MutableRefObject<HTMLDivElement>}
                     sx={{ "> *": { pointerEvents: "auto" } }}
                 >
                     {bottomToolbar}

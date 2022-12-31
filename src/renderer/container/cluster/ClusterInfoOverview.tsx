@@ -37,7 +37,7 @@ const cloudServiceNames: Record<string, string> = {
 };
 
 export const ClusterInfoOverview: React.FC = () => {
-    const [_isLoadingNodes, nodes, _nodesError] = useK8sListWatch(
+    const [, nodes] = useK8sListWatch(
         {
             apiVersion: "v1",
             kind: "Node",
@@ -48,7 +48,7 @@ export const ClusterInfoOverview: React.FC = () => {
 
     const context = useK8sContext();
 
-    const [_loadingContexts, contextsInfo] = useK8sContextsInfo();
+    const [, contextsInfo] = useK8sContextsInfo();
     const contextInfo = contextsInfo.find((info) => info.name === context);
 
     const [versionIsLoading, version] = useK8sVersion({
@@ -159,7 +159,7 @@ export const ClusterInfoOverview: React.FC = () => {
                                     </StatTd>
                                 </Tr>
                             )}
-                            {contextInfo.cloudInfo?.region && (
+                            {contextInfo?.cloudInfo?.region && (
                                 <Tr>
                                     <StatTh>Region</StatTh>
                                     <StatTd>
@@ -170,7 +170,7 @@ export const ClusterInfoOverview: React.FC = () => {
                                 </Tr>
                             )}
 
-                            {contextInfo.cloudInfo?.accounts?.map(
+                            {contextInfo?.cloudInfo?.accounts?.map(
                                 (account, index) => (
                                     <Tr
                                         key={
@@ -213,8 +213,10 @@ const CapacityTable: React.FC<{ nodes: K8sObject[] }> = (props) => {
     const cpu = useMemo(
         () =>
             sum(
-                nodes.map((node) =>
-                    parseCpu((node as any)?.status?.capacity?.cpu ?? "0")
+                nodes.map(
+                    (node) =>
+                        parseCpu((node as any)?.status?.capacity?.cpu ?? "0") ??
+                        0
                 )
             ),
         [nodes]
@@ -223,11 +225,12 @@ const CapacityTable: React.FC<{ nodes: K8sObject[] }> = (props) => {
     const memory = useMemo(
         () =>
             sum(
-                nodes.map((node) =>
-                    parseMemory(
-                        (node as any)?.status?.capacity?.memory ?? "0",
-                        "Gi"
-                    )
+                nodes.map(
+                    (node) =>
+                        parseMemory(
+                            (node as any)?.status?.capacity?.memory ?? "0",
+                            "Gi"
+                        ) ?? 0
                 )
             ),
         [nodes]

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { MutableRefObject, useEffect, useRef } from "react";
 import { Box, BoxProps, VStack } from "@chakra-ui/react";
 import { Terminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
@@ -18,6 +18,10 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = (props) => {
     const termRef = useRef<Terminal>();
 
     useEffect(() => {
+        if (!containerRef.current) {
+            return;
+        }
+
         const term = new Terminal({
             fontFamily: "JetBrainsMono",
             fontSize: 12,
@@ -34,7 +38,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = (props) => {
 
         return () => {
             term.dispose();
-            termRef.current = null;
+            termRef.current = undefined;
         };
     }, [containerRef, fitAddonRef, termRef]);
 
@@ -49,19 +53,23 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = (props) => {
     useEffect(() => {
         isPausedRef.current = isPaused;
         if (!isPaused) {
-            fitAddonRef?.current.fit();
+            fitAddonRef.current?.fit();
         }
     }, [containerRef, isPaused, isPausedRef]);
 
     useAppContentResizeListener(() => {
         if (!isPausedRef.current) {
-            fitAddonRef.current.fit();
+            fitAddonRef.current?.fit();
         }
     }, [containerRef, fitAddonRef, isPausedRef]);
 
     return (
         <VStack bg="black" p={2} {...boxProps} spacing={0} alignItems="stretch">
-            <Box flex="1 0 0" overflow="hidden" ref={containerRef} />
+            <Box
+                flex="1 0 0"
+                overflow="hidden"
+                ref={containerRef as MutableRefObject<HTMLDivElement>}
+            />
         </VStack>
     );
 };

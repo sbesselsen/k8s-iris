@@ -139,7 +139,7 @@ export function useK8sPortForwardsListener(
         // If we unpaused, process the changes.
         if (!isPaused) {
             for (const e of eventsWhilePausedRef.current) {
-                watcher[e.event](...e.value);
+                (watcher as any)[e.event](...e.value);
             }
             eventsWhilePausedRef.current = [];
         }

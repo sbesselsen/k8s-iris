@@ -7,7 +7,7 @@ export const useDialog = (): ((
 ) => Promise<DialogResult>) => {
     const call = useIpcCall((ipc) => ipc.app.showDialog);
     return (options: DialogOptions) => {
-        const { windowId } = getHashParams();
+        const { windowId = undefined } = getHashParams() ?? {};
         return call({ ...options, windowId } as DialogOptions);
     };
 };

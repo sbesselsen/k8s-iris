@@ -32,6 +32,7 @@ import { createWindowManager, WindowParameters } from "./window";
         console.log("Shell options: ", opts);
     })();
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const prefsManager = createPrefsManager();
     const k8sClientManager = createClientManager({
         ...(process.env.WRITABLE_CONTEXTS

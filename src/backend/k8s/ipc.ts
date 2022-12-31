@@ -194,16 +194,24 @@ export const wireK8sClientIpc = (clientManager: K8sClientManager): void => {
                     if (error) {
                         send(error);
                         lastMessageWasError = true;
-                    } else {
-                        if (!didSendInitialList || lastMessageWasError) {
-                            send(undefined, { list: message.list });
-                            didSendInitialList = true;
-                            lastMessageWasError = false;
-                        }
-                        if (message.update) {
-                            send(undefined, { update: message.update });
-                            lastMessageWasError = false;
-                        }
+                        return;
+                    }
+                    if (!message) {
+                        send(
+                            new Error(
+                                "Unknown listWatch error: no message and no error"
+                            )
+                        );
+                        return;
+                    }
+                    if (!didSendInitialList || lastMessageWasError) {
+                        send(undefined, { list: message.list });
+                        didSendInitialList = true;
+                        lastMessageWasError = false;
+                    }
+                    if (message.update) {
+                        send(undefined, { update: message.update });
+                        lastMessageWasError = false;
                     }
                 });
             return {

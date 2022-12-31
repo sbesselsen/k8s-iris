@@ -2,6 +2,7 @@ import * as k8s from "@kubernetes/client-node";
 import {
     KubeConfig,
     KubernetesObject,
+    ListPromise,
     Log,
     PortForward,
 } from "@kubernetes/client-node";
@@ -27,15 +28,12 @@ import {
     K8sObjectListWatch,
     K8sObjectListWatcher,
     K8sObjectListWatcherMessage,
-    K8sApplyOptions,
     K8sPatchOptions,
     K8sRemoveOptions,
     K8sRemoveStatus,
     K8sExecSpec,
-    K8sExecOptions,
     K8sExecHandler,
     K8sExecCommandSpec,
-    K8sExecCommandOptions,
     K8sExecCommandStatus,
     K8sExecCommandResult,
     K8sLogSpec,
@@ -106,9 +104,9 @@ const defaultClientOptions = {
 };
 
 // Patch KubeConfig class with an ExecAuth class that works asynchronously.
-((k8s.KubeConfig as any).authenticators as Array<any>).unshift(
-    new CharmPatchedExecAuth()
-);
+(
+    k8s.KubeConfig as unknown as { authenticators: Array<unknown> }
+).authenticators.unshift(new CharmPatchedExecAuth());
 
 export function createClient(
     kubeConfig: k8s.KubeConfig,
@@ -178,7 +176,9 @@ export function createClient(
         try {
             const { body } = await objectApi.read(spec);
             return onlyFullObject(body);
-        } catch (e) {}
+        } catch (e) {
+            // Return null on error.
+        }
         return null;
     };
 
@@ -210,10 +210,7 @@ export function createClient(
         }
     }
 
-    const apply = async (
-        spec: K8sObject,
-        options?: K8sApplyOptions
-    ): Promise<K8sObject> => {
+    const apply = async (spec: K8sObject): Promise<K8sObject> => {
         if (opts.readonly) {
             throw new Error("Running in readonly mode");
         }
@@ -230,15 +227,25 @@ export function createClient(
                             shell: shellOpts.executablePath,
                             env: shellOpts.env,
                         },
-                        (err, _stdout, stderr) => {
+                        async (err, _stdout, stderr) => {
                             if (err) {
                                 reject(stderr);
                             } else {
-                                resolve(read(spec));
+                                try {
+                                    const result = await read(spec);
+                                    if (result === null) {
+                                        throw new Error(
+                                            "Object not found after apply"
+                                        );
+                                    }
+                                    resolve(result);
+                                } catch (e) {
+                                    reject(e);
+                                }
                             }
                         }
                     );
-                    const specClone: any = JSON.parse(JSON.stringify(spec));
+                    const specClone = JSON.parse(JSON.stringify(spec));
                     delete specClone.metadata.managedFields;
                     process.stdin.write(toYaml(specClone));
                     process.stdin.end();
@@ -273,15 +280,19 @@ export function createClient(
                 }
             );
             body = result.body;
-        } catch (e) {
+        } catch (e: any) {
             if ("statusCode" in e && e.statusCode === 409) {
                 // Conflict! See if the caller wants to force the patch.
                 e.isConflictError = true;
-                e.conflictData = (e as any).body;
+                e.conflictData = e.body;
             }
             throw e;
         }
-        return onlyFullObject(body);
+        const obj = onlyFullObject(body);
+        if (obj === null) {
+            throw new Error("Object not found after patch");
+        }
+        return obj;
     };
 
     const replace = async (spec: K8sObject): Promise<K8sObject> => {
@@ -294,7 +305,11 @@ export function createClient(
             undefined,
             "k8s-charm"
         );
-        return onlyFullObject(body);
+        const obj = onlyFullObject(body);
+        if (obj === null) {
+            throw new Error("Object not found after replace");
+        }
+        return obj;
     };
 
     const redeploy = async (spec: K8sObject): Promise<void> => {
@@ -432,8 +447,13 @@ export function createClient(
         }
 
         return new Promise((resolve, reject) => {
+            const currentCluster = kubeConfig.getCurrentCluster();
+            if (!currentCluster) {
+                reject(new Error("No cluster selected"));
+                return;
+            }
             request.get(
-                `${kubeConfig.getCurrentCluster().server}/${path}?` +
+                `${currentCluster.server}/${path}?` +
                     querystring.stringify(queryParams),
                 opts,
                 (err, _res, body) => {
@@ -491,6 +511,7 @@ export function createClient(
         const retrySignal = async () => {
             // Send a retry signal after a certain number of seconds, or when retryConnections is called; whichever comes first.
             return new Promise<void>((resolve) => {
+                // eslint-disable-next-line prefer-const
                 let retryConnectionsListener: any;
 
                 console.log("retrySignal: set");
@@ -525,7 +546,7 @@ export function createClient(
         };
 
         async function startListWatch() {
-            let path: string;
+            let path: string | null = null;
             let opts: request.CoreOptions;
             while (!stopped) {
                 try {
@@ -542,6 +563,11 @@ export function createClient(
             }
             if (stopped) {
                 return;
+            }
+            if (path === null) {
+                throw new Error(
+                    "Logic error: path not available when it should be"
+                );
             }
 
             let list: K8sObjectList<T> = {
@@ -563,10 +589,15 @@ export function createClient(
                 );
             }
 
-            const listFn = () => {
+            const listFn: ListPromise<T> = () => {
                 return new Promise((resolve, reject) => {
+                    const currentCluster = kubeConfig.getCurrentCluster();
+                    if (!currentCluster) {
+                        reject(new Error("No cluster selected"));
+                        return;
+                    }
                     request.get(
-                        `${kubeConfig.getCurrentCluster().server}/${path}?` +
+                        `${currentCluster.server}/${path}?` +
                             querystring.stringify(queryParams),
                         opts,
                         (err, response, body) => {
@@ -601,11 +632,11 @@ export function createClient(
             informer = k8s.makeInformer(
                 kubeConfig,
                 `/${path}?` + querystring.stringify(queryParams),
-                listFn as any,
+                listFn,
                 labelSelectorString
             );
 
-            informer.on("add", (obj: any) => {
+            informer.on("add", (obj) => {
                 if (!passesNamespaceCheck(obj)) {
                     return;
                 }
@@ -619,11 +650,11 @@ export function createClient(
                     list,
                     update: {
                         type: "add",
-                        object: obj as any,
+                        object: obj,
                     },
                 });
             });
-            informer.on("update", (obj: any) => {
+            informer.on("update", (obj) => {
                 if (!passesNamespaceCheck(obj)) {
                     return;
                 }
@@ -636,7 +667,7 @@ export function createClient(
                     },
                 });
             });
-            informer.on("delete", (obj: any) => {
+            informer.on("delete", (obj) => {
                 if (!passesNamespaceCheck(obj)) {
                     return;
                 }
@@ -769,26 +800,28 @@ export function createClient(
             reusableListWatchHandles[key] = [];
         }
 
-        let reusableHandle = reusableListWatchHandles[key].find((handle) =>
-            deepEqual(handle.spec, spec)
-        );
-        if (!reusableHandle) {
-            // Create a reusable handle.
-            let listWatch: K8sObjectListWatch;
-            const handle: ReusableListWatchHandle<K8sObject> = {
-                spec,
-                watchers: [],
-                stop() {
-                    listWatch?.stop();
-                },
-            };
-            listWatch = baseListWatch(spec, (error, message) => {
-                handle.lastMessage = { error, message: message };
-                handle.watchers.forEach((h) => h(error, message));
-            });
-            reusableListWatchHandles[key].push(handle);
-            reusableHandle = handle;
-        }
+        const reusableHandle =
+            reusableListWatchHandles[key].find((handle) =>
+                deepEqual(handle.spec, spec)
+            ) ??
+            (() => {
+                // Create a reusable handle.
+                // eslint-disable-next-line prefer-const
+                let listWatch: K8sObjectListWatch;
+                const handle: ReusableListWatchHandle<K8sObject> = {
+                    spec,
+                    watchers: [],
+                    stop() {
+                        listWatch?.stop();
+                    },
+                };
+                listWatch = baseListWatch(spec, (error, message) => {
+                    handle.lastMessage = { error, message: message };
+                    handle.watchers.forEach((h) => h(error, message));
+                });
+                reusableListWatchHandles[key].push(handle);
+                return handle;
+            })();
 
         // Reuse the existing handle.
         const { watchers, lastMessage } = reusableHandle;
@@ -798,10 +831,10 @@ export function createClient(
             if (error) {
                 watcher(error);
             } else {
-                watcher(error, message as any);
+                watcher(error, message as K8sObjectListWatcherMessage<T>);
             }
         }
-        watchers.push(watcher as any);
+        watchers.push(watcher as K8sObjectListWatcher<K8sObject>);
         return {
             stop() {
                 // Remove the watcher.
@@ -846,28 +879,30 @@ export function createClient(
             }));
     };
 
-    const exec = async (
-        spec: K8sExecSpec,
-        options?: K8sExecOptions
-    ): Promise<K8sExecHandler> => {
+    const exec = async (spec: K8sExecSpec): Promise<K8sExecHandler> => {
         if (opts.readonly) {
             throw new Error("Running in readonly mode");
         }
 
         // TODO: set some high water marks?
-        const stdout = new PassThrough();
+        const stdout = new PassThrough() as PassThrough & {
+            rows: number;
+            columns: number;
+        };
         const stderr = new PassThrough();
         const stdin = new PassThrough();
 
         // Make this stream resizeable so .exec handles it properly.
-        (stdout as any).rows = 30;
-        (stdout as any).columns = 80;
+        stdout.rows = 30;
+        stdout.columns = 80;
 
+        // eslint-disable-next-line prefer-const
         let socket: {
             close(): void;
         };
 
-        let stdoutListener, stderrListener;
+        let stdoutListener: ((chunk: string | Buffer) => void) | undefined;
+        let stderrListener: ((chunk: string | Buffer) => void) | undefined;
         let closeListener: (status?: K8sExecCommandStatus) => void;
 
         const handler: K8sExecHandler = {
@@ -904,8 +939,8 @@ export function createClient(
                 closeListener = listener;
             },
             resizeTerminal(size) {
-                (stdout as any).rows = size.rows;
-                (stdout as any).columns = size.cols;
+                stdout.rows = size.rows;
+                stdout.columns = size.cols;
                 stdout.emit("resize");
             },
             send(chunk) {
@@ -942,8 +977,7 @@ export function createClient(
     };
 
     const execCommand = async (
-        spec: K8sExecCommandSpec,
-        options?: K8sExecCommandOptions
+        spec: K8sExecCommandSpec
     ): Promise<K8sExecCommandResult> => {
         const handler = await exec({ ...spec, tty: false });
         const stdout: Buffer[] = [];
@@ -960,8 +994,8 @@ export function createClient(
             handler.onEnd((status) => {
                 resolve({
                     status: {
-                        status: status.status ?? "",
-                        message: status.message ?? "",
+                        status: status?.status ?? "",
+                        message: status?.message ?? "",
                     },
                     stdout: bufferToArrayBuffer(Buffer.concat(stdout)),
                     stderr: bufferToArrayBuffer(Buffer.concat(stderr)),
@@ -985,7 +1019,9 @@ export function createClient(
             onLogLine: (line) => {
                 logLines.push(line);
             },
-            onEnd: resolveReadyPromise,
+            onEnd: () => {
+                resolveReadyPromise();
+            },
         });
         await readyPromise;
         return { logLines };
@@ -1033,13 +1069,14 @@ export function createClient(
                 return;
             }
 
-            const match: (line: string) => boolean = options.match
+            const optionsMatch = options.match;
+            const match: (line: string) => boolean = optionsMatch
                 ? (line: string) =>
                       isMatch(
                           line,
-                          options.match.startsWith("!")
-                              ? options.match
-                              : "*" + options.match + "*",
+                          optionsMatch.startsWith("!")
+                              ? optionsMatch
+                              : "*" + optionsMatch + "*",
                           {
                               caseSensitive: false,
                           }
@@ -1081,7 +1118,7 @@ export function createClient(
     let portForwards: K8sPortForwardEntry[] = [];
     let portForwardWatchers: K8sPortForwardWatcher[] = [];
     let portForwardIndex = 1;
-    let portForwardHandles: Record<string, { stop(): void }> = {};
+    const portForwardHandles: Record<string, { stop(): void }> = {};
 
     const sendPortForwardStats = coalesce(() => {
         portForwardWatchers.forEach(({ onStats }) => onStats(portForwardStats));

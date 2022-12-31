@@ -545,7 +545,7 @@ function computePodSetGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
             }
         }
         if (groupId !== null) {
-            let serviceAccount =
+            const serviceAccount =
                 (resource as any)?.spec?.template?.spec?.serviceAccount ??
                 (resource as any)?.spec?.template?.spec?.serviceAccountName;
             if (serviceAccount) {
@@ -687,7 +687,7 @@ function computeHelmGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
             }
         }
         if (groupId !== null) {
-            let serviceAccount =
+            const serviceAccount =
                 (resource as any)?.spec?.template?.spec?.serviceAccount ??
                 (resource as any)?.spec?.template?.spec?.serviceAccountName;
             if (serviceAccount) {
@@ -727,8 +727,8 @@ const GroupedResourcesOverview: React.FC<{}> = () => {
     const sortedGroups = useMemo(
         () =>
             Object.values(groups).sort((a, b) => {
-                let aSortOrder = a.sortOrder ?? 0;
-                let bSortOrder = b.sortOrder ?? 0;
+                const aSortOrder = a.sortOrder ?? 0;
+                const bSortOrder = b.sortOrder ?? 0;
                 if (aSortOrder !== bSortOrder) {
                     return aSortOrder - bSortOrder;
                 }

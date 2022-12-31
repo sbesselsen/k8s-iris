@@ -11,7 +11,7 @@ export function useK8sVersion(opts?: {
 }): [boolean, K8sVersion | undefined, any | undefined, () => void] {
     const { pollInterval, pauseOnHibernate = true } = opts ?? {};
 
-    const currentContext = useK8sContext();
+    const currentContext = useK8sContext() ?? "";
     const kubeContext = opts?.kubeContext ?? currentContext;
     const client = useK8sClient(kubeContext);
 

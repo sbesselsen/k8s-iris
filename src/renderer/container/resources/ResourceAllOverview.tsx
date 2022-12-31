@@ -97,7 +97,7 @@ export const ResourceAllOverview: React.FC = () => {
                 py={2}
                 bottomToolbar={
                     <ResourcesToolbar
-                        resourceType={selectedResourceType}
+                        resourceType={selectedResourceType ?? undefined}
                         resources={selectedResources}
                         onClearSelection={onClearSelection}
                     />
@@ -162,8 +162,7 @@ type ResourceListProps = {
 const ResourceList: React.FC<ResourceListProps> = (props) => {
     const { resourceType, ...otherProps } = props;
 
-    const [_isLoadingResourcesTypes, resourcesTypesInfo, _resourcesError] =
-        useK8sApiResourceTypes();
+    const [, resourcesTypesInfo] = useK8sApiResourceTypes();
 
     const resourceTypeInfo = resourcesTypesInfo?.find(
         (info) =>
@@ -205,7 +204,7 @@ const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
 
     const namespaces = useK8sNamespaces();
 
-    const [_isLoadingResources, resources, _resourcesError] = useK8sListWatch(
+    const [, resources] = useK8sListWatch(
         {
             apiVersion: resourceTypeInfo.apiVersion,
             kind: resourceTypeInfo.kind,
@@ -398,20 +397,18 @@ const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
                         </Tr>
                     </Thead>
                     <Tbody>
-                        {sortedKeyedResources.map(
-                            ({ key, resource }, index) => (
-                                <ResourceRow
-                                    resource={resource}
-                                    showNamespace={showNamespace}
-                                    customDetails={customDetails}
-                                    key={key}
-                                    isSelected={selectedResourceIdentifiers.includes(
-                                        key
-                                    )}
-                                    onChangeSelect={onSelectHandlers[key]}
-                                />
-                            )
-                        )}
+                        {sortedKeyedResources.map(({ key, resource }) => (
+                            <ResourceRow
+                                resource={resource}
+                                showNamespace={!!showNamespace}
+                                customDetails={customDetails}
+                                key={key}
+                                isSelected={selectedResourceIdentifiers.includes(
+                                    key
+                                )}
+                                onChangeSelect={onSelectHandlers[key]}
+                            />
+                        ))}
                     </Tbody>
                 </Table>
             </ResourceContextMenu>

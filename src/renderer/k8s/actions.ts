@@ -105,7 +105,7 @@ export function useK8sPauseAction(): (
                                 replicas: 0,
                             },
                         } as K8sObject);
-                    } catch (e) {
+                    } catch (e: any) {
                         errors.push(e.message);
                     }
                 })
@@ -186,7 +186,7 @@ export function useK8sResumeAction(): (
                                 replicas: targetScale,
                             },
                         } as K8sObject);
-                    } catch (e) {
+                    } catch (e: any) {
                         errors.push(e.message);
                     }
                 })

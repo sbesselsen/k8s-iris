@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import {
     addListObject,
     deleteListObject,
@@ -36,9 +36,11 @@ import {
     useContextLockGetter,
 } from "../context/context-lock";
 
+const noop = () => {};
+
 export function useK8sClient(kubeContext?: string): K8sClient {
     const sharedKubeContext = useK8sContext();
-    const context = kubeContext ?? sharedKubeContext;
+    const context = kubeContext ?? sharedKubeContext ?? "";
 
     const ipcRead = useIpcCall((ipc) => ipc.k8s.read);
     const ipcApply = useIpcCall((ipc) => ipc.k8s.apply);
@@ -70,13 +72,13 @@ export function useK8sClient(kubeContext?: string): K8sClient {
         listWatchesRef.current = [];
 
         const read = (spec: K8sObject) => ipcRead({ context, spec });
-        const apply = (spec: K8sObject, options?: K8sApplyOptions) => {
+        const apply = (spec: K8sObject, options: K8sApplyOptions = {}) => {
             if (getContextLock()) {
                 throw new ContextLockedError("Cluster is locked");
             }
             return ipcApply({ context, spec, options });
         };
-        const patch = (spec: K8sObject, options?: K8sPatchOptions) => {
+        const patch = (spec: K8sObject, options: K8sPatchOptions = {}) => {
             if (getContextLock()) {
                 throw new ContextLockedError("Cluster is locked");
             }
@@ -115,6 +117,14 @@ export function useK8sClient(kubeContext?: string): K8sClient {
                 (error, message) => {
                     if (error) {
                         watcher(unwrapError(error));
+                        return;
+                    }
+                    if (!message) {
+                        watcher(
+                            new Error(
+                                "Unknown subscription error: no message and no error passed"
+                            )
+                        );
                         return;
                     }
                     if (isListMessage(message)) {
@@ -172,7 +182,7 @@ export function useK8sClient(kubeContext?: string): K8sClient {
         };
         const execCommand = (
             spec: K8sExecCommandSpec,
-            options?: K8sExecCommandOptions
+            options: K8sExecCommandOptions = {}
         ) => {
             if (getContextLock()) {
                 throw new ContextLockedError("Cluster is locked");
@@ -182,7 +192,7 @@ export function useK8sClient(kubeContext?: string): K8sClient {
 
         const exec = async (
             spec: K8sExecSpec,
-            options?: K8sExecOptions
+            options: K8sExecOptions = {}
         ): Promise<K8sExecHandler> => {
             if (getContextLock()) {
                 throw new ContextLockedError("Cluster is locked");
@@ -231,13 +241,18 @@ export function useK8sClient(kubeContext?: string): K8sClient {
         };
         const listApiResourceTypes = () => ipcListApiResourceTypes({ context });
 
-        const log = (spec: K8sLogSpec, options?: K8sLogOptions) =>
+        const log = (spec: K8sLogSpec, options: K8sLogOptions = {}) =>
             ipcLog({ context, spec, options });
+
         const logWatch = (
             spec: K8sLogSpec,
             options?: K8sLogWatchOptions
         ): K8sLogWatch => {
-            const { onLogLine, onEnd, ...otherOptions } = options;
+            const {
+                onLogLine = noop,
+                onEnd = noop,
+                ...otherOptions
+            } = options ?? {};
             const subscription = ipcLogWatch(
                 {
                     context,

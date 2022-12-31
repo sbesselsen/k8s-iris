@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { MutableRefObject, useEffect, useRef } from "react";
 import { editor } from "monaco-editor";
 import {
     Box,
@@ -11,7 +11,7 @@ import {
     defaultFontFamily,
     defaultFontSize,
     initializeMonaco,
-    recalcFont,
+    recalcFonts,
 } from "./monaco-shared";
 import { useIpcCall } from "../../hook/ipc";
 
@@ -90,9 +90,9 @@ export const MonacoDiffEditor: React.FC<MonacoCodeEditorProps> = (props) => {
                 contextMenuService,
             }
         );
-        recalcFont(optionsConst.fontFamily ?? defaultFontFamily);
-        const originalModel = editor.createModel(originalValue, language);
-        const modifiedModel = editor.createModel(value, language);
+        recalcFonts();
+        const originalModel = editor.createModel(originalValue ?? "", language);
+        const modifiedModel = editor.createModel(value ?? "", language);
         editorInstance.setModel({
             original: originalModel,
             modified: modifiedModel,
@@ -136,7 +136,7 @@ export const MonacoDiffEditor: React.FC<MonacoCodeEditorProps> = (props) => {
     }, [theme]);
 
     useEffect(() => {
-        editorRef.current?.getOriginalEditor().setValue(originalValue);
+        editorRef.current?.getOriginalEditor().setValue(originalValue ?? "");
     }, [editorRef, originalValue]);
 
     useEffect(() => {
@@ -153,5 +153,11 @@ export const MonacoDiffEditor: React.FC<MonacoCodeEditorProps> = (props) => {
         }
     }, [editorRef, editorValueRef, stateValue]);
 
-    return <Box flex="1 0 0" overflow="hidden" ref={containerRef}></Box>;
+    return (
+        <Box
+            flex="1 0 0"
+            overflow="hidden"
+            ref={containerRef as MutableRefObject<HTMLDivElement>}
+        ></Box>
+    );
 };

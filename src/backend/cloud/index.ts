@@ -103,8 +103,7 @@ async function awsAugmentK8sContexts(
     const output: Record<string, CloudK8sContextInfo> = {};
     for (const context of contexts) {
         const awsEksRegex = /^arn:aws:eks:([^:]+):([0-9]+):cluster\/(.*)$/;
-        let match: RegExpMatchArray | undefined =
-            context.cluster.match(awsEksRegex);
+        let match: RegExpMatchArray | null = context.cluster.match(awsEksRegex);
         if (!match) {
             match = context.name.match(awsEksRegex);
         }
@@ -143,14 +142,14 @@ async function listAwsProfiles(): Promise<Record<string, any>> {
 async function awsEksLoginForContext(
     augmentedContext: CloudK8sContextInfo
 ): Promise<void> {
-    if ((augmentedContext.accounts?.length ?? 0) === 0) {
+    if (!augmentedContext.accounts || augmentedContext.accounts.length === 0) {
         throw new Error("No supported accounts for app login");
     }
     const { accountId } = augmentedContext.accounts[0];
     const awsProfiles = await listAwsProfiles();
 
     const awsProfileEntry = Object.entries(awsProfiles).find(
-        ([_, info]) => info.sso_account_id === accountId
+        ([, info]) => info.sso_account_id === accountId
     );
     if (!awsProfileEntry) {
         throw new Error("No suitable profile found for AWS app login");

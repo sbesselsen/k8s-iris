@@ -14,8 +14,8 @@ export type StoreUpdate<T> = T | ((oldValue: T) => T);
 export type Store<T> = {
     get(): T;
     set(newValue: StoreUpdate<T>): T;
-    subscribe(listener: (value: T) => void);
-    unsubscribe(listener: (value: T) => void);
+    subscribe(listener: (value: T) => void): void;
+    unsubscribe(listener: (value: T) => void): void;
 };
 
 export type UseStore<T, S extends Store<T>> = (() => S) & {
@@ -37,7 +37,7 @@ export function createStore<T>(initialValue: T): Store<T> {
             return value;
         },
         set(newValue: T | ((oldValue: T) => T)): T {
-            let oldValue = value;
+            const oldValue = value;
             if (typeof newValue === "function") {
                 value = (newValue as (oldValue: T) => T)(value);
             } else {

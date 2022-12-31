@@ -159,10 +159,12 @@ export function useK8sListWatchListener<T extends K8sObject = K8sObject>(
                 // Update is coming in too soon. Need to schedule it.
                 if (!updateTimeoutRef.current) {
                     updateTimeoutRef.current = setTimeout(() => {
-                        pausableOnUpdate(coalescedUpdateRef.current);
+                        if (coalescedUpdateRef.current) {
+                            pausableOnUpdate(coalescedUpdateRef.current);
+                        }
                         lastUpdateTimestampRef.current = ts;
-                        updateTimeoutRef.current = null;
-                        coalescedUpdateRef.current = null;
+                        updateTimeoutRef.current = undefined;
+                        coalescedUpdateRef.current = undefined;
                     }, lastUpdateTimestampRef.current + boundedUpdateCoalesceInterval - ts);
                 }
                 return;
@@ -171,9 +173,9 @@ export function useK8sListWatchListener<T extends K8sObject = K8sObject>(
             // We can do the update immediately. Cancel any scheduled updates and go.
             if (updateTimeoutRef.current) {
                 clearTimeout(updateTimeoutRef.current);
-                updateTimeoutRef.current = null;
+                updateTimeoutRef.current = undefined;
             }
-            coalescedUpdateRef.current = null;
+            coalescedUpdateRef.current = undefined;
 
             const coalescedMessage: K8sCoalescedObjectListWatcherMessage<T> = {
                 list: message.list,
@@ -199,16 +201,23 @@ export function useK8sListWatchListener<T extends K8sObject = K8sObject>(
             lastUpdateTimestampRef.current = 0;
             if (updateTimeoutRef.current) {
                 clearTimeout(updateTimeoutRef.current);
-                updateTimeoutRef.current = null;
+                updateTimeoutRef.current = undefined;
             }
-            coalescedUpdateRef.current = null;
+            coalescedUpdateRef.current = undefined;
 
             const listWatch = client.listWatch<T>(spec, (error, message) => {
                 if (error) {
                     onWatchError(error);
-                } else {
-                    coalescedOnUpdate(message);
                 }
+                if (!message) {
+                    onWatchError(
+                        new Error(
+                            "Unknown listWatch error: no message and no error"
+                        )
+                    );
+                    return;
+                }
+                coalescedOnUpdate(message);
             });
             listWatchRef.current = listWatch;
         } catch (e) {
@@ -219,10 +228,10 @@ export function useK8sListWatchListener<T extends K8sObject = K8sObject>(
             if (updateTimeoutRef.current) {
                 clearTimeout(updateTimeoutRef.current);
             }
-            coalescedUpdateRef.current = null;
+            coalescedUpdateRef.current = undefined;
             lastUpdateTimestampRef.current = 0;
-            listWatchRef.current = null;
-            updateTimeoutRef.current = null;
+            listWatchRef.current = undefined;
+            updateTimeoutRef.current = undefined;
         };
     }, [
         client,
@@ -416,7 +425,7 @@ export function useK8sListWatchesListener<T extends K8sObject = K8sObject>(
                             pausableOnUpdate(coalescedUpdateRef.current);
                         }
                         lastUpdateTimestampRef.current = ts;
-                        updateTimeoutRef.current = null;
+                        updateTimeoutRef.current = undefined;
                         coalescedUpdateRef.current = undefined;
                     }, lastUpdateTimestampRef.current + boundedUpdateCoalesceInterval - ts);
                 }
@@ -426,7 +435,7 @@ export function useK8sListWatchesListener<T extends K8sObject = K8sObject>(
             // We can do the update immediately. Cancel any scheduled updates and go.
             if (updateTimeoutRef.current) {
                 clearTimeout(updateTimeoutRef.current);
-                updateTimeoutRef.current = null;
+                updateTimeoutRef.current = undefined;
             }
             coalescedUpdateRef.current = undefined;
 
@@ -463,7 +472,7 @@ export function useK8sListWatchesListener<T extends K8sObject = K8sObject>(
         lastUpdateTimestampRef.current = 0;
         if (updateTimeoutRef.current) {
             clearTimeout(updateTimeoutRef.current);
-            updateTimeoutRef.current = null;
+            updateTimeoutRef.current = undefined;
         }
         coalescedUpdateRef.current = undefined;
 
@@ -503,7 +512,7 @@ export function useK8sListWatchesListener<T extends K8sObject = K8sObject>(
             coalescedUpdateRef.current = undefined;
             lastUpdateTimestampRef.current = 0;
             listWatchesRef.current = {};
-            updateTimeoutRef.current = null;
+            updateTimeoutRef.current = undefined;
         };
     }, [
         client,

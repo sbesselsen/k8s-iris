@@ -81,7 +81,7 @@ export function initializeMonaco() {
     });
 
     (self as any).MonacoEnvironment = {
-        getWorker: function (_moduleId, label) {
+        getWorker: function (_moduleId: any, label: any) {
             // if (label === "json") {
             //     return JSONWorker;
             // }
@@ -108,7 +108,7 @@ export function initializeMonaco() {
     };
 }
 
-export function recalcFont(_family: string) {
+export function recalcFonts() {
     // This sucks but it does the job. Maybe we could wait for window onLoad but I'm not sure that would help.
     editor.remeasureFonts();
     setTimeout(() => {
@@ -131,7 +131,7 @@ function initializeLogLanguage() {
         tokenizer: {
             root: [
                 [
-                    /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9\.]+[Z+][^\s]*/,
+                    /^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9.]+[Z+][^\s]*/,
                     "log-timestamp",
                 ],
                 [/\[[Ww][Aa][Rr][Nn]([Ii][Nn][Gg])?\]/, "log-warning"],
@@ -160,7 +160,7 @@ export function createContextMenuService({
     function menuTemplateFromParams(params: any): ContextMenuTemplate {
         return params
             .getActions()
-            .map((action): ContextMenuItemConstructorOptions => {
+            .map((action: any): ContextMenuItemConstructorOptions => {
                 if (action._id === "vs.actions.separator") {
                     return { type: "separator" };
                 }
@@ -211,7 +211,7 @@ export function createContextMenuService({
                     registerAccelerator: false,
                 };
             })
-            .filter((x) => x !== null);
+            .filter((x: any) => x !== null);
     }
 
     function showContextMenu(params: any) {

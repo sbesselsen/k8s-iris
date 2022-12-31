@@ -9,7 +9,7 @@ export type OpenShellOptions = {
 export function useLocalShellOpener(): (
     opts?: OpenShellOptions
 ) => Promise<ShellHandler> {
-    const localContext = useK8sContext();
+    const localContext = useK8sContext() ?? "";
     const ipcOpenShell = useIpcCall((ipc) => ipc.shell.openForContext);
 
     return async (opts) => {

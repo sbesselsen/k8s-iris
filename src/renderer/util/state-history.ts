@@ -13,10 +13,10 @@ export type HistoryOptions = {
     maxOverflow?: number;
 };
 
-const defaultOptions: HistoryOptions = {
+const defaultOptions = {
     maxSize: 100,
     maxOverflow: 10,
-};
+} as const;
 
 export type HistoryOf<T> = {
     values: T[];
@@ -140,13 +140,14 @@ export type HistoryControls<T> = {
     goForward(): T;
 };
 
-export const useCurrentValue =
-    <T>(useStoreValueHook: UseStoreValue<HistoryOf<T>>): UseStoreValue<T> =>
-    (selector = undefined, deps = []) =>
+export const useCurrentValue = <T>(
+    useStoreValueHook: UseStoreValue<HistoryOf<T>>
+): UseStoreValue<T> =>
+    ((selector: ((data: T) => unknown) | undefined = undefined, deps = []) =>
         useStoreValueHook((history) => {
             const value = history.values[history.currentIndex];
             return selector ? selector(value) : value;
-        }, deps);
+        }, deps)) as UseStoreValue<T>;
 
 export const useCurrentValueGetter =
     <T>(

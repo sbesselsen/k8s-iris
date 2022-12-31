@@ -100,6 +100,7 @@ export const MenuItem: React.FC<PropsWithChildren<MenuItemProps>> = () => {
 
 function menuTemplateFromChildren(children: ReactNode): ContextMenuTemplate {
     function processItem(item: any): ContextMenuItemConstructorOptions {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
         const { children: _, ...itemProps } = item;
         const result: ContextMenuItemConstructorOptions = itemProps;
         if (item.children) {

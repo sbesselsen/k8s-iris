@@ -1,5 +1,5 @@
 export type AppRoute = {
-    context: string;
+    context: string | null;
     namespaces: AppNamespacesSelection;
     menuItem: string | null;
     menuTab: Record<string, string>;

@@ -1,6 +1,6 @@
 import { mode } from "@chakra-ui/theme-tools";
 
-const baseStyle = (props) => {
+const baseStyle = (props: any) => {
     const { colorScheme } = props;
 
     return {

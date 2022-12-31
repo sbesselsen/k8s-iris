@@ -1,4 +1,3 @@
-import { watch } from "original-fs";
 export type ContextLockWatcher = (
     error: undefined | any,
     message?: undefined | { locked: boolean }
@@ -12,7 +11,7 @@ export type ContextLockManager = {
 
 export function createContextLockManager(): ContextLockManager {
     const locks: Record<string, boolean> = {};
-    let watchers: Record<string, ContextLockWatcher[]> = {};
+    const watchers: Record<string, ContextLockWatcher[]> = {};
 
     function triggerWatchers(context: string) {
         const locked = lockValue(locks, context);

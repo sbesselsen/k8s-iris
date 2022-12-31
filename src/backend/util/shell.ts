@@ -33,7 +33,7 @@ export async function shellOptions(): Promise<{
 }
 
 async function loadShellPath(): Promise<string[]> {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         const initialPath = uniqueOrdered([
             ...(process.env.PATH ?? "").split(":").filter((x) => x),
             ...defaultPathItems,

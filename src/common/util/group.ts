@@ -23,7 +23,11 @@ export function groupByKeys<T>(
     let groupValues = Object.values(groups);
     if (sortComparator) {
         groupValues = groupValues.sort(([a], [b]) =>
-            sortComparator(firstKey, a[firstKey], b[firstKey])
+            sortComparator(
+                firstKey,
+                a[firstKey] as T[keyof T],
+                b[firstKey] as T[keyof T]
+            )
         );
     }
     const output: Array<[Partial<T>, Array<T>]> = [];

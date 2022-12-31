@@ -8,6 +8,7 @@ export type DialogOptions = {
     defaultId?: number;
     cancelId?: number;
     attachToWindow?: boolean;
+    windowId?: string;
 };
 
 export type DialogResult = {

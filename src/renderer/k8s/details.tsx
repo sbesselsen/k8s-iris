@@ -110,18 +110,19 @@ function generateIngressDetails(
                 const r = resource as any;
                 const hasTls = (r.spec?.tls ?? []).length > 0;
                 const protocol = hasTls ? "https" : "http";
-                const urls: string[] = (r.spec?.rules ?? []).flatMap((rule) =>
-                    (rule.http?.paths ?? []).flatMap((path) => {
-                        if (rule.host) {
-                            const url =
-                                protocol +
-                                "://" +
-                                rule.host +
-                                (path.path ?? "");
-                            return [url];
-                        }
-                        return [];
-                    })
+                const urls: string[] = (r.spec?.rules ?? []).flatMap(
+                    (rule: any) =>
+                        (rule?.http?.paths ?? []).flatMap((path: any) => {
+                            if (rule.host) {
+                                const url =
+                                    protocol +
+                                    "://" +
+                                    rule.host +
+                                    (path?.path ?? "");
+                                return [url];
+                            }
+                            return [];
+                        })
                 );
                 return (
                     <List>

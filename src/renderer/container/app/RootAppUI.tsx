@@ -9,6 +9,7 @@ import {
 } from "@chakra-ui/react";
 import React, {
     Fragment,
+    MutableRefObject,
     ReactNode,
     Suspense,
     useCallback,
@@ -104,7 +105,7 @@ export const RootAppUI: React.FunctionComponent = () => {
     const colorThemeStore = useColorThemeStore();
 
     const kubeContext = useK8sContext();
-    usePageTitle(kubeContext);
+    usePageTitle(kubeContext ?? "Iris");
 
     const [isLoadingContextsInfo, contextsInfo] = useK8sContextsInfo();
     const isSidebarVisible = useAppRoute((route) => route.isSidebarVisible);
@@ -129,7 +130,7 @@ export const RootAppUI: React.FunctionComponent = () => {
                     metaKeyRef.current &&
                     key === "f"
                 ) {
-                    searchBoxRef.current.focus();
+                    searchBoxRef.current?.focus();
                 }
                 if (
                     eventType === "keydown" &&
@@ -137,14 +138,14 @@ export const RootAppUI: React.FunctionComponent = () => {
                     shiftKeyRef.current &&
                     key === "o"
                 ) {
-                    contextSelectMenuRef.current.click();
+                    contextSelectMenuRef.current?.click();
                 }
                 if (
                     eventType === "keydown" &&
                     ctrlKeyRef.current &&
                     key === "r"
                 ) {
-                    contextSelectMenuRef.current.click();
+                    contextSelectMenuRef.current?.click();
                 }
                 if (
                     eventType === "keydown" &&
@@ -287,12 +288,20 @@ export const RootAppUI: React.FunctionComponent = () => {
                 }
                 title={
                     <HStack p={2} spacing="2px" maxWidth="300px" mx="auto">
-                        <ContextSelectMenu ref={contextSelectMenuRef} />
+                        <ContextSelectMenu
+                            ref={
+                                contextSelectMenuRef as MutableRefObject<HTMLButtonElement>
+                            }
+                        />
                     </HStack>
                 }
                 search={
                     <Box px={2} py={2}>
-                        <AppSearchBox ref={searchBoxRef} />
+                        <AppSearchBox
+                            ref={
+                                searchBoxRef as MutableRefObject<HTMLInputElement>
+                            }
+                        />
                     </Box>
                 }
                 sidebar={
@@ -364,7 +373,7 @@ const AppMainMenu: React.FC<{}> = () => {
     const selectedEditor = useAppRoute((route) => route.activeEditor)?.id;
 
     const onChangeMenuItemSelection = useCallback(
-        (menuItem: string, requestNewWindow: boolean = false) => {
+        (menuItem: string, requestNewWindow = false) => {
             const newRoute = {
                 ...getAppRoute(),
                 menuItem,
@@ -410,16 +419,17 @@ const AppEditors: React.FC<{}> = () => {
                         route: {
                             ...getAppRoute(),
                             isSidebarVisible: false,
-                            activeEditor: editors.find(
-                                (editor) => editor.id === id
-                            ),
+                            activeEditor:
+                                editors.find((editor) => editor.id === id) ??
+                                null,
                         },
                     });
                 }
             } else {
                 setAppRoute((route) => ({
                     ...route,
-                    activeEditor: editors.find((editor) => editor.id === id),
+                    activeEditor:
+                        editors.find((editor) => editor.id === id) ?? null,
                 }));
             }
         },
@@ -699,7 +709,7 @@ const AppContentEditor: React.FC<{ editor: AppEditor; isSelected: boolean }> =
                                               apiVersion: editor.apiVersion,
                                               kind: editor.kind,
                                           }
-                                        : null
+                                        : undefined
                                 }
                             />
                         )}

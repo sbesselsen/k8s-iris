@@ -7,7 +7,7 @@ const navigationKeys = ["ArrowUp", "ArrowDown", "Escape"];
 export const MenuInput: React.FC<InputProps & { onPressEnter?: () => void }> = (
     props
 ) => {
-    const { role, ...rest } = useMenuItem(props);
+    const { role, ...rest } = useMenuItem(props as any);
     delete (rest as any).onPressEnter;
     const { onPressEnter } = props;
 

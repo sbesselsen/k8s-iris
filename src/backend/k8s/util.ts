@@ -8,7 +8,7 @@ export async function kubeRequestOpts(
     const opts: request.CoreOptions = {};
     try {
         await kubeConfig.applyToRequest(opts as request.Options);
-    } catch (e) {
+    } catch (e: any) {
         e.isKubeConfigRequestError = true;
         throw e;
     }

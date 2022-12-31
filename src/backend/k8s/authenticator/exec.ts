@@ -1,4 +1,4 @@
-import execa = require("execa");
+import execa from "execa";
 import { shellOptions } from "../../util/shell";
 
 interface CredentialStatus {
@@ -54,9 +54,9 @@ export class CharmPatchedExecAuth {
         const token = this.getToken(credential);
         if (token) {
             if (!opts.headers) {
-                opts.headers = [];
+                opts.headers = {};
             }
-            opts.headers!.Authorization = `Bearer ${token}`;
+            opts.headers.Authorization = `Bearer ${token}`;
         }
     }
 
@@ -99,7 +99,10 @@ export class CharmPatchedExecAuth {
         };
         if (exec.env) {
             const env = process.env;
-            exec.env.forEach((elt) => (env[elt.name] = elt.value));
+            exec.env.forEach(
+                (elt: { name: string; value: string }) =>
+                    (env[elt.name] = elt.value)
+            );
             opts = { ...opts, env };
         }
 

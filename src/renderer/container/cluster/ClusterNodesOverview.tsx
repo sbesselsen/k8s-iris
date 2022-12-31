@@ -9,7 +9,6 @@ import {
     Td,
     Th,
     Thead,
-    Tooltip,
     Tr,
     useColorModeValue,
 } from "@chakra-ui/react";
@@ -26,8 +25,8 @@ import { useK8sListPoll } from "../../k8s/list-poll";
 import { useK8sListWatch } from "../../k8s/list-watch";
 import { ResourceEditorLink } from "../resources/ResourceEditorLink";
 
-export const ClusterNodesOverview: React.FC = (props) => {
-    const [_loadingNodes, nodes, _nodesError] = useK8sListWatch(
+export const ClusterNodesOverview: React.FC = () => {
+    const [, nodes] = useK8sListWatch(
         {
             apiVersion: "v1",
             kind: "Node",
@@ -35,17 +34,16 @@ export const ClusterNodesOverview: React.FC = (props) => {
         {},
         []
     );
-    const [_loadingNodeMetrics, nodeMetrics, _nodeMetricsError] =
-        useK8sListPoll(
-            {
-                apiVersion: "metrics.k8s.io/v1beta1",
-                kind: "NodeMetrics",
-            },
-            {
-                pollInterval: 10000,
-            },
-            []
-        );
+    const [, nodeMetrics] = useK8sListPoll(
+        {
+            apiVersion: "metrics.k8s.io/v1beta1",
+            kind: "NodeMetrics",
+        },
+        {
+            pollInterval: 10000,
+        },
+        []
+    );
 
     const nodeMetricsByNode: Record<string, K8sObject> = useMemo(
         () =>
@@ -112,7 +110,7 @@ const NodeInfo: React.FC<NodeInfoProps> = React.memo((props) => {
     const { node, metrics } = props;
 
     const ready = (node as any)?.status?.conditions?.find(
-        (c) => c?.type === "Ready"
+        (c: any) => c?.type === "Ready"
     )?.status;
     const statusColor =
         ready === "True" ? "green" : ready === "False" ? "red" : "gray";
@@ -157,7 +155,7 @@ const NodeInfo: React.FC<NodeInfoProps> = React.memo((props) => {
                 )}
             </Td>
             <Td verticalAlign="baseline">
-                {totalCpu > 0 && cpu !== null && (
+                {totalCpu !== null && totalCpu > 0 && cpu !== null && (
                     <AppTooltip
                         label={
                             cpu.toFixed(1) +
@@ -176,7 +174,7 @@ const NodeInfo: React.FC<NodeInfoProps> = React.memo((props) => {
                 {!totalCpu && cpu !== null && <Badge>{cpu.toFixed(1)}</Badge>}
             </Td>
             <Td verticalAlign="baseline">
-                {totalMemory > 0 && memory !== null && (
+                {totalMemory !== null && totalMemory > 0 && memory !== null && (
                     <AppTooltip
                         w="100%"
                         label={
@@ -213,6 +211,7 @@ const PercentageBadge = forwardRef<
     } & BadgeProps,
     any
 >((props, ref) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { value, label, colorScheme, size, ...badgeProps } = props;
 
     const bgColor = useColorModeValue(

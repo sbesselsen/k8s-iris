@@ -2,14 +2,14 @@ import { useEffect, useState } from "react";
 
 let listeners: Array<(focus: boolean) => void> = [];
 
-let focusState: boolean = true;
+let focusState = true;
 (window as any).charm.app.onWindowFocusChange((focus: boolean) => {
     focusState = focus;
     listeners.forEach((l) => l(focusState));
 });
 
 export const useWindowFocus = (): boolean => {
-    const [_, setRerenderIndex] = useState(0);
+    const [, setRerenderIndex] = useState(0);
     useEffect(() => {
         const listener = () => {
             setRerenderIndex((i) => i + 1);

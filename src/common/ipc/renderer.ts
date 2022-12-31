@@ -68,7 +68,7 @@ function ipcSubscribe<T, U>(
             prefixSubscriptionChannel(name),
             data
         );
-        const listener = (e, data) => {
+        const listener = (e: any, data: any) => {
             if (!data) {
                 stopSubscription();
                 return;

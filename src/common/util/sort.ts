@@ -23,11 +23,17 @@ export function k8sSmartCompare(a: any, b: any): number {
     if (aString.match(otaWordsRegex) && bString.match(otaWordsRegex)) {
         aString = aString.replace(
             otaWordsRegex,
-            (word) => otaWordsReplacement[word.toLowerCase()] ?? word
+            (word) =>
+                (otaWordsReplacement as Record<string, string>)[
+                    word.toLowerCase()
+                ] ?? word
         );
         bString = bString.replace(
             otaWordsRegex,
-            (word) => otaWordsReplacement[word.toLowerCase()] ?? word
+            (word) =>
+                (otaWordsReplacement as Record<string, string>)[
+                    word.toLowerCase()
+                ] ?? word
         );
     }
     return aString.localeCompare(bString, undefined, {

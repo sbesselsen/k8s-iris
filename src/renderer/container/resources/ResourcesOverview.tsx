@@ -44,7 +44,7 @@ export const ResourcesOverview: React.FC<{}> = () => {
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
 
     const onChangeTabSelection = useCallback(
-        (id: string, requestNewWindow: boolean = false) => {
+        (id: string, requestNewWindow = false) => {
             if (requestNewWindow) {
                 const oldRoute = getAppRoute();
                 if (oldRoute.menuItem) {

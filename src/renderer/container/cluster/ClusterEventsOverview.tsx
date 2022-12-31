@@ -16,7 +16,7 @@ export const ClusterEventsOverview: React.FC = () => {
 
     const scrollBoxRef = useRef<HTMLDivElement>();
 
-    const [isLoadingEvents, events, _eventsError] = useK8sListWatch(
+    const [isLoadingEvents, events] = useK8sListWatch(
         {
             apiVersion: "events.k8s.io/v1",
             kind: "Event",
@@ -60,7 +60,9 @@ export const ClusterEventsOverview: React.FC = () => {
                 const content = (
                     <EventContent
                         event={event}
-                        selectionContainerRef={scrollBoxRef}
+                        selectionContainerRef={
+                            scrollBoxRef as MutableRefObject<HTMLElement>
+                        }
                     />
                 );
                 return { when, content, id };
@@ -70,7 +72,11 @@ export const ClusterEventsOverview: React.FC = () => {
     }, [events, query, scrollBoxRef]);
 
     return (
-        <ScrollBox pb={10} w="100%" ref={scrollBoxRef}>
+        <ScrollBox
+            pb={10}
+            w="100%"
+            ref={scrollBoxRef as MutableRefObject<HTMLDivElement>}
+        >
             {isLoadingEvents && <Spinner />}
             {!isLoadingEvents && timelineEvents.length === 0 && (
                 <Box fontSize="sm" textColor="gray">

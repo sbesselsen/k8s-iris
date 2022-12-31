@@ -1,12 +1,7 @@
-import {
-    Box,
-    HStack,
-    useColorModeValue,
-    useToken,
-    VStack,
-} from "@chakra-ui/react";
+import { Box, HStack, useColorModeValue, VStack } from "@chakra-ui/react";
 import React, {
     createContext,
+    MutableRefObject,
     PointerEventHandler,
     ReactElement,
     useCallback,
@@ -70,6 +65,9 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
     const onVSeparatorPointerDown: PointerEventHandler<HTMLDivElement> =
         useCallback(
             (e) => {
+                if (!sidebarBoxRef.current) {
+                    return;
+                }
                 separatorDragState.isDragging = true;
                 separatorDragState.dragStartX = e.clientX;
                 separatorDragState.currentSidebarWidth =
@@ -83,6 +81,13 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
     // When pointer is moved while dragging, dynamically recalculate the layout *without rerendering*.
     const onPointerMove: PointerEventHandler<HTMLDivElement> = useCallback(
         (e) => {
+            if (
+                !vSeparatorBoxRef.current ||
+                !sidebarBoxRef.current ||
+                !sidebarContentRef.current
+            ) {
+                return;
+            }
             if (separatorDragState.isDragging) {
                 separatorDragState.currentSidebarWidth = Math.max(
                     sidebarMinWidth,
@@ -180,7 +185,7 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                     flexBasis={isSidebarVisible ? sidebarWidth : 0}
                     overflow={isSidebarFloating ? "visible" : "hidden"}
                     bg={sidebarBackground}
-                    ref={sidebarBoxRef}
+                    ref={sidebarBoxRef as MutableRefObject<HTMLDivElement>}
                     position={isSidebarFloating ? "absolute" : "relative"}
                     top={isSidebarFloating ? headerHeight : "initial"}
                     bottom={isSidebarFloating ? 0 : "initial"}
@@ -216,7 +221,9 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                         onPointerDown={onVSeparatorPointerDown}
                         top="0"
                         right="0"
-                        ref={vSeparatorBoxRef}
+                        ref={
+                            vSeparatorBoxRef as MutableRefObject<HTMLDivElement>
+                        }
                         zIndex={1}
                     ></Box>
                     <Box
@@ -252,7 +259,9 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                                 ? floatingSidebarWidth
                                 : sidebarWidth
                         }
-                        ref={sidebarContentRef}
+                        ref={
+                            sidebarContentRef as MutableRefObject<HTMLDivElement>
+                        }
                         position="absolute"
                         top={isSidebarFloating ? 0 : headerHeight}
                         bottom={0}

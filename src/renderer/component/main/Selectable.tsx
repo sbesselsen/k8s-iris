@@ -9,11 +9,12 @@ export const Selectable: React.FC<SelectableProps> = (props) => {
     const { children, containerRef, userSelect = "text", ...boxProps } = props;
     const ref = useRef<HTMLDivElement>();
     useOutsideClick({
-        ref: containerRef ?? ref,
+        ref: (containerRef ?? ref) as MutableRefObject<HTMLElement>,
         handler: () => {
             const selection = getSelection();
             if (
                 ref.current &&
+                selection &&
                 selection.anchorNode &&
                 ancestorsContains(selection.anchorNode, ref.current)
             ) {
@@ -29,7 +30,7 @@ export const Selectable: React.FC<SelectableProps> = (props) => {
                 cursor="text"
                 userSelect={userSelect}
                 {...boxProps}
-                ref={ref}
+                ref={ref as MutableRefObject<HTMLDivElement>}
             >
                 {children}
             </Box>
