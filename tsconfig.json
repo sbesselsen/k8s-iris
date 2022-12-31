@@ -1,0 +1,9 @@
+{
+    "compilerOptions": {
+        "esModuleInterop": true,
+        "strict": true,
+        "jsx": "react",
+        "lib": ["es2019"]
+    },
+    "include": ["src"]
+}

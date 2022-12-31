@@ -1,0 +1,8 @@
+/_sb
+/.parcel-cache
+/.vscode
+/dist
+/node_modules
+/renderer-dev
+/res
+/scripts
