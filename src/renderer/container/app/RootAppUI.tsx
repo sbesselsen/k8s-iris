@@ -508,18 +508,15 @@ const AppNamespaces: React.FC<{
             namespaces: AppNamespacesSelection,
             options: {
                 requestNewWindow: boolean;
-                singleNamespaceClicked: boolean;
+                requestBrowse: boolean;
             }
         ) => {
-            const { requestNewWindow, singleNamespaceClicked } = options;
+            const { requestNewWindow, requestBrowse } = options;
             const oldRoute = getAppRoute();
             let menuItem = oldRoute.menuItem;
             let menuTab = oldRoute.menuTab;
             let activeEditor = oldRoute.activeEditor;
-            if (
-                singleNamespaceClicked &&
-                (menuItem !== "resources" || activeEditor)
-            ) {
+            if (requestBrowse && (menuItem !== "resources" || activeEditor)) {
                 // If the user clicks a single namespace, open the workloads overview.
                 activeEditor = null;
                 menuItem = "resources";
@@ -545,7 +542,7 @@ const AppNamespaces: React.FC<{
                         menuTab,
                         namespaces,
                     }),
-                    !singleNamespaceClicked
+                    !requestBrowse
                 );
             }
         },

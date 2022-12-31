@@ -2,7 +2,6 @@ import { AddIcon, CloseIcon, SettingsIcon } from "@chakra-ui/icons";
 import {
     Box,
     Button,
-    ButtonGroup,
     Checkbox,
     CheckboxGroup,
     Heading,
@@ -13,8 +12,10 @@ import {
     useToken,
     ButtonProps,
     IconButton,
+    FormLabel,
 } from "@chakra-ui/react";
 import React, {
+    ChangeEventHandler,
     ElementType,
     KeyboardEvent,
     MouseEvent,
@@ -127,7 +128,7 @@ export type SidebarNamespacesMenuProps = {
     onClickAddNamespace: (options: { requestNewWindow: boolean }) => void;
     onChangeSelection: (
         selection: AppNamespacesSelection,
-        options: { requestNewWindow: boolean; singleNamespaceClicked: boolean }
+        options: { requestNewWindow: boolean; requestBrowse: boolean }
     ) => void;
 };
 
@@ -144,46 +145,42 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
 
     const metaKeyRef = useModifierKeyRef("Meta");
 
-    const onClickAll = useCallback(() => {
-        onChangeSelection(
-            {
-                ...selection,
-                mode: "all",
-            },
-            {
-                requestNewWindow: metaKeyRef.current,
-                singleNamespaceClicked: false,
-            }
-        );
-    }, [metaKeyRef, selection, onChangeSelection]);
-    const onClickSelected = useCallback(() => {
-        onChangeSelection(
-            {
-                ...selection,
-                mode: "selected",
-            },
-            {
-                requestNewWindow: metaKeyRef.current,
-                singleNamespaceClicked: false,
-            }
-        );
-    }, [metaKeyRef, selection, onChangeSelection]);
+    const onChangeSelectAll: ChangeEventHandler<HTMLInputElement> = useCallback(
+        (e) => {
+            const checked = e.target.checked;
+            onChangeSelection(
+                {
+                    ...selection,
+                    mode: checked ? "all" : "selected",
+                },
+                {
+                    requestNewWindow: metaKeyRef.current,
+                    requestBrowse: false,
+                }
+            );
+        },
+        [metaKeyRef, onChangeSelection, selection]
+    );
+
+    const onClickSelectAll: MouseEventHandler = useCallback(
+        (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            onChangeSelection(
+                {
+                    ...selection,
+                    mode: "all",
+                },
+                {
+                    requestNewWindow: metaKeyRef.current,
+                    requestBrowse: true,
+                }
+            );
+        },
+        [metaKeyRef, onChangeSelection, selection]
+    );
 
     const itemTextColor = useColorModeValue("gray.700", "white");
-
-    const namespacesToggleSelectedBorderColor = useColorModeValue(
-        "gray.600",
-        "gray.300"
-    );
-    const namespacesToggleAllBorderColor = useColorModeValue(
-        "primary.500",
-        "primary.500"
-    );
-    const namespacesToggleBorderColor =
-        selection.mode === "all"
-            ? namespacesToggleAllBorderColor
-            : namespacesToggleSelectedBorderColor;
-    const namespacesToggleHoverColor = useColorModeValue("gray.50", "gray.700");
 
     const checkboxBorderColor = useColorModeValue("gray.400", "gray.200");
 
@@ -219,7 +216,7 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                 },
                 {
                     requestNewWindow: metaKeyRef.current,
-                    singleNamespaceClicked: false,
+                    requestBrowse: false,
                 }
             );
         },
@@ -242,7 +239,7 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                             },
                             {
                                 requestNewWindow: metaKeyRef.current,
-                                singleNamespaceClicked: true,
+                                requestBrowse: true,
                             }
                         );
                     },
@@ -250,8 +247,6 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
             ),
         [metaKeyRef, namespaces, onChangeSelection, selection]
     );
-
-    const focusShadow = useToken("shadows", "outline");
 
     const selectedNamespaces = useMemo(
         () => (selection.mode === "all" ? namespaceNames : selection.selected),
@@ -314,7 +309,7 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
     );
 
     return (
-        <VStack flex="1 0 0" alignItems="stretch">
+        <VStack flex="1 0 0" alignItems="stretch" spacing={0}>
             <HStack ps={4} pe={2} alignItems="center">
                 <Heading
                     textColor={headingColor}
@@ -341,50 +336,41 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                 </ContextMenuButton>
             </HStack>
 
-            <HStack px={4} flex="0 0 0">
-                <ButtonGroup variant="outline" size="xs" isAttached>
-                    <Button
-                        mr="-1px"
-                        borderColor={namespacesToggleBorderColor}
+            <FormLabel px={2}>
+                <HStack
+                    w="100%"
+                    spacing={0}
+                    py={1}
+                    borderRadius="6px"
+                    fontWeight="medium"
+                    _hover={{
+                        bg: hoverBg,
+                    }}
+                >
+                    <Checkbox
+                        color={itemTextColor}
+                        ps={2}
+                        pe={4}
+                        size="sm"
+                        isChecked={selection.mode === "all"}
+                        py={1}
+                        borderColor={checkboxBorderColor}
+                        onChange={onChangeSelectAll}
+                        flexShrink={0}
+                    />
+                    <Box
+                        fontSize="sm"
+                        flexGrow={1}
                         textColor={itemTextColor}
-                        isActive={selection.mode === "all"}
-                        _active={{
-                            bg: namespacesToggleBorderColor,
-                            textColor: "white",
-                        }}
-                        _hover={{
-                            bg: namespacesToggleHoverColor,
-                        }}
-                        _focus={{}}
-                        _focusVisible={{
-                            boxShadow: focusShadow,
-                        }}
-                        onClick={onClickAll}
+                        onClick={onClickSelectAll}
+                        isTruncated
+                        pe={2}
                     >
                         All
-                    </Button>
-                    <Button
-                        borderColor={namespacesToggleBorderColor}
-                        textColor={itemTextColor}
-                        isActive={selection.mode === "selected"}
-                        isLoading={isLoading}
-                        _active={{
-                            bg: namespacesToggleBorderColor,
-                            textColor: "white",
-                        }}
-                        _hover={{
-                            bg: namespacesToggleHoverColor,
-                        }}
-                        _focus={{}}
-                        _focusVisible={{
-                            boxShadow: focusShadow,
-                        }}
-                        onClick={onClickSelected}
-                    >
-                        Selected
-                    </Button>
-                </ButtonGroup>
-            </HStack>
+                    </Box>
+                </HStack>
+            </FormLabel>
+
             <Box
                 flex="1 0 0"
                 overflow="hidden scroll"
