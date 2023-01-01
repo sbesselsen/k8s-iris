@@ -12,6 +12,9 @@ import {
     HStack,
     List,
     ListItem,
+    Stat,
+    StatLabel,
+    StatNumber,
     Text,
     useColorModeValue,
     useControllableState,
@@ -20,6 +23,11 @@ import {
 import React, { createContext, useCallback, useContext, useMemo } from "react";
 import { K8sObject } from "../../../common/k8s/client";
 import { ResourceBadge } from "../../k8s/badges";
+import {
+    generateResourceDetails,
+    isResourceColumn,
+    ResourceDetail,
+} from "../../k8s/details";
 import { Datetime } from "../main/Datetime";
 import { Defer } from "../main/Defer";
 import { Selectable } from "../main/Selectable";
@@ -466,26 +474,43 @@ export type K8sObjectHeadingProps = BoxProps & {
     kind: string | undefined;
     metadata: K8sObject["metadata"];
     badges?: ResourceBadge[];
+    object?: K8sObject | undefined;
 };
 
+const sharedDetails: ResourceDetail[] = [];
+
 export const K8sObjectHeading: React.FC<K8sObjectHeadingProps> = (props) => {
-    const { apiVersion, kind, metadata, badges, ...boxProps } = props;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { apiVersion, kind, metadata, badges, object, ...boxProps } = props;
+
+    const customDetails = useMemo(
+        () =>
+            object
+                ? [...sharedDetails, ...generateResourceDetails(object)]
+                : sharedDetails,
+        [object]
+    );
 
     return (
         <VStack alignItems="start" {...boxProps}>
-            <Heading fontSize="md" fontWeight="semibold">
-                <Selectable isTruncated>
-                    {kind && (
-                        <Text fontWeight="bold" display="inline">
-                            {kind}:{" "}
-                        </Text>
-                    )}{" "}
-                    {metadata.name}
-                </Selectable>
-            </Heading>
+            <HStack w="100%" alignItems="baseline">
+                <Heading fontSize="md" fontWeight="semibold">
+                    <Selectable isTruncated>
+                        {kind && (
+                            <Text
+                                title={apiVersion}
+                                fontWeight="bold"
+                                display="inline"
+                            >
+                                {kind}:{" "}
+                            </Text>
+                        )}{" "}
+                        {metadata.name}
+                    </Selectable>
+                </Heading>
+            </HStack>
             <HStack alignItems="baseline">
-                {apiVersion && <Badge>{apiVersion}</Badge>}
-                {metadata?.namespace && <Badge>{metadata?.namespace}</Badge>}
+                {metadata.namespace && <Badge>{metadata.namespace}</Badge>}
                 {badges?.map((badge) => {
                     const { id, text, variant, details, badgeProps } = badge;
                     const colorScheme = {
@@ -506,7 +531,74 @@ export const K8sObjectHeading: React.FC<K8sObjectHeadingProps> = (props) => {
                     );
                 })}
             </HStack>
+            {customDetails.length > 0 && object && (
+                <K8sObjectCustomDetails
+                    object={object}
+                    details={customDetails}
+                />
+            )}
         </VStack>
+    );
+};
+
+type K8sObjectCustomDetailsProps = {
+    object: K8sObject;
+    details: ResourceDetail[];
+};
+
+const K8sObjectCustomDetails: React.FC<K8sObjectCustomDetailsProps> = (
+    props
+) => {
+    const { object, details } = props;
+
+    const columns = details.filter(isResourceColumn);
+    const bg = useColorModeValue("transparent", "gray.800");
+    const borderColor = useColorModeValue("transparent", "gray.700");
+    const boxShadow = useColorModeValue(
+        "0 0 1px rgba(0, 0, 0, 0.3), 0 0 5px rgba(0, 0, 0, 0.1)",
+        ""
+    );
+
+    return (
+        <Box py={1}>
+            {columns.map((col) => {
+                const value = col.valueFor(object);
+                if (!value) {
+                    return;
+                }
+                return (
+                    <Stat
+                        key={col.id}
+                        display="inline-block"
+                        border="1px solid"
+                        borderColor={borderColor}
+                        bg={bg}
+                        borderRadius="8px"
+                        boxShadow={boxShadow}
+                        px={3}
+                        py={1}
+                        me={2}
+                        mb={2}
+                    >
+                        <StatLabel
+                            fontSize="sm"
+                            whiteSpace="nowrap"
+                            fontWeight="normal"
+                        >
+                            {col.header}
+                        </StatLabel>
+                        <StatNumber
+                            fontSize="md"
+                            whiteSpace="nowrap"
+                            userSelect="text"
+                            cursor="text"
+                        >
+                            {value}
+                        </StatNumber>
+                    </Stat>
+                );
+            })}
+        </Box>
     );
 };
 

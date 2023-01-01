@@ -412,6 +412,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
                         kind={kind}
                         apiVersion={apiVersion}
                         metadata={metadata}
+                        object={object}
                         badges={badges}
                         flex="1 0 0"
                     />
