@@ -7,6 +7,7 @@ import {
 } from "@chakra-ui/react";
 import React, {
     MutableRefObject,
+    PropsWithChildren,
     ReactNode,
     useCallback,
     useImperativeHandle,
@@ -114,3 +115,15 @@ export const ScrollBox = forwardRef<ScrollBoxProps, "div">((props, ref) => {
         </Box>
     );
 });
+
+export const ScrollBoxHorizontalScroll: React.FC<PropsWithChildren<{}>> = (
+    props
+) => {
+    const { children } = props;
+
+    return (
+        <Box overflowX="auto" px={4} mx={-4}>
+            {children}
+        </Box>
+    );
+};

@@ -18,7 +18,10 @@ import { parseCpu, parseMemory } from "../../../common/k8s/util";
 import { resourceMatch } from "../../../common/util/search";
 import { k8sSmartCompare } from "../../../common/util/sort";
 import { AppTooltip } from "../../component/main/AppTooltip";
-import { ScrollBox } from "../../component/main/ScrollBox";
+import {
+    ScrollBox,
+    ScrollBoxHorizontalScroll,
+} from "../../component/main/ScrollBox";
 import { Selectable } from "../../component/main/Selectable";
 import { useAppSearch } from "../../context/search";
 import { useK8sListPoll } from "../../k8s/list-poll";
@@ -73,30 +76,36 @@ export const ClusterNodesOverview: React.FC = () => {
 
     return (
         <ScrollBox pb={10} w="100%">
-            <Table
-                size="sm"
-                sx={{ tableLayout: "fixed" }}
-                width="100%"
-                maxWidth="1000px"
-            >
-                <Thead>
-                    <Tr>
-                        <Th width="20px"></Th>
-                        <Th whiteSpace="nowrap">Node</Th>
-                        <Th width="100px">CPU</Th>
-                        <Th width="100px">Memory</Th>
-                    </Tr>
-                </Thead>
-                <Tbody>
-                    {sortedNodes.map((node) => (
-                        <NodeInfo
-                            key={node.metadata.name}
-                            node={node}
-                            metrics={nodeMetricsByNode[node.metadata.name]}
-                        />
-                    ))}
-                </Tbody>
-            </Table>
+            <ScrollBoxHorizontalScroll>
+                <Table
+                    size="sm"
+                    sx={{ tableLayout: "fixed" }}
+                    width="100%"
+                    minWidth="700px"
+                    maxWidth="1000px"
+                >
+                    <Thead>
+                        <Tr>
+                            <Th width="20px"></Th>
+                            <Th whiteSpace="nowrap">Node</Th>
+                            <Th width="80px">Arch</Th>
+                            <Th width="120px">Instance</Th>
+                            <Th width="120px">Zone</Th>
+                            <Th width="100px">CPU</Th>
+                            <Th width="100px">Memory</Th>
+                        </Tr>
+                    </Thead>
+                    <Tbody>
+                        {sortedNodes.map((node) => (
+                            <NodeInfo
+                                key={node.metadata.name}
+                                node={node}
+                                metrics={nodeMetricsByNode[node.metadata.name]}
+                            />
+                        ))}
+                    </Tbody>
+                </Table>
+            </ScrollBoxHorizontalScroll>
         </ScrollBox>
     );
 };
@@ -114,6 +123,16 @@ const NodeInfo: React.FC<NodeInfoProps> = React.memo((props) => {
     )?.status;
     const statusColor =
         ready === "True" ? "green" : ready === "False" ? "red" : "gray";
+
+    const labels = node.metadata.labels ?? {};
+    const arch =
+        labels["kubernetes.io/arch"] ?? labels["beta.kubernetes.io/arch"];
+    const instance =
+        labels["node.kubernetes.io/instance-type"] ??
+        labels["beta.kubernetes.io/instance-type"];
+    const zone =
+        labels["topology.kubernetes.io/zone"] ??
+        labels["failure-domain.beta.kubernetes.io/zone"];
 
     const cpu = (metrics as any)?.usage?.cpu
         ? parseCpu((metrics as any)?.usage?.cpu)
@@ -154,6 +173,9 @@ const NodeInfo: React.FC<NodeInfoProps> = React.memo((props) => {
                     </HStack>
                 )}
             </Td>
+            <Td verticalAlign="baseline">{arch}</Td>
+            <Td verticalAlign="baseline">{instance}</Td>
+            <Td verticalAlign="baseline">{zone}</Td>
             <Td verticalAlign="baseline">
                 {totalCpu !== null && totalCpu > 0 && cpu !== null && (
                     <AppTooltip
