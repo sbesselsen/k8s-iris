@@ -24,11 +24,14 @@ import {
     ContextMenuButton,
     MenuItem,
 } from "../../component/main/ContextMenuButton";
+import { useOptionalK8sContext } from "../../context/k8s-context";
 
 export const AppToolbar: React.FC = () => {
     const { canGoBack, canGoForward, goBack, goForward } = useAppRouteHistory();
     const isSidebarVisible = useAppRoute((route) => route.isSidebarVisible);
     const setAppRoute = useAppRouteSetter();
+
+    const kubeContext = useOptionalK8sContext();
 
     const toggleSidebarVisible = useCallback(() => {
         setAppRoute(
@@ -54,15 +57,6 @@ export const AppToolbar: React.FC = () => {
             },
             [goBack, goForward, metaKeyRef]
         )
-    );
-
-    const isLocked = useContextLock();
-    const setLock = useContextLockSetter();
-    const onLockAction = useCallback(
-        ({ actionId }: { actionId: string }) => {
-            setLock(actionId === "lock");
-        },
-        [setLock]
     );
 
     const buttonColor = useColorModeValue("gray.600", "gray.300");
@@ -102,33 +96,50 @@ export const AppToolbar: React.FC = () => {
                     _focusVisible={{ boxShadow: "outline" }}
                 />
             </ButtonGroup>
-            <ButtonGroup variant="ghost" size="sm">
-                <ContextMenuButton
-                    as={IconButton}
-                    px={1}
-                    icon={<Icon as={isLocked ? FiLock : FiUnlock} />}
-                    aria-label="Lock/unlock cluster"
-                    title="Lock/unlock cluster"
-                    color={buttonColor}
-                    fontWeight="normal"
-                    onMenuAction={onLockAction}
-                    _focus={{ boxShadow: "none" }}
-                    _focusVisible={{ boxShadow: "outline" }}
-                >
-                    <MenuItem
-                        label="Locked"
-                        type="radio"
-                        actionId="lock"
-                        checked={isLocked}
-                    />
-                    <MenuItem
-                        label="Unlocked"
-                        type="radio"
-                        actionId="unlock"
-                        checked={!isLocked}
-                    />
-                </ContextMenuButton>
-            </ButtonGroup>
+            {kubeContext && <ContextLockButton />}
         </HStack>
+    );
+};
+
+const ContextLockButton: React.FC = () => {
+    const buttonColor = useColorModeValue("gray.600", "gray.300");
+
+    const isLocked = useContextLock();
+    const setLock = useContextLockSetter();
+    const onLockAction = useCallback(
+        ({ actionId }: { actionId: string }) => {
+            setLock(actionId === "lock");
+        },
+        [setLock]
+    );
+
+    return (
+        <ButtonGroup variant="ghost" size="sm">
+            <ContextMenuButton
+                as={IconButton}
+                px={1}
+                icon={<Icon as={isLocked ? FiLock : FiUnlock} />}
+                aria-label="Lock/unlock cluster"
+                title="Lock/unlock cluster"
+                color={buttonColor}
+                fontWeight="normal"
+                onMenuAction={onLockAction}
+                _focus={{ boxShadow: "none" }}
+                _focusVisible={{ boxShadow: "outline" }}
+            >
+                <MenuItem
+                    label="Locked"
+                    type="radio"
+                    actionId="lock"
+                    checked={isLocked}
+                />
+                <MenuItem
+                    label="Unlocked"
+                    type="radio"
+                    actionId="unlock"
+                    checked={!isLocked}
+                />
+            </ContextMenuButton>
+        </ButtonGroup>
     );
 };

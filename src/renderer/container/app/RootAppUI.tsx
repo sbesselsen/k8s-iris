@@ -27,7 +27,10 @@ import { usePageTitle } from "../../hook/page-title";
 import { ContextSelectMenu } from "../k8s-context/ContextSelectMenu";
 import { AppFrame } from "../../component/main/AppFrame";
 import { useColorThemeStore } from "../../context/color-theme";
-import { useK8sContext } from "../../context/k8s-context";
+import {
+    useK8sContext,
+    useOptionalK8sContext,
+} from "../../context/k8s-context";
 import { useK8sContextsInfo } from "../../hook/k8s-contexts-info";
 import { k8sAccountIdColor } from "../../util/k8s-context-color";
 import { SearchInput } from "../../component/main/SearchInput";
@@ -104,7 +107,7 @@ export const RootAppUI: React.FunctionComponent = () => {
 
     const colorThemeStore = useColorThemeStore();
 
-    const kubeContext = useK8sContext();
+    const kubeContext = useOptionalK8sContext();
     usePageTitle(kubeContext ?? "Iris");
 
     const [isLoadingContextsInfo, contextsInfo] = useK8sContextsInfo();
@@ -305,18 +308,20 @@ export const RootAppUI: React.FunctionComponent = () => {
                     </Box>
                 }
                 sidebar={
-                    <VStack
-                        h="100%"
-                        spacing={6}
-                        position="relative"
-                        alignItems="stretch"
-                    >
-                        <AppMainMenu />
-                        <AppEditors />
-                        <AppNamespaces
-                            onErrorStateChange={setNamespacesError}
-                        />
-                    </VStack>
+                    kubeContext && (
+                        <VStack
+                            h="100%"
+                            spacing={6}
+                            position="relative"
+                            alignItems="stretch"
+                        >
+                            <AppMainMenu />
+                            <AppEditors />
+                            <AppNamespaces
+                                onErrorStateChange={setNamespacesError}
+                            />
+                        </VStack>
+                    )
                 }
                 content={
                     kubeContext ? (

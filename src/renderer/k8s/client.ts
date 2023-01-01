@@ -40,7 +40,7 @@ const noop = () => {};
 
 export function useK8sClient(kubeContext?: string): K8sClient {
     const sharedKubeContext = useK8sContext();
-    const context = kubeContext ?? sharedKubeContext ?? "";
+    const context = kubeContext ?? sharedKubeContext;
 
     const ipcRead = useIpcCall((ipc) => ipc.k8s.read);
     const ipcApply = useIpcCall((ipc) => ipc.k8s.apply);

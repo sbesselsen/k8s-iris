@@ -49,13 +49,13 @@ function useContextLockIpcWatch(context: string) {
 }
 
 export function useContextLock(): boolean {
-    const context = useK8sContext() ?? "";
+    const context = useK8sContext();
     useContextLockIpcWatch(context);
     return useStoreValue(({ locks }) => locks[context] ?? true, [context]);
 }
 
 export function useContextLockGetter(): () => boolean {
-    const context = useK8sContext() ?? "";
+    const context = useK8sContext();
     useContextLockIpcWatch(context);
     const store = useStore();
     return useCallback(

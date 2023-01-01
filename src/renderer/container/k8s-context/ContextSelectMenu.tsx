@@ -20,7 +20,7 @@ import React, {
     useState,
 } from "react";
 import { MenuInput } from "../../component/MenuInput";
-import { useK8sContext } from "../../context/k8s-context";
+import { useOptionalK8sContext } from "../../context/k8s-context";
 import { useIpcCall } from "../../hook/ipc";
 import { useAppRouteGetter, useAppRouteSetter } from "../../context/route";
 import { useModifierKeyRef } from "../../hook/keyboard";
@@ -47,7 +47,7 @@ type ContextOption = K8sContext &
 
 export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
     (_props, ref) => {
-        const kubeContext = useK8sContext();
+        const kubeContext = useOptionalK8sContext();
         const getAppRoute = useAppRouteGetter();
         const setAppRoute = useAppRouteSetter();
         const editorsStore = useAppEditorsStore();

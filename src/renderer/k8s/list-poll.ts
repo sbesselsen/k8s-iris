@@ -74,7 +74,7 @@ export function useK8sListPollListener<T extends K8sObject = K8sObject>(
     options: K8sListPollListenerOptions<T>,
     deps: any[] = []
 ): void {
-    const kubeContext = useK8sContext() ?? "";
+    const kubeContext = useK8sContext();
 
     const client = useK8sClient(kubeContext);
 

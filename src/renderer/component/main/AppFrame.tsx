@@ -3,7 +3,7 @@ import React, {
     createContext,
     MutableRefObject,
     PointerEventHandler,
-    ReactElement,
+    ReactNode,
     useCallback,
     useContext,
     useEffect,
@@ -17,11 +17,11 @@ import { useWindowResizeListener } from "../../hook/window-resize";
 const SidebarVisibleContext = createContext(true);
 
 export type AppFrameProps = {
-    search: ReactElement;
-    sidebar: ReactElement;
-    content: ReactElement;
-    title: ReactElement;
-    toolbar: ReactElement;
+    search: ReactNode;
+    sidebar: ReactNode;
+    content: ReactNode;
+    title: ReactNode;
+    toolbar: ReactNode;
     isSidebarVisible?: boolean;
     onRequestSidebarVisibilityChange?: (visible: boolean) => void;
 };
