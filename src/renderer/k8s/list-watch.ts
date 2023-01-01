@@ -208,6 +208,7 @@ export function useK8sListWatchListener<T extends K8sObject = K8sObject>(
             const listWatch = client.listWatch<T>(spec, (error, message) => {
                 if (error) {
                     onWatchError(error);
+                    return;
                 }
                 if (!message) {
                     onWatchError(
