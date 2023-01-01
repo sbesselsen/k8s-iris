@@ -493,7 +493,13 @@ export const K8sObjectHeading: React.FC<K8sObjectHeadingProps> = (props) => {
 
     return (
         <VStack alignItems="start" {...boxProps}>
-            <HStack w="100%" alignItems="baseline">
+            <HStack
+                w="100%"
+                alignItems="baseline"
+                wrap="wrap"
+                gap={1}
+                spacing={0}
+            >
                 <Heading fontSize="md" fontWeight="semibold">
                     <Selectable isTruncated>
                         {kind && (
@@ -508,9 +514,10 @@ export const K8sObjectHeading: React.FC<K8sObjectHeadingProps> = (props) => {
                         {metadata.name}
                     </Selectable>
                 </Heading>
-            </HStack>
-            <HStack alignItems="baseline">
-                {metadata.namespace && <Badge>{metadata.namespace}</Badge>}
+
+                {metadata.namespace && (
+                    <Badge me={1}>{metadata.namespace}</Badge>
+                )}
                 {badges?.map((badge) => {
                     const { id, text, variant, details, badgeProps } = badge;
                     const colorScheme = {
@@ -524,6 +531,7 @@ export const K8sObjectHeading: React.FC<K8sObjectHeadingProps> = (props) => {
                             key={id}
                             colorScheme={colorScheme}
                             title={details ?? text}
+                            me={1}
                             {...badgeProps}
                         >
                             {text}
