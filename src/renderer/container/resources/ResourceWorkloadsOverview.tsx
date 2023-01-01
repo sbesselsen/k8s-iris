@@ -50,6 +50,7 @@ import {
     generateResourceDetails,
     isResourceBox,
     isResourceColumn,
+    ResourceColumn,
     ResourceDetail,
 } from "../../k8s/details";
 import {
@@ -915,7 +916,7 @@ const WorkloadGroup: React.FC<{
                         bg={groupContentBg}
                         borderRadius={6}
                         spacing={4}
-                        p={4}
+                        py={4}
                     >
                         {Object.entries(resourceTypes).map(([k, { title }]) => (
                             <WorkloadResourceSection
@@ -963,9 +964,11 @@ const WorkloadResourceSection: React.FC<WorkloadResourceSectionProps> =
 
         return (
             <VStack alignItems="stretch">
-                <Heading fontSize="sm">{title}</Heading>
+                <Heading fontSize="sm" px={4}>
+                    {title}
+                </Heading>
                 {isLoading && (
-                    <Box>
+                    <Box px={4}>
                         <Spinner color="gray" size="sm" />
                     </Box>
                 )}
@@ -1071,51 +1074,61 @@ const WorkloadResourceList: React.FC<WorkloadResourceListProps> = (props) => {
         [customDetails]
     );
 
-    // TODO: show/hide type columns as space becomes available
+    function detailColWidth(col: ResourceColumn): number {
+        return 40 * (col.widthUnits + 1);
+    }
+
+    const detailColumns = customDetails.filter(isResourceColumn);
+    const detailColumnsTotalWidth = detailColumns
+        .map(detailColWidth)
+        .reduce((x, y) => x + y, 0);
 
     return (
-        <Table
-            size="sm"
-            sx={{ tableLayout: "fixed" }}
-            width="100%"
-            maxWidth="1000px"
-        >
-            <Thead>
-                <Tr>
-                    <Th ps={2} width="40px">
-                        <Checkbox
-                            colorScheme="gray"
-                            isIndeterminate={someResourcesSelected}
-                            isChecked={allResourcesSelected}
-                            onChange={onChangeSelectAll}
-                        />
-                    </Th>
-                    <Th ps={0} whiteSpace="nowrap">
-                        Name
-                    </Th>
-                    {customColumns.map((col) => (
-                        <Th
-                            key={col.id}
-                            width={40 * (col.widthUnits + 1) + "px"}
-                        >
-                            {col.header}
+        <Box overflowX="auto" mx={-4} px={4}>
+            <Table
+                size="sm"
+                sx={{ tableLayout: "fixed" }}
+                minWidth={
+                    350 +
+                    (showNamespace ? 150 : 0) +
+                    detailColumnsTotalWidth +
+                    "px"
+                }
+            >
+                <Thead>
+                    <Tr>
+                        <Th ps={2} width="40px">
+                            <Checkbox
+                                colorScheme="gray"
+                                isIndeterminate={someResourcesSelected}
+                                isChecked={allResourcesSelected}
+                                onChange={onChangeSelectAll}
+                            />
                         </Th>
+                        <Th ps={0} whiteSpace="nowrap">
+                            Name
+                        </Th>
+                        {customColumns.map((col) => (
+                            <Th key={col.id} width={detailColWidth(col) + "px"}>
+                                {col.header}
+                            </Th>
+                        ))}
+                        {showNamespace && <Th width="150px">Namespace</Th>}
+                        <Th width="120px">Created</Th>
+                    </Tr>
+                </Thead>
+                <Tbody>
+                    {sortedKeyedResources.map(({ key, resource }) => (
+                        <WorkloadResourceRow
+                            resource={resource}
+                            showNamespace={showNamespace}
+                            customDetails={customDetails}
+                            key={key}
+                        />
                     ))}
-                    {showNamespace && <Th width="150px">Namespace</Th>}
-                    <Th width="150px">Created</Th>
-                </Tr>
-            </Thead>
-            <Tbody>
-                {sortedKeyedResources.map(({ key, resource }) => (
-                    <WorkloadResourceRow
-                        resource={resource}
-                        showNamespace={showNamespace}
-                        customDetails={customDetails}
-                        key={key}
-                    />
-                ))}
-            </Tbody>
-        </Table>
+                </Tbody>
+            </Table>
+        </Box>
     );
 };
 

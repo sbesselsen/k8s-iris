@@ -353,7 +353,6 @@ const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
         [resourceTypeInfo]
     );
 
-    // TODO: show/hide type columns as space becomes available
     function detailColWidth(col: ResourceColumn): number {
         return 40 * (col.widthUnits + 1);
     }

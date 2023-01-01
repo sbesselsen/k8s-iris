@@ -45,7 +45,7 @@ function generateSetSizeDetails(
     resourceType: K8sResourceTypeIdentifier
 ): ResourceDetail[] {
     const output: ResourceDetail[] = [];
-    if (isSetLike(resourceType)) {
+    if (isSetLike(resourceType) && resourceType.kind !== "DaemonSet") {
         output.push({
             id: "resource-set-scale",
             header: "Scale",
