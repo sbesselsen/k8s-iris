@@ -6,9 +6,7 @@ import { useK8sListWatch } from "../../k8s/list-watch";
 import { useK8sContextsInfo } from "../../hook/k8s-contexts-info";
 import { useK8sContext } from "../../context/k8s-context";
 import {
-    Button,
     Heading,
-    Icon,
     Table,
     Tbody,
     Td,
@@ -20,9 +18,6 @@ import {
 import { Selectable } from "../../component/main/Selectable";
 import { K8sObject } from "../../../common/k8s/client";
 import { parseCpu, parseMemory } from "../../../common/k8s/util";
-import { Toolbar } from "../../component/main/Toolbar";
-import { FiTerminal } from "react-icons/fi";
-import { useLocalShellEditorOpener } from "../../hook/shell-opener";
 import { useK8sVersion } from "../../k8s/version";
 
 const cloudProviderNames: Record<string, string> = {
@@ -62,22 +57,8 @@ export const ClusterInfoOverview: React.FC = () => {
           contextInfo.cloudInfo.cloudProvider
         : "Cloud";
 
-    const onClickLocalShell = useLocalShellEditorOpener();
-
     return (
-        <ScrollBox
-            bottomToolbar={
-                <Toolbar>
-                    <Button
-                        leftIcon={<Icon as={FiTerminal} />}
-                        fontWeight="normal"
-                        onClick={onClickLocalShell}
-                    >
-                        Local shell
-                    </Button>
-                </Toolbar>
-            }
-        >
+        <ScrollBox>
             <VStack alignItems="stretch" spacing={6}>
                 <VStack alignItems="stretch" spacing={1}>
                     <Heading isTruncated>Cluster</Heading>
