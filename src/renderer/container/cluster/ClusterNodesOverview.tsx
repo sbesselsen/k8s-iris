@@ -24,6 +24,12 @@ import {
 } from "../../component/main/ScrollBox";
 import { Selectable } from "../../component/main/Selectable";
 import { useAppSearch } from "../../context/search";
+import {
+    generateResourceDetails,
+    isResourceColumn,
+    ResourceColumn,
+    ResourceDetail,
+} from "../../k8s/details";
 import { useK8sListPoll } from "../../k8s/list-poll";
 import { useK8sListWatch } from "../../k8s/list-watch";
 import { ResourceEditorLink } from "../resources/ResourceEditorLink";
@@ -74,23 +80,45 @@ export const ClusterNodesOverview: React.FC = () => {
         [filteredNodes]
     );
 
+    const customDetails = useMemo(
+        () =>
+            generateResourceDetails({
+                apiVersion: "v1",
+                kind: "Node",
+            }),
+        []
+    );
+
+    // TODO: show/hide type columns as space becomes available
+    function detailColWidth(col: ResourceColumn): number {
+        return 40 * (col.widthUnits + 1);
+    }
+
+    const detailColumns = customDetails.filter(isResourceColumn);
+    const detailColumnsTotalWidth = detailColumns
+        .map(detailColWidth)
+        .reduce((x, y) => x + y, 0);
+
     return (
         <ScrollBox pb={10} w="100%">
             <ScrollBoxHorizontalScroll>
                 <Table
                     size="sm"
                     sx={{ tableLayout: "fixed" }}
-                    width="100%"
-                    minWidth="700px"
-                    maxWidth="1000px"
+                    minWidth={400 + detailColumnsTotalWidth + "px"}
                 >
                     <Thead>
                         <Tr>
                             <Th width="20px"></Th>
                             <Th whiteSpace="nowrap">Node</Th>
-                            <Th width="80px">Arch</Th>
-                            <Th width="120px">Instance</Th>
-                            <Th width="120px">Zone</Th>
+                            {detailColumns.map((col) => (
+                                <Th
+                                    key={col.id}
+                                    width={detailColWidth(col) + "px"}
+                                >
+                                    {col.header}
+                                </Th>
+                            ))}
                             <Th width="100px">CPU</Th>
                             <Th width="100px">Memory</Th>
                         </Tr>
@@ -101,6 +129,7 @@ export const ClusterNodesOverview: React.FC = () => {
                                 key={node.metadata.name}
                                 node={node}
                                 metrics={nodeMetricsByNode[node.metadata.name]}
+                                details={customDetails}
                             />
                         ))}
                     </Tbody>
@@ -112,11 +141,12 @@ export const ClusterNodesOverview: React.FC = () => {
 
 type NodeInfoProps = {
     node: K8sObject;
+    details: ResourceDetail[];
     metrics?: K8sObject | undefined;
 };
 
 const NodeInfo: React.FC<NodeInfoProps> = React.memo((props) => {
-    const { node, metrics } = props;
+    const { node, details, metrics } = props;
 
     const ready = (node as any)?.status?.conditions?.find(
         (c: any) => c?.type === "Ready"
@@ -124,15 +154,7 @@ const NodeInfo: React.FC<NodeInfoProps> = React.memo((props) => {
     const statusColor =
         ready === "True" ? "green" : ready === "False" ? "red" : "gray";
 
-    const labels = node.metadata.labels ?? {};
-    const arch =
-        labels["kubernetes.io/arch"] ?? labels["beta.kubernetes.io/arch"];
-    const instance =
-        labels["node.kubernetes.io/instance-type"] ??
-        labels["beta.kubernetes.io/instance-type"];
-    const zone =
-        labels["topology.kubernetes.io/zone"] ??
-        labels["failure-domain.beta.kubernetes.io/zone"];
+    const detailColumns = details.filter(isResourceColumn);
 
     const cpu = (metrics as any)?.usage?.cpu
         ? parseCpu((metrics as any)?.usage?.cpu)
@@ -173,9 +195,11 @@ const NodeInfo: React.FC<NodeInfoProps> = React.memo((props) => {
                     </HStack>
                 )}
             </Td>
-            <Td verticalAlign="baseline">{arch}</Td>
-            <Td verticalAlign="baseline">{instance}</Td>
-            <Td verticalAlign="baseline">{zone}</Td>
+            {detailColumns.map((col) => (
+                <Td verticalAlign="baseline" key={col.id}>
+                    <Selectable>{col.valueFor(node)}</Selectable>
+                </Td>
+            ))}
             <Td verticalAlign="baseline">
                 {totalCpu !== null && totalCpu > 0 && cpu !== null && (
                     <AppTooltip

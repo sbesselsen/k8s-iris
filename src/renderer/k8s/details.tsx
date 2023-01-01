@@ -34,9 +34,11 @@ export function isResourceBox(detail: ResourceDetail): detail is ResourceBox {
 export function generateResourceDetails(
     resourceType: K8sResourceTypeIdentifier
 ): ResourceDetail[] {
-    return [generateSetSizeDetails, generateIngressDetails].flatMap((f) =>
-        f(resourceType)
-    );
+    return [
+        generateSetSizeDetails,
+        generateIngressDetails,
+        generateNodeDetails,
+    ].flatMap((f) => f(resourceType));
 }
 
 function generateSetSizeDetails(
@@ -162,3 +164,54 @@ export const IngressHostLink: React.FC<{ url: string }> = (props) => {
         </Link>
     );
 };
+
+function generateNodeDetails(
+    resourceType: K8sResourceTypeIdentifier
+): ResourceDetail[] {
+    const output: ResourceDetail[] = [];
+    if (resourceType.apiVersion === "v1" && resourceType.kind === "Node") {
+        output.push({
+            id: "node-arch",
+            header: "Arch",
+            importance: 1,
+            style: "column",
+            widthUnits: 1,
+            valueFor(node) {
+                const labels = node.metadata.labels ?? {};
+                return (
+                    labels["kubernetes.io/arch"] ??
+                    labels["beta.kubernetes.io/arch"]
+                );
+            },
+        });
+        output.push({
+            id: "node-instance",
+            header: "Instance",
+            importance: 1,
+            style: "column",
+            widthUnits: 2,
+            valueFor(node) {
+                const labels = node.metadata.labels ?? {};
+                return (
+                    labels["node.kubernetes.io/instance-type"] ??
+                    labels["beta.kubernetes.io/instance-type"]
+                );
+            },
+        });
+        output.push({
+            id: "node-zone",
+            header: "Zone",
+            importance: 1,
+            style: "column",
+            widthUnits: 2,
+            valueFor(node) {
+                const labels = node.metadata.labels ?? {};
+                return (
+                    labels["topology.kubernetes.io/zone"] ??
+                    labels["failure-domain.beta.kubernetes.io/zone"]
+                );
+            },
+        });
+    }
+    return output;
+}

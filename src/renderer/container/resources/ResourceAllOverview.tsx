@@ -10,7 +10,6 @@ import {
     Th,
     Thead,
     Tr,
-    useBreakpointValue,
     useControllableState,
     VStack,
 } from "@chakra-ui/react";
@@ -30,7 +29,10 @@ import {
 import { objSameRef, resourceIdentifier } from "../../../common/k8s/util";
 import { resourceMatch } from "../../../common/util/search";
 import { k8sSmartCompare } from "../../../common/util/sort";
-import { ScrollBox } from "../../component/main/ScrollBox";
+import {
+    ScrollBox,
+    ScrollBoxHorizontalScroll,
+} from "../../component/main/ScrollBox";
 import { Selectable } from "../../component/main/Selectable";
 import { useK8sNamespaces } from "../../context/k8s-namespaces";
 import { useAppParam } from "../../context/param";
@@ -44,6 +46,7 @@ import {
     generateResourceDetails,
     isResourceBox,
     isResourceColumn,
+    ResourceColumn,
     ResourceDetail,
 } from "../../k8s/details";
 import { useK8sListWatch } from "../../k8s/list-watch";
@@ -265,12 +268,9 @@ const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
         [filteredResources]
     );
 
-    const showNamespace = useBreakpointValue({
-        base: false,
-        md:
-            resourceTypeInfo.namespaced &&
-            (namespaces.mode === "all" || namespaces.selected.length > 1),
-    });
+    const showNamespace =
+        resourceTypeInfo.namespaced &&
+        (namespaces.mode === "all" || namespaces.selected.length > 1);
 
     const keys = useMemo(
         () => sortedKeyedResources.map(({ key }) => key),
@@ -348,70 +348,87 @@ const InnerResourceList: React.FC<InnerResourceListProps> = (props) => {
         [setSelectedResourceIdentifiers, sortedKeyedResources]
     );
 
-    const customDetails = generateResourceDetails(resourceTypeInfo);
+    const customDetails = useMemo(
+        () => generateResourceDetails(resourceTypeInfo),
+        [resourceTypeInfo]
+    );
 
     // TODO: show/hide type columns as space becomes available
+    function detailColWidth(col: ResourceColumn): number {
+        return 40 * (col.widthUnits + 1);
+    }
+
+    const detailColumns = customDetails.filter(isResourceColumn);
+    const detailColumnsTotalWidth = detailColumns
+        .map(detailColWidth)
+        .reduce((x, y) => x + y, 0);
 
     return (
         <Box>
-            <ResourceContextMenu objects={selectedResourcesState}>
-                <Table
-                    size="sm"
-                    sx={{ tableLayout: "fixed" }}
-                    width="100%"
-                    maxWidth="1000px"
-                >
-                    <Thead>
-                        <Tr>
-                            <Th ps={2} width="40px">
-                                <Checkbox
-                                    colorScheme="gray"
-                                    isIndeterminate={
-                                        selectedResourceIdentifiers.length >
-                                            0 &&
-                                        selectedResourceIdentifiers.length <
-                                            sortedKeyedResources.length
-                                    }
-                                    isChecked={
-                                        selectedResourceIdentifiers.length >
-                                            0 &&
-                                        selectedResourceIdentifiers.length ===
-                                            sortedKeyedResources.length
-                                    }
-                                    onChange={onChangeSelectAll}
-                                />
-                            </Th>
-                            <Th ps={0}>Name</Th>
-                            {customDetails
-                                .filter(isResourceColumn)
-                                .map((col) => (
+            <ScrollBoxHorizontalScroll>
+                <ResourceContextMenu objects={selectedResourcesState}>
+                    <Table
+                        size="sm"
+                        sx={{ tableLayout: "fixed" }}
+                        minWidth={
+                            350 +
+                            (showNamespace ? 150 : 0) +
+                            detailColumnsTotalWidth +
+                            "px"
+                        }
+                    >
+                        <Thead>
+                            <Tr>
+                                <Th ps={2} width="40px">
+                                    <Checkbox
+                                        colorScheme="gray"
+                                        isIndeterminate={
+                                            selectedResourceIdentifiers.length >
+                                                0 &&
+                                            selectedResourceIdentifiers.length <
+                                                sortedKeyedResources.length
+                                        }
+                                        isChecked={
+                                            selectedResourceIdentifiers.length >
+                                                0 &&
+                                            selectedResourceIdentifiers.length ===
+                                                sortedKeyedResources.length
+                                        }
+                                        onChange={onChangeSelectAll}
+                                    />
+                                </Th>
+                                <Th ps={0}>Name</Th>
+                                {detailColumns.map((col) => (
                                     <Th
                                         key={col.id}
-                                        width={40 * (col.widthUnits + 1) + "px"}
+                                        width={detailColWidth(col) + "px"}
                                     >
                                         {col.header}
                                     </Th>
                                 ))}
-                            {showNamespace && <Th width="150px">Namespace</Th>}
-                            <Th width="150px">Created</Th>
-                        </Tr>
-                    </Thead>
-                    <Tbody>
-                        {sortedKeyedResources.map(({ key, resource }) => (
-                            <ResourceRow
-                                resource={resource}
-                                showNamespace={!!showNamespace}
-                                customDetails={customDetails}
-                                key={key}
-                                isSelected={selectedResourceIdentifiers.includes(
-                                    key
+                                {showNamespace && (
+                                    <Th width="150px">Namespace</Th>
                                 )}
-                                onChangeSelect={onSelectHandlers[key]}
-                            />
-                        ))}
-                    </Tbody>
-                </Table>
-            </ResourceContextMenu>
+                                <Th width="120px">Created</Th>
+                            </Tr>
+                        </Thead>
+                        <Tbody>
+                            {sortedKeyedResources.map(({ key, resource }) => (
+                                <ResourceRow
+                                    resource={resource}
+                                    showNamespace={!!showNamespace}
+                                    customDetails={customDetails}
+                                    key={key}
+                                    isSelected={selectedResourceIdentifiers.includes(
+                                        key
+                                    )}
+                                    onChangeSelect={onSelectHandlers[key]}
+                                />
+                            ))}
+                        </Tbody>
+                    </Table>
+                </ResourceContextMenu>
+            </ScrollBoxHorizontalScroll>
         </Box>
     );
 };
@@ -521,7 +538,7 @@ const ResourceRow: React.FC<ResourceRowProps> = (props) => {
                         verticalAlign="baseline"
                         key={col.id}
                     >
-                        {col.valueFor(resource)}
+                        <Selectable>{col.valueFor(resource)}</Selectable>
                     </Td>
                 ))}
                 {showNamespace && (
