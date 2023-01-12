@@ -115,7 +115,7 @@ const { useStore, useStoreValue, store } = create(storeEmptyState);
 
 export const ResourceWorkloadsOverview: React.FC<{}> = () => {
     return (
-        <ScrollBox flex="1 0 0" bottomToolbar={<ResourceWorkloadsToolbar />}>
+        <ScrollBox flex="1 0 0" attachedToolbar={<ResourceWorkloadsToolbar />}>
             <WorkloadsMonitor />
             <GroupedResourcesOverview />
         </ScrollBox>

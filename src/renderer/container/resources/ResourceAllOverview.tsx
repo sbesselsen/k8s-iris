@@ -98,7 +98,7 @@ export const ResourceAllOverview: React.FC = () => {
             <ScrollBox
                 flex="1 0 0"
                 py={2}
-                bottomToolbar={
+                attachedToolbar={
                     <ResourcesToolbar
                         resourceType={selectedResourceType ?? undefined}
                         resources={selectedResources}
@@ -137,7 +137,7 @@ export const ResourceTypeOverview: React.FC<{
         <VStack flex="1 0 0" spacing={0} alignItems="stretch">
             <ScrollBox
                 flex="1 0 0"
-                bottomToolbar={
+                attachedToolbar={
                     <ResourcesToolbar
                         resourceType={resourceType}
                         resources={selectedResources}

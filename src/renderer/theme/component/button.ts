@@ -36,6 +36,15 @@ const ghost = (props: any) => {
     };
 };
 
+const toolbar = (props: any) => {
+    const { colorMode } = props;
+    return {
+        ...ghost(props),
+        color: colorMode === "light" ? "gray.600" : "gray.100",
+        fontWeight: "medium",
+    };
+};
+
 const sidebar = (props: any) => {
     const { colorMode, colorScheme } = props;
     return {
@@ -119,6 +128,7 @@ export const Button = {
     },
     variants: {
         solid,
+        toolbar,
         ghost,
         sidebar,
         sidebarGhost,

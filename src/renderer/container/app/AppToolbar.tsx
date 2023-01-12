@@ -59,18 +59,15 @@ export const AppToolbar: React.FC = () => {
         )
     );
 
-    const buttonColor = useColorModeValue("gray.600", "gray.300");
-
     return (
         <HStack py={2} spacing={0}>
-            <ButtonGroup variant="ghost" size="sm" isAttached>
+            <ButtonGroup variant="toolbar" size="sm" isAttached>
                 <IconButton
                     disabled={!canGoBack}
                     onClick={goBack}
                     icon={<Icon as={MdArrowBackIosNew} />}
                     aria-label="Back"
                     title="Back"
-                    color={buttonColor}
                     _focus={{}}
                     _focusVisible={{ boxShadow: "outline" }}
                 />
@@ -80,18 +77,16 @@ export const AppToolbar: React.FC = () => {
                     icon={<Icon as={MdArrowForwardIos} />}
                     aria-label="Forward"
                     title="Forward"
-                    color={buttonColor}
                     _focus={{}}
                     _focusVisible={{ boxShadow: "outline" }}
                 />
             </ButtonGroup>
-            <ButtonGroup variant="ghost" size="sm">
+            <ButtonGroup variant="toolbar" size="sm">
                 <IconButton
                     onClick={toggleSidebarVisible}
                     icon={<HamburgerIcon />}
                     aria-label={isSidebarVisible ? "Hide menu" : "Show menu"}
                     title={isSidebarVisible ? "Hide menu" : "Show menu"}
-                    color={buttonColor}
                     _focus={{}}
                     _focusVisible={{ boxShadow: "outline" }}
                 />
@@ -102,8 +97,6 @@ export const AppToolbar: React.FC = () => {
 };
 
 const ContextLockButton: React.FC = () => {
-    const buttonColor = useColorModeValue("gray.600", "gray.300");
-
     const isLocked = useContextLock();
     const setLock = useContextLockSetter();
     const onLockAction = useCallback(
@@ -114,15 +107,13 @@ const ContextLockButton: React.FC = () => {
     );
 
     return (
-        <ButtonGroup variant="ghost" size="sm">
+        <ButtonGroup variant="toolbar" size="sm">
             <ContextMenuButton
                 as={IconButton}
                 px={1}
                 icon={<Icon as={isLocked ? FiLock : FiUnlock} />}
                 aria-label="Lock/unlock cluster"
                 title="Lock/unlock cluster"
-                color={buttonColor}
-                fontWeight="normal"
                 onMenuAction={onLockAction}
                 _focus={{ boxShadow: "none" }}
                 _focusVisible={{ boxShadow: "outline" }}

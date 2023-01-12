@@ -18,25 +18,31 @@ import React, {
 import { useWindowResizeListener } from "../../hook/window-resize";
 
 export type ScrollBoxProps = BoxProps & {
-    bottomToolbar?: ReactNode;
+    attachedToolbar?: ReactNode;
 };
 
+const defaultAttachedToolbarSpace = 100;
+
 export const ScrollBox = forwardRef<ScrollBoxProps, "div">((props, ref) => {
-    const { bottomToolbar, ...boxProps } = props;
+    const { attachedToolbar, ...boxProps } = props;
 
     const scrollBoxRef = useRef<HTMLDivElement | null>(null);
     useImperativeHandle(ref, () => scrollBoxRef.current);
 
     const topShadowRef = useRef<HTMLDivElement | null>(null);
 
-    const bottomToolbarRef = useRef<HTMLDivElement>();
+    const attachedToolbarRef = useRef<HTMLDivElement>();
 
-    const [bottomToolbarSpace, setBottomToolbarSpace] = useState(100);
-    const updateBottomToolbarSpace = useCallback(() => {
-        setBottomToolbarSpace((space) =>
-            Math.max(space, bottomToolbarRef.current?.offsetHeight ?? 0)
+    const [attachedToolbarSpace, setAttachedToolbarSpace] = useState(
+        defaultAttachedToolbarSpace
+    );
+    const updateAttachedToolbarSpace = useCallback(() => {
+        setAttachedToolbarSpace(
+            (space) =>
+                attachedToolbarRef.current?.offsetHeight ??
+                defaultAttachedToolbarSpace
         );
-    }, [bottomToolbarRef, setBottomToolbarSpace]);
+    }, [attachedToolbarRef, setAttachedToolbarSpace]);
 
     const updateScrollShadows = useCallback(() => {
         const elem = scrollBoxRef.current;
@@ -50,16 +56,16 @@ export const ScrollBox = forwardRef<ScrollBoxProps, "div">((props, ref) => {
     }, [scrollBoxRef, topShadowRef]);
 
     useLayoutEffect(() => {
-        updateBottomToolbarSpace();
+        updateAttachedToolbarSpace();
         updateScrollShadows();
-    }, [updateBottomToolbarSpace, updateScrollShadows]);
+    }, [updateAttachedToolbarSpace, updateScrollShadows]);
 
     const onScroll = useCallback(() => {
         updateScrollShadows();
     }, [updateScrollShadows]);
 
     useWindowResizeListener(() => {
-        updateBottomToolbarSpace();
+        updateAttachedToolbarSpace();
         updateScrollShadows();
     }, [updateScrollShadows]);
 
@@ -92,24 +98,25 @@ export const ScrollBox = forwardRef<ScrollBoxProps, "div">((props, ref) => {
                 px={4}
                 py={4}
                 {...boxProps}
-                {...(bottomToolbar
-                    ? { pb: `${bottomToolbarSpace + 10}px` }
+                {...(attachedToolbar
+                    ? { pb: `${attachedToolbarSpace + 10}px` }
                     : {})}
             />
-            {bottomToolbar ? (
+            {attachedToolbar ? (
                 <HStack
                     position="absolute"
                     bottom={0}
                     left={0}
                     right={0}
-                    px={6}
                     pb={3}
+                    px={6}
                     justifyContent="center"
                     pointerEvents="none"
-                    ref={bottomToolbarRef as MutableRefObject<HTMLDivElement>}
+                    ref={attachedToolbarRef as MutableRefObject<HTMLDivElement>}
+                    zIndex={2}
                     sx={{ "> *": { pointerEvents: "auto" } }}
                 >
-                    {bottomToolbar}
+                    {attachedToolbar}
                 </HStack>
             ) : null}
         </Box>

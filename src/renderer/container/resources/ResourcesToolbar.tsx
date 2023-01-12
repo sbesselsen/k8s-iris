@@ -175,27 +175,24 @@ export const ResourcesToolbar: React.FC<ResourcesToolbarProps> = (props) => {
             )}
             {(isPausable || isResumable) && (
                 <>
-                    <Box flex="1 0 0" />
-                    <ButtonGroup isAttached>
-                        {isPausable && (
-                            <IconButton
-                                icon={<Icon as={MdOutlinePause} />}
-                                aria-label="Pause"
-                                title="Pause"
-                                onClick={onClickPause}
-                                isLoading={isPausing}
-                            />
-                        )}
-                        {isResumable && (
-                            <IconButton
-                                icon={<Icon as={MdPlayArrow} />}
-                                aria-label="Resume"
-                                title="Resume"
-                                onClick={onClickResume}
-                                isLoading={isResuming}
-                            />
-                        )}
-                    </ButtonGroup>
+                    {isPausable && (
+                        <IconButton
+                            icon={<Icon as={MdOutlinePause} />}
+                            aria-label="Pause"
+                            title="Pause"
+                            onClick={onClickPause}
+                            isLoading={isPausing}
+                        />
+                    )}
+                    {isResumable && (
+                        <IconButton
+                            icon={<Icon as={MdPlayArrow} />}
+                            aria-label="Resume"
+                            title="Resume"
+                            onClick={onClickResume}
+                            isLoading={isResuming}
+                        />
+                    )}
                 </>
             )}
         </Toolbar>

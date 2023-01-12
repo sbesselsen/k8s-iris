@@ -354,7 +354,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
     }
     return (
         <ScrollBox
-            bottomToolbar={
+            attachedToolbar={
                 <Toolbar>
                     <Button
                         leftIcon={<EditIcon />}
@@ -370,7 +370,6 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
                         onClick={onClickDelete}
                         isLoading={isDeleting}
                     />
-                    <Box flex="1 0 0"></Box>
                     {isShellable && (
                         <ShellButton
                             object={object}
@@ -398,7 +397,6 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
                     {isScalable && (
                         <ScaleButton object={object} isDisabled={isDeleting} />
                     )}
-                    <Box flex="1 0 0"></Box>
                     <ShowDetailsToggle
                         value={showDetails}
                         onChange={setShowDetails}
@@ -859,7 +857,6 @@ const ShowDetailsToggle: React.FC<{
             as={IconButton}
             aria-label="View mode"
             title="View mode"
-            variant="solid"
             onMenuAction={onMenuAction}
             icon={<Icon as={value ? CgDetailsMore : CgDetailsLess} />}
         >
