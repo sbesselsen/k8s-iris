@@ -36,6 +36,7 @@ import { k8sAccountIdColor } from "../../util/k8s-context-color";
 import { emptyAppRoute } from "../../../common/route/app-route";
 import { useAppEditorsStore } from "../../context/editors";
 import { useDialog } from "../../hook/dialog";
+import { useWindowFocus } from "../../hook/window-focus";
 
 type ContextOption = K8sContext &
     Partial<CloudK8sContextInfo> & {
@@ -221,10 +222,11 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
         const popupBorderColor = useColorModeValue("gray.200", "gray.700");
 
         const focusBoxShadow = useToken("shadows", "outline");
+        const isWindowFocused = useWindowFocus();
 
         return (
             <Menu
-                isOpen={isOpen}
+                isOpen={isOpen && isWindowFocused}
                 onOpen={onOpen}
                 onClose={onClose}
                 matchWidth={true}
