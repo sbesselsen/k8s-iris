@@ -40,7 +40,7 @@ body.app-ui-mounted {
 
 @media (prefers-color-scheme: dark) {
     #root {
-        background: #363636;
+        background: #242424;
         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
 }
