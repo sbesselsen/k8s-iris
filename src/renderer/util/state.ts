@@ -27,6 +27,18 @@ export type UseStoreValue<T> = {
     <U>(selector: (data: T) => U, deps?: any[]): U;
 };
 
+export function transformUseStoreValue<T, R>(
+    hook: UseStoreValue<T>,
+    transformer: (input: T) => R
+): UseStoreValue<R> {
+    return ((selector, deps) => {
+        return hook((v) => {
+            const transformedValue = transformer(v);
+            return selector ? selector(transformedValue) : transformedValue;
+        }, deps);
+    }) as UseStoreValue<R>;
+}
+
 export type UseStoreValueGetter<T> = () => () => T;
 
 export function createStore<T>(initialValue: T): Store<T> {
