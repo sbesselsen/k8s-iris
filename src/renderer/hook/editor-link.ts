@@ -18,7 +18,15 @@ export function useEditorLink(resource: K8sObject | K8sObjectIdentifier): {
     return useMemo(() => ({ openEditor }), [openEditor]);
 }
 
-export function useEditorOpener(): (editor: AppEditor) => void {
+export type EditorOpenOptions = {
+    requestNewWindow?: boolean;
+    requestBackground?: boolean;
+};
+
+export function useEditorOpener(): (
+    editor: AppEditor,
+    options?: EditorOpenOptions
+) => void {
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
     const altKeyRef = useModifierKeyRef("Alt");
     const metaKeyRef = useModifierKeyRef("Meta");
@@ -29,8 +37,12 @@ export function useEditorOpener(): (editor: AppEditor) => void {
     const appEditorsStore = useAppEditorsStore();
 
     return useCallback(
-        (editor: AppEditor) => {
-            if (metaKeyRef.current) {
+        (editor: AppEditor, options: EditorOpenOptions = {}) => {
+            const {
+                requestNewWindow = metaKeyRef.current,
+                requestBackground = altKeyRef.current,
+            } = options;
+            if (requestNewWindow) {
                 createWindow({
                     route: {
                         ...getAppRoute(),
@@ -39,7 +51,7 @@ export function useEditorOpener(): (editor: AppEditor) => void {
                     },
                 });
             } else {
-                if (altKeyRef.current) {
+                if (requestBackground) {
                     // Option+click: open in background.
                     appEditorsStore.set((editors) => {
                         if (editors.find((e) => e.id === editor.id)) {

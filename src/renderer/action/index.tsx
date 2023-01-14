@@ -63,6 +63,7 @@ export const ActionsCollector: React.FC<{
 
 export type ActionClickResult = Omit<ContextMenuResult, "actionId"> & {
     resources: Array<K8sObject | K8sObjectIdentifier>;
+    subOptionId?: string | undefined;
 };
 
 export type ActionTemplate = {
@@ -73,15 +74,27 @@ export type ActionTemplate = {
     checked?: boolean;
     toolTip?: string;
     isVisible?: (resources: Array<K8sObject | K8sObjectIdentifier>) => boolean;
+    subOptions?: (
+        resources: Array<K8sObject | K8sObjectIdentifier>
+    ) => Array<{ id: string; label: string }>;
     onClick: (result: ActionClickResult) => void | Promise<void>;
 };
 
-export const Action: React.FC<ActionTemplate> = (props) => {
+export const Action: React.FC<PropsWithChildren<ActionTemplate>> = (props) => {
     const groupId = useContext(ActionGroupContext);
     const store = useStore();
 
-    const { id, label, type, enabled, checked, toolTip, isVisible, onClick } =
-        props;
+    const {
+        id,
+        label,
+        type,
+        enabled,
+        checked,
+        toolTip,
+        isVisible,
+        subOptions,
+        onClick,
+    } = props;
 
     useEffect(() => {
         store.set((value) => ({
@@ -96,6 +109,7 @@ export const Action: React.FC<ActionTemplate> = (props) => {
                     toolTip,
                     onClick,
                     isVisible,
+                    subOptions,
                     groupId,
                 },
             ],
@@ -105,7 +119,18 @@ export const Action: React.FC<ActionTemplate> = (props) => {
                 actions: value.actions.filter((a) => a.id !== id),
             }));
         };
-    }, [groupId, id, label, type, enabled, checked, toolTip, onClick, store]);
+    }, [
+        groupId,
+        id,
+        label,
+        type,
+        enabled,
+        checked,
+        toolTip,
+        onClick,
+        subOptions,
+        store,
+    ]);
 
     return null;
 };

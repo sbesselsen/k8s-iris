@@ -95,18 +95,57 @@ export const ResourceContextMenu: React.FC<ResourceContextMenuProps> = (
             > = {};
 
             function menuTemplateFromActions(
-                actions: ActionTemplate[][]
+                actions: ActionTemplate[][],
+                actionResources: Array<K8sObject | K8sObjectIdentifier>
             ): ContextMenuTemplate {
                 const menuTemplate: ContextMenuTemplate = [];
                 for (const actionGroup of actions) {
                     for (const action of actionGroup) {
-                        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                        const { onClick, isVisible, ...menuItemProps } = action;
-                        menuTemplate.push({
-                            ...menuItemProps,
-                            actionId: action.id,
-                        });
-                        actionHandlers[action.id] = onClick;
+                        /* eslint-disable @typescript-eslint/no-unused-vars */
+                        const {
+                            onClick,
+                            isVisible,
+                            subOptions,
+                            ...menuItemProps
+                        } = action;
+                        /* eslint-enable */
+                        const actionSubOptions = subOptions?.(actionResources);
+                        if (actionSubOptions !== undefined) {
+                            console.log(
+                                actionSubOptions.map(({ id, label }) => ({
+                                    id,
+                                    actionId: `${action.id}::${id}`,
+                                    label,
+                                }))
+                            );
+                            menuTemplate.push({
+                                ...menuItemProps,
+                                type: "submenu",
+                                submenu: actionSubOptions.map(
+                                    ({ id, label }) => ({
+                                        id,
+                                        actionId: `${action.id}::${id}`,
+                                        label,
+                                    })
+                                ),
+                            });
+                            for (const option of actionSubOptions) {
+                                actionHandlers[`${action.id}::${option.id}`] = (
+                                    result
+                                ) => {
+                                    onClick({
+                                        ...result,
+                                        subOptionId: option.id,
+                                    });
+                                };
+                            }
+                        } else {
+                            menuTemplate.push({
+                                ...menuItemProps,
+                                actionId: action.id,
+                            });
+                            actionHandlers[action.id] = onClick;
+                        }
                     }
                     menuTemplate.push({ type: "separator" });
                 }
@@ -117,7 +156,7 @@ export const ResourceContextMenu: React.FC<ResourceContextMenuProps> = (
             }
 
             const actions = getActionsRef.current?.(resources);
-            let menuTemplate = menuTemplateFromActions(actions);
+            let menuTemplate = menuTemplateFromActions(actions, resources);
 
             let handlerResources = resources;
 
@@ -125,7 +164,10 @@ export const ResourceContextMenu: React.FC<ResourceContextMenuProps> = (
                 // We also have resources from a parent context.
                 const combinedActions =
                     getActionsRef.current?.(parentResources);
-                menuTemplate = menuTemplateFromActions(combinedActions);
+                menuTemplate = menuTemplateFromActions(
+                    combinedActions,
+                    parentResources
+                );
                 handlerResources = parentResources;
             }
 
