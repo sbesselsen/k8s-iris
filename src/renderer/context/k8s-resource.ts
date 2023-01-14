@@ -7,6 +7,8 @@ import React, {
     useState,
 } from "react";
 import { K8sObject, K8sObjectIdentifier } from "../../common/k8s/client";
+import { objSameRef } from "../../common/k8s/util";
+import { apply, diff } from "../../common/util/diff";
 import { useK8sListWatchListener } from "../k8s/list-watch";
 import { create, createStore, transformUseStoreValue } from "../util/state";
 
@@ -77,7 +79,26 @@ export const ResourceContext: React.FC<ResourceContextProps> = (props) => {
         },
         {
             onUpdate(message) {
-                const resource: K8sObject | undefined = message.list.items[0];
+                let resource: K8sObject | undefined = message.list.items[0];
+                const { resource: prevResource } = store.get();
+                if (!prevResource && !resource) {
+                    // Nothing changed.
+                    return;
+                }
+                if (
+                    resource &&
+                    prevResource &&
+                    objSameRef(resource, prevResource)
+                ) {
+                    // Do a diff/apply so unchanged parts of the resource remain equal.
+                    // This can improve rendering performance.
+                    const resourceDiff = diff(prevResource, resource);
+                    if (resourceDiff === null) {
+                        // Nothing changed.
+                        return;
+                    }
+                    resource = apply(prevResource, resourceDiff) as K8sObject;
+                }
                 store.set({ resource, error: undefined, isLoading: false });
             },
             onWatchError(error) {
