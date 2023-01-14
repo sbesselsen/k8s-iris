@@ -119,6 +119,14 @@ export const ResourceContext: React.FC<ResourceContextProps> = (props) => {
     );
 };
 
+export const ResourceInjector: React.FC<{
+    render: (resource: K8sObject) => ReactNode;
+}> = (props) => {
+    const { render } = props;
+    const resource = useResourceValue();
+    return createElement(Fragment, {}, render(resource));
+};
+
 type ResourceContextInnerProps = PropsWithChildren<{
     renderError?: (error: any) => ReactNode;
     renderLoading?: () => ReactNode;
