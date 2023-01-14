@@ -13,6 +13,7 @@ import { EditActions } from "./EditActions";
 import { BrowseActions } from "./BrowseActions";
 import { ContextMenuResult } from "../../common/contextmenu";
 import { LifecycleActions } from "./LifecycleActions";
+import { InspectActions } from "./InspectActions";
 
 type ActionStore = {
     actions: Array<ActionTemplate & { groupId: string }>;
@@ -57,6 +58,7 @@ export const ActionsCollector: React.FC<{
             <BrowseActions />
             <EditActions />
             <LifecycleActions />
+            <InspectActions />
         </ActionStoreContext.Provider>
     );
 };
