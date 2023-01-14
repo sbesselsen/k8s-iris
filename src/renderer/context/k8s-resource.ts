@@ -52,8 +52,8 @@ export const useResourceGetter: () => () => K8sObject = () => {
 export type ResourceContextProps = PropsWithChildren<{
     objectIdentifier: K8sObjectIdentifier;
     renderError?: (error: any) => ReactNode;
-    renderLoading?: () => ReactNode;
-    renderNotFound?: () => ReactNode;
+    renderLoading?: ReactNode;
+    renderNotFound?: ReactNode;
 }>;
 
 export const ResourceContext: React.FC<ResourceContextProps> = (props) => {
@@ -129,8 +129,8 @@ export const ResourceInjector: React.FC<{
 
 type ResourceContextInnerProps = PropsWithChildren<{
     renderError?: (error: any) => ReactNode;
-    renderLoading?: () => ReactNode;
-    renderNotFound?: () => ReactNode;
+    renderLoading?: ReactNode;
+    renderNotFound?: ReactNode;
 }>;
 
 const renderEmpty = () => null;
@@ -145,13 +145,13 @@ const ResourceContextInner: React.FC<ResourceContextInnerProps> = (props) => {
     const error = useStoreValue((v) => v.error);
     const hasResource = useStoreValue((v) => !!v.resource);
     if (isLoading) {
-        return createElement(Fragment, {}, renderLoading());
+        return createElement(Fragment, {}, renderLoading);
     }
     if (error) {
         return createElement(Fragment, {}, renderError(error));
     }
     if (!hasResource) {
-        return createElement(Fragment, {}, renderNotFound());
+        return createElement(Fragment, {}, renderNotFound);
     }
     return createElement(Fragment, {}, children);
 };
