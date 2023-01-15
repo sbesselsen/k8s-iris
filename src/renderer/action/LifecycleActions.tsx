@@ -1,4 +1,7 @@
+import { RepeatIcon } from "@chakra-ui/icons";
+import { Icon } from "@chakra-ui/react";
 import React, { useCallback } from "react";
+import { MdOutlinePause, MdPlayArrow } from "react-icons/md";
 import { Action, ActionClickResult, ActionGroup } from ".";
 import { K8sObject, K8sObjectIdentifier } from "../../common/k8s/client";
 import { isK8sObject, isSetLike } from "../../common/k8s/util";
@@ -88,18 +91,21 @@ export const LifecycleActions: React.FC<{}> = () => {
                     label="Pause"
                     isVisible={isPauseVisible}
                     onClick={onClickPause}
+                    buttonIcon={<Icon as={MdOutlinePause} />}
                 />
                 <Action
                     id="resume"
                     label="Resume"
                     isVisible={isResumeVisible}
                     onClick={onClickResume}
+                    buttonIcon={<Icon as={MdPlayArrow} />}
                 />
                 <Action
                     id="redeploy"
                     label="Redeploy"
                     isVisible={isRedeployVisible}
                     onClick={onClickRedeploy}
+                    buttonIcon={<RepeatIcon />}
                 />
             </ActionGroup>
         </>

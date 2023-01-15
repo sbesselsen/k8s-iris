@@ -2,6 +2,7 @@ import React, {
     createContext,
     MutableRefObject,
     PropsWithChildren,
+    ReactElement,
     useCallback,
     useContext,
     useEffect,
@@ -76,6 +77,7 @@ export type ActionTemplate = {
     checked?: boolean;
     toolTip?: string;
     isVisible?: (resources: Array<K8sObject | K8sObjectIdentifier>) => boolean;
+    buttonIcon?: ReactElement;
     subOptions?: (
         resources: Array<K8sObject | K8sObjectIdentifier>
     ) => Array<{ id: string; label: string }>;
@@ -94,6 +96,7 @@ export const Action: React.FC<PropsWithChildren<ActionTemplate>> = (props) => {
         checked,
         toolTip,
         isVisible,
+        buttonIcon,
         subOptions,
         onClick,
     } = props;
@@ -111,6 +114,7 @@ export const Action: React.FC<PropsWithChildren<ActionTemplate>> = (props) => {
                     toolTip,
                     onClick,
                     isVisible,
+                    buttonIcon,
                     subOptions,
                     groupId,
                 },

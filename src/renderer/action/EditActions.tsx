@@ -1,3 +1,4 @@
+import { DeleteIcon, EditIcon } from "@chakra-ui/icons";
 import React, { useCallback } from "react";
 import { Action, ActionClickResult, ActionGroup } from ".";
 import { K8sObject, K8sObjectIdentifier } from "../../common/k8s/client";
@@ -69,12 +70,18 @@ export const EditActions: React.FC<{}> = () => {
     return (
         <>
             <ActionGroup>
-                <Action id="edit" label="Edit" onClick={onClickEdit} />
+                <Action
+                    id="edit"
+                    label="Edit"
+                    onClick={onClickEdit}
+                    buttonIcon={<EditIcon />}
+                />
                 <Action
                     id="delete"
                     label="Delete"
                     isVisible={deleteIsVisible}
                     onClick={onClickDelete}
+                    buttonIcon={<DeleteIcon />}
                 />
             </ActionGroup>
         </>

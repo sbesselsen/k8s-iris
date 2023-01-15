@@ -106,6 +106,7 @@ export const ResourceContextMenu: React.FC<ResourceContextMenuProps> = (
                             onClick,
                             isVisible,
                             subOptions,
+                            buttonIcon,
                             ...menuItemProps
                         } = action;
                         /* eslint-enable */

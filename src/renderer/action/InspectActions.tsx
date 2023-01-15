@@ -1,4 +1,7 @@
+import { Icon } from "@chakra-ui/icons";
 import React, { useCallback } from "react";
+import { FiTerminal } from "react-icons/fi";
+import { RiTextWrap } from "react-icons/ri";
 import { Action, ActionClickResult, ActionGroup } from ".";
 import { K8sObject, K8sObjectIdentifier } from "../../common/k8s/client";
 import { isK8sObject } from "../../common/k8s/util";
@@ -100,6 +103,7 @@ export const InspectActions: React.FC<{}> = () => {
                     isVisible={isShellVisible}
                     onClick={onClickShell}
                     subOptions={containerOptions}
+                    buttonIcon={<Icon as={FiTerminal} />}
                 />
                 <Action
                     id="logs"
@@ -107,6 +111,7 @@ export const InspectActions: React.FC<{}> = () => {
                     isVisible={isLogsVisible}
                     onClick={onClickLogs}
                     subOptions={containerOptions}
+                    buttonIcon={<Icon as={RiTextWrap} />}
                 />
             </ActionGroup>
         </>

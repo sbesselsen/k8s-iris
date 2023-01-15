@@ -1,4 +1,6 @@
+import { Icon } from "@chakra-ui/icons";
 import React, { useCallback } from "react";
+import { BsViewList } from "react-icons/bs";
 import { Action, ActionClickResult, ActionGroup } from ".";
 import { K8sObject, K8sObjectIdentifier } from "../../common/k8s/client";
 import { toK8sObjectIdentifier } from "../../common/k8s/util";
@@ -60,6 +62,7 @@ export const BrowseActions: React.FC<{}> = () => {
                 label="Browse"
                 isVisible={isVisible}
                 onClick={onClickBrowse}
+                buttonIcon={<Icon as={BsViewList} />}
             />
         </ActionGroup>
     );
