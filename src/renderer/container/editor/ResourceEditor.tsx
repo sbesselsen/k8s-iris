@@ -3,17 +3,13 @@ import {
     ArrowUpDownIcon,
     DeleteIcon,
     EditIcon,
-    RepeatIcon,
 } from "@chakra-ui/icons";
 import { CgDetailsLess, CgDetailsMore } from "react-icons/cg";
-import { FiTerminal } from "react-icons/fi";
-import { RiTextWrap } from "react-icons/ri";
 import { MdOutlinePause, MdPlayArrow } from "react-icons/md";
 import {
     Badge,
     Box,
     Button,
-    ButtonGroup,
     FormControl,
     FormLabel,
     Heading,
@@ -74,12 +70,7 @@ import {
 import { ScrollBox } from "../../component/main/ScrollBox";
 import { Toolbar } from "../../component/main/Toolbar";
 import { useContextLockHelpers } from "../../context/context-lock";
-import {
-    resourceEditor,
-    useAppEditorsStore,
-    logsEditor,
-    shellEditor,
-} from "../../context/editors";
+import { resourceEditor, useAppEditorsStore } from "../../context/editors";
 import { useK8sNamespaces } from "../../context/k8s-namespaces";
 import { useAppParam } from "../../context/param";
 import { useAppRouteSetter } from "../../context/route";
@@ -91,7 +82,7 @@ import { useK8sClient } from "../../k8s/client";
 import { useK8sListWatch } from "../../k8s/list-watch";
 import { ResourceTypeSelector } from "../resources/ResourceTypeSelector";
 import { ResourceYamlEditor } from "./ResourceYamlEditor";
-import { useEditorLink, useEditorOpener } from "../../hook/editor-link";
+import { useEditorLink } from "../../hook/editor-link";
 import { useK8sPortForwardsWatch } from "../../k8s/port-forward-watch";
 import {
     PortForwardStats,
@@ -107,9 +98,9 @@ import {
     ContextMenuButton,
     MenuItem as ContextMenuItem,
 } from "../../component/main/ContextMenuButton";
-import { useK8sDeleteAction, useK8sRedeployAction } from "../../k8s/actions";
 import { useContextMenu } from "../../hook/context-menu";
 import { ContextMenuTemplate } from "../../../common/contextmenu";
+import { ResourceActionButtons } from "../resources/ResourceActionButtons";
 
 export type ResourceEditorProps = {
     editorResource: K8sObjectIdentifier;
@@ -261,18 +252,12 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
     const metaKeyPressedRef = useModifierKeyRef("Meta");
 
-    const openEditor = useEditorOpener();
-
-    const { checkContextLock } = useContextLockHelpers();
-
     const [showDetails, setShowDetails] = useState(false);
     const [mode, setMode] = useAppParam<"view" | "edit">("editorMode", "view");
-    const [isDeleting, setIsDeleting] = useState(false);
+
+    const isDeleting = Boolean((object as any)?.metadata?.deletionTimestamp);
 
     const [expandedItems, setExpandedItems] = useState<string[]>([]);
-
-    const deleteResource = useK8sDeleteAction();
-    const redeploy = useK8sRedeployAction();
 
     const onCancelEdit = useCallback(() => {
         setMode("view");
@@ -286,48 +271,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
             setMode("edit");
         }
     }, [createWindow, metaKeyPressedRef, setMode]);
-    const onClickDelete = useCallback(async () => {
-        if (object) {
-            setIsDeleting(true);
-            await deleteResource([object]);
-            setIsDeleting(false);
-        }
-    }, [object, setIsDeleting]);
 
-    const onClickShell = useCallback(
-        async (containerName: string) => {
-            if (!object) {
-                return;
-            }
-            if (!(await checkContextLock())) {
-                return;
-            }
-            openEditor(shellEditor(object, containerName));
-        },
-        [checkContextLock, openEditor, object]
-    );
-    const onClickLogs = useCallback(
-        (containerName: string) => {
-            if (!object) {
-                return;
-            }
-            openEditor(logsEditor(object, containerName));
-        },
-        [openEditor, object]
-    );
-    const [isRedeploying, setRedeploying] = useState(false);
-    const onClickRedeploy = useCallback(async () => {
-        if (object) {
-            setRedeploying(true);
-            await redeploy([object]);
-            setRedeploying(false);
-        }
-    }, [object, redeploy, setRedeploying]);
-
-    // TODO: wire the log button and the shell button to an associated pod
-    const isLoggable = object?.apiVersion === "v1" && object.kind === "Pod";
-    const isShellable = object?.apiVersion === "v1" && object.kind === "Pod";
-    const isRedeployable = object && isSetLike(object);
     const isScalable =
         object && isSetLike(object) && object.kind !== "DaemonSet";
 
@@ -335,6 +279,9 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
         () => (object ? generateBadges(object) : []),
         [object]
     );
+
+    const resourceArray = useMemo(() => (object ? [object] : []), [object]);
+    const omitActions = useConst(["edit"]);
 
     if (!kind || !apiVersion || !metadata) {
         return <Box p={4}>This resource is not available.</Box>;
@@ -363,37 +310,10 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
                     >
                         Edit
                     </Button>
-                    <IconButton
-                        icon={<DeleteIcon />}
-                        aria-label="Delete"
-                        title="Delete"
-                        onClick={onClickDelete}
-                        isLoading={isDeleting}
+                    <ResourceActionButtons
+                        resources={resourceArray}
+                        omitActions={omitActions}
                     />
-                    {isShellable && (
-                        <ShellButton
-                            object={object}
-                            isDisabled={isDeleting}
-                            onClick={onClickShell}
-                        />
-                    )}
-                    {isLoggable && (
-                        <LogsButton
-                            object={object}
-                            isDisabled={isDeleting}
-                            onClick={onClickLogs}
-                        />
-                    )}
-                    {isRedeployable && (
-                        <IconButton
-                            icon={<RepeatIcon />}
-                            aria-label="Redeploy"
-                            title="Redeploy"
-                            onClick={onClickRedeploy}
-                            isLoading={isRedeploying}
-                            isDisabled={isDeleting}
-                        />
-                    )}
                     {isScalable && (
                         <ScaleButton object={object} isDisabled={isDeleting} />
                     )}
@@ -433,126 +353,6 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
         </ScrollBox>
     );
 });
-
-const ShellButton: React.FC<{
-    object: K8sObject;
-    isDisabled?: boolean;
-    onClick?: (containerName: string) => void;
-}> = (props) => {
-    const { object, onClick, isDisabled = false } = props;
-
-    const containers = useMemo(
-        () =>
-            (object as any).spec?.containers?.map((container: any) => ({
-                name: container.name,
-                onClick: () => {
-                    onClick?.(container.name);
-                },
-            })) ?? [],
-        [object, onClick]
-    );
-
-    const onMenuAction = useCallback(
-        ({ actionId }: { actionId: string }) => {
-            containers.find((c: any) => c.name === actionId)?.onClick();
-        },
-        [containers]
-    );
-
-    if (containers.length === 1) {
-        return (
-            <IconButton
-                icon={<Icon as={FiTerminal} />}
-                aria-label="Shell"
-                title="Shell"
-                fontWeight="normal"
-                isDisabled={isDisabled}
-                onClick={containers[0].onClick}
-            />
-        );
-    } else {
-        return (
-            <ContextMenuButton
-                px={1}
-                as={IconButton}
-                icon={<Icon as={FiTerminal} />}
-                aria-label="Shell"
-                title="Shell"
-                fontWeight="normal"
-                isDisabled={isDisabled}
-                onMenuAction={onMenuAction}
-            >
-                {containers.map((container: any) => (
-                    <ContextMenuItem
-                        key={container.name}
-                        actionId={container.name}
-                        label={container.name}
-                    />
-                ))}
-            </ContextMenuButton>
-        );
-    }
-};
-
-const LogsButton: React.FC<{
-    object: K8sObject;
-    isDisabled?: boolean;
-    onClick?: (containerName: string) => void;
-}> = (props) => {
-    const { object, onClick, isDisabled = false } = props;
-
-    const containers = useMemo(
-        () =>
-            (object as any).spec?.containers?.map((container: any) => ({
-                name: container.name,
-                onClick: () => {
-                    onClick?.(container.name);
-                },
-            })) ?? [],
-        [object, onClick]
-    );
-
-    const onMenuAction = useCallback(
-        ({ actionId }: { actionId: string }) => {
-            containers.find((c: any) => c.name === actionId)?.onClick();
-        },
-        [containers]
-    );
-
-    if (containers.length === 1) {
-        return (
-            <IconButton
-                icon={<Icon as={RiTextWrap} />}
-                aria-label="Logs"
-                title="Logs"
-                fontWeight="normal"
-                isDisabled={isDisabled}
-                onClick={containers[0].onClick}
-            />
-        );
-    } else {
-        return (
-            <ContextMenuButton
-                px={1}
-                as={IconButton}
-                icon={<Icon as={RiTextWrap} />}
-                aria-label="Logs"
-                title="Logs"
-                fontWeight="normal"
-                isDisabled={isDisabled}
-                onMenuAction={onMenuAction}
-            >
-                {containers.map((container: any) => (
-                    <ContextMenuItem
-                        key={container.name}
-                        actionId={container.name}
-                        label={container.name}
-                    />
-                ))}
-            </ContextMenuButton>
-        );
-    }
-};
 
 const ScaleButton: React.FC<{
     object: K8sObject;
@@ -1001,7 +801,6 @@ const AssociatedPods: React.FC<{ object: K8sObject }> = (props) => {
                                 Name
                             </Th>
                             <Th width="150px">Created</Th>
-                            <Th width="150px">Actions</Th>
                         </Tr>
                     </Thead>
                     <Tbody>
@@ -1026,25 +825,6 @@ const AssociatedPodRow: React.FC<{ object: K8sObject }> = (props) => {
     const badges: ResourceBadge[] = useMemo(
         () => generateBadges(object),
         [object]
-    );
-
-    const { checkContextLock } = useContextLockHelpers();
-    const openEditor = useEditorOpener();
-
-    const onClickShell = useCallback(
-        async (containerName: string) => {
-            if (!(await checkContextLock())) {
-                return;
-            }
-            openEditor(shellEditor(object, containerName));
-        },
-        [checkContextLock, openEditor, object]
-    );
-    const onClickLogs = useCallback(
-        (containerName: string) => {
-            openEditor(logsEditor(object, containerName));
-        },
-        [openEditor, object]
     );
 
     return (
@@ -1090,20 +870,6 @@ const AssociatedPodRow: React.FC<{ object: K8sObject }> = (props) => {
                 <Selectable display="block" isTruncated>
                     {formatDeveloperDateTime(creationDate)}
                 </Selectable>
-            </Td>
-            <Td>
-                <ButtonGroup size="xs">
-                    <ShellButton
-                        object={object}
-                        isDisabled={isDeleting}
-                        onClick={onClickShell}
-                    />
-                    <LogsButton
-                        object={object}
-                        isDisabled={isDeleting}
-                        onClick={onClickLogs}
-                    />
-                </ButtonGroup>
             </Td>
         </Tr>
     );

@@ -23,12 +23,13 @@ import { useModifierKeyRef } from "../../hook/keyboard";
 
 export type ResourceActionButtonsProps = {
     resources: Array<K8sObject | K8sObjectIdentifier>;
+    omitActions?: string[];
 };
 
 export const ResourceActionButtons: React.FC<ResourceActionButtonsProps> = (
     props
 ) => {
-    const { resources } = props;
+    const { omitActions, resources } = props;
 
     const getActionsRef = useRef<
         (
@@ -41,8 +42,13 @@ export const ResourceActionButtons: React.FC<ResourceActionButtonsProps> = (
     >([]);
 
     useEffect(() => {
-        setActionGroups(getActionsRef.current(resources));
-    }, [getActionsRef, resources, setActionGroups]);
+        const omitActionIds = new Set<string>(omitActions ?? []);
+        const actionGroups = getActionsRef
+            .current(resources)
+            .map((actions) => actions.filter((a) => !omitActionIds.has(a.id)))
+            .filter((group) => group.length > 0);
+        setActionGroups(actionGroups);
+    }, [getActionsRef, omitActions, resources, setActionGroups]);
 
     return (
         <>
