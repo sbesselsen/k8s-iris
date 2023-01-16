@@ -36,6 +36,9 @@ export const ActionsCollector: React.FC<{
 
     const getActions = useCallback(
         (resources: Array<K8sObject | K8sObjectIdentifier>) => {
+            if (resources.length === 0) {
+                return [];
+            }
             const groupedActions: Record<string, ActionTemplate[]> = {};
             for (const action of store.get().actions) {
                 if (action.isVisible && !action.isVisible(resources)) {
