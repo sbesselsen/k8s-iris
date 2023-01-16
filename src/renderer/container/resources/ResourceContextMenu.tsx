@@ -1,3 +1,5 @@
+import { TriangleDownIcon } from "@chakra-ui/icons";
+import { IconButton } from "@chakra-ui/react";
 import React, {
     createContext,
     MouseEventHandler,
@@ -7,7 +9,10 @@ import React, {
     useMemo,
     useRef,
 } from "react";
-import { ContextMenuTemplate } from "../../../common/contextmenu";
+import {
+    ContextMenuOptions,
+    ContextMenuTemplate,
+} from "../../../common/contextmenu";
 import { K8sObject, K8sObjectIdentifier } from "../../../common/k8s/client";
 import { toK8sObjectIdentifierString } from "../../../common/k8s/util";
 import {
@@ -19,6 +24,7 @@ import { useIpcCall } from "../../hook/ipc";
 
 const ResourceContextMenuContext = createContext<{
     getResources: () => Array<K8sObject | K8sObjectIdentifier>;
+    onContextMenu: MouseEventHandler;
 } | null>(null);
 
 export type ResourceContextMenuProps = PropsWithChildren<{
@@ -59,8 +65,6 @@ export const ResourceContextMenu: React.FC<ResourceContextMenuProps> = (
         return [];
     }, [object, objects]);
 
-    const subContext = useMemo(() => ({ getResources }), [getResources]);
-
     const popup = useIpcCall((ipc) => ipc.contextMenu.popup);
     const getActionsRef = useRef<
         (
@@ -72,6 +76,11 @@ export const ResourceContextMenu: React.FC<ResourceContextMenuProps> = (
         (e) => {
             e.preventDefault();
             e.stopPropagation();
+
+            const isContextMenuButtonClick =
+                e.currentTarget?.classList?.contains(
+                    "resource-context-menu-trigger"
+                ) ?? false;
 
             const resources = getResources();
             let parentResources = getParentResources();
@@ -179,8 +188,18 @@ export const ResourceContextMenu: React.FC<ResourceContextMenuProps> = (
                 });
             }
 
+            const contextMenuOptions: ContextMenuOptions = {};
+            if (isContextMenuButtonClick) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                contextMenuOptions.position = {
+                    x: Math.round(rect.left),
+                    y: Math.round(rect.bottom),
+                };
+            }
+
             popup({
                 menuTemplate,
+                options: contextMenuOptions,
             }).then((result) => {
                 if (result.actionId) {
                     actionHandlers[result.actionId]?.({
@@ -193,11 +212,19 @@ export const ResourceContextMenu: React.FC<ResourceContextMenuProps> = (
         [getActionsRef, getParentResources, getResources, popup]
     );
 
-    const mappedChildren = React.Children.map(children, (child: any) =>
-        React.cloneElement(child, {
-            onContextMenu,
-        })
+    const subContext = useMemo(
+        () => ({ getResources, onContextMenu }),
+        [getResources, onContextMenu]
     );
+
+    const mappedChildren = React.Children.map(children, (child: any) => {
+        if (typeof child === "string") {
+            return child;
+        }
+        return React.cloneElement(child, {
+            onContextMenu,
+        });
+    });
 
     return (
         <>
@@ -206,5 +233,34 @@ export const ResourceContextMenu: React.FC<ResourceContextMenuProps> = (
             </ResourceContextMenuContext.Provider>
             <ActionsCollector getActionsRef={getActionsRef} />
         </>
+    );
+};
+
+export const ResourceContextMenuTriggerButton: React.FC<{}> = () => {
+    const context = useContext(ResourceContextMenuContext);
+    if (!context) {
+        throw new Error(
+            "Cannot use ResourceContextMenuTriggerButton outside ResourceContextMenu container"
+        );
+    }
+    return (
+        <IconButton
+            aria-label="Actions"
+            title="Actions"
+            onClick={context.onContextMenu}
+            variant="unstyled"
+            className="resource-context-menu-trigger"
+            p={0}
+            minWidth={6}
+            h={4}
+            size="xs"
+            colorScheme="gray"
+            cursor="pointer"
+            _focus={{}}
+            _focusVisible={{
+                boxShadow: "outline",
+            }}
+            icon={<TriangleDownIcon cursor="pointer" w={2} h={2} />}
+        />
     );
 };
