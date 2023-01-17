@@ -5,16 +5,10 @@ import {
     IconButton,
     IconButtonProps,
 } from "@chakra-ui/react";
-import React, {
-    useCallback,
-    useEffect,
-    useMemo,
-    useRef,
-    useState,
-} from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { ContextMenuResult } from "../../../common/contextmenu";
 import { K8sObject, K8sObjectIdentifier } from "../../../common/k8s/client";
-import { ActionsCollector, ActionTemplate } from "../../action";
+import { ActionTemplate, useActionsGetter } from "../../action";
 import {
     ContextMenuButton,
     MenuItem,
@@ -31,11 +25,7 @@ export const ResourceActionButtons: React.FC<ResourceActionButtonsProps> = (
 ) => {
     const { omitActions, resources } = props;
 
-    const getActionsRef = useRef<
-        (
-            resources: Array<K8sObject | K8sObjectIdentifier>
-        ) => Array<Array<ActionTemplate>>
-    >(() => []);
+    const getActions = useActionsGetter();
 
     const [actionGroups, setActionGroups] = useState<
         Array<Array<ActionTemplate>>
@@ -43,16 +33,14 @@ export const ResourceActionButtons: React.FC<ResourceActionButtonsProps> = (
 
     useEffect(() => {
         const omitActionIds = new Set<string>(omitActions ?? []);
-        const actionGroups = getActionsRef
-            .current(resources)
+        const actionGroups = getActions(resources)
             .map((actions) => actions.filter((a) => !omitActionIds.has(a.id)))
             .filter((group) => group.length > 0);
         setActionGroups(actionGroups);
-    }, [getActionsRef, omitActions, resources, setActionGroups]);
+    }, [getActions, omitActions, resources, setActionGroups]);
 
     return (
         <>
-            <ActionsCollector getActionsRef={getActionsRef} />
             {actionGroups.map((actions, i) => (
                 <Box key={i}>
                     {actions.map((action) => (

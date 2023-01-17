@@ -1,6 +1,5 @@
 import React, {
     createContext,
-    MutableRefObject,
     PropsWithChildren,
     ReactElement,
     useCallback,
@@ -10,37 +9,59 @@ import React, {
 } from "react";
 import { K8sObject, K8sObjectIdentifier } from "../../common/k8s/client";
 import { create, createStore } from "../util/state";
-import { EditActions } from "./EditActions";
-import { BrowseActions } from "./BrowseActions";
 import { ContextMenuResult } from "../../common/contextmenu";
-import { LifecycleActions } from "./LifecycleActions";
-import { InspectActions } from "./InspectActions";
 
 type ActionStore = {
-    actions: Array<ActionTemplate & { groupId: string }>;
+    actions: Array<ActionTemplate & { groupId: string }> | null;
 };
 
-const { useStore } = create<ActionStore>({ actions: [] });
+const { useStore, useStoreValue } = create<ActionStore>({ actions: null });
 
-const ActionGroupContext = createContext<string>("");
+export type ActionsProviderProps = {
+    groups: Array<React.FC>;
+};
 
-export const ActionsCollector: React.FC<{
-    getActionsRef: MutableRefObject<
-        (
-            resources: Array<K8sObject | K8sObjectIdentifier>
-        ) => Array<Array<ActionTemplate>>
-    >;
-}> = ({ getActionsRef }) => {
-    const ActionStoreContext = useStore.Context;
-    const [store] = useState(() => createStore<ActionStore>({ actions: [] }));
+export const ActionsProvider: React.FC<
+    PropsWithChildren<ActionsProviderProps>
+> = (props) => {
+    const [store] = useState(() => createStore<ActionStore>({ actions: null }));
+    const Context = useStore.Context;
 
-    const getActions = useCallback(
-        (resources: Array<K8sObject | K8sObjectIdentifier>) => {
+    return (
+        <Context.Provider value={store}>
+            <ActionsProviderInner {...props} />
+        </Context.Provider>
+    );
+};
+
+const ActionsProviderInner: React.FC<
+    PropsWithChildren<ActionsProviderProps>
+> = (props) => {
+    const hasActions = useStoreValue((v) => v !== null);
+
+    const { children, groups } = props;
+
+    return (
+        <>
+            {hasActions && children}
+            {groups.map((Group, i) => (
+                <Group key={i} />
+            ))}
+        </>
+    );
+};
+
+export function useActionsGetter(): (
+    resources: Array<K8sObject | K8sObjectIdentifier>
+) => Array<Array<ActionTemplate>> {
+    const store = useStore();
+    return useCallback(
+        (resources) => {
             if (resources.length === 0) {
                 return [];
             }
             const groupedActions: Record<string, ActionTemplate[]> = {};
-            for (const action of store.get().actions) {
+            for (const action of store.get().actions ?? []) {
                 if (action.isVisible && !action.isVisible(resources)) {
                     // This action is invisible.
                     continue;
@@ -55,17 +76,9 @@ export const ActionsCollector: React.FC<{
         },
         [store]
     );
-    getActionsRef.current = getActions;
+}
 
-    return (
-        <ActionStoreContext.Provider value={store}>
-            <BrowseActions />
-            <EditActions />
-            <LifecycleActions />
-            <InspectActions />
-        </ActionStoreContext.Provider>
-    );
-};
+const ActionGroupContext = createContext<string>("");
 
 export type ActionClickResult = Omit<ContextMenuResult, "actionId"> & {
     resources: Array<K8sObject | K8sObjectIdentifier>;
@@ -107,7 +120,7 @@ export const Action: React.FC<PropsWithChildren<ActionTemplate>> = (props) => {
     useEffect(() => {
         store.set((value) => ({
             actions: [
-                ...value.actions,
+                ...(value.actions ?? []),
                 {
                     id,
                     label,
@@ -125,7 +138,10 @@ export const Action: React.FC<PropsWithChildren<ActionTemplate>> = (props) => {
         }));
         return () => {
             store.set((value) => ({
-                actions: value.actions.filter((a) => a.id !== id),
+                actions:
+                    value.actions === null
+                        ? null
+                        : value.actions.filter((a) => a.id !== id),
             }));
         };
     }, [

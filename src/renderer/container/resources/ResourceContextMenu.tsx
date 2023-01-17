@@ -7,7 +7,6 @@ import React, {
     useCallback,
     useContext,
     useMemo,
-    useRef,
 } from "react";
 import {
     ContextMenuOptions,
@@ -17,8 +16,8 @@ import { K8sObject, K8sObjectIdentifier } from "../../../common/k8s/client";
 import { toK8sObjectIdentifierString } from "../../../common/k8s/util";
 import {
     ActionClickResult,
-    ActionsCollector,
     ActionTemplate,
+    useActionsGetter,
 } from "../../action";
 import { useIpcCall } from "../../hook/ipc";
 
@@ -66,11 +65,7 @@ export const ResourceContextMenu: React.FC<ResourceContextMenuProps> = (
     }, [object, objects]);
 
     const popup = useIpcCall((ipc) => ipc.contextMenu.popup);
-    const getActionsRef = useRef<
-        (
-            resources: Array<K8sObject | K8sObjectIdentifier>
-        ) => Array<Array<ActionTemplate>>
-    >(() => []);
+    const getActions = useActionsGetter();
 
     const onContextMenu: MouseEventHandler = useCallback(
         (e) => {
@@ -165,15 +160,14 @@ export const ResourceContextMenu: React.FC<ResourceContextMenuProps> = (
                 return menuTemplate;
             }
 
-            const actions = getActionsRef.current?.(resources);
+            const actions = getActions(resources);
             let menuTemplate = menuTemplateFromActions(actions, resources);
 
             let handlerResources = resources;
 
             if (parentResources.length > resources.length) {
                 // We also have resources from a parent context.
-                const combinedActions =
-                    getActionsRef.current?.(parentResources);
+                const combinedActions = getActions(parentResources);
                 menuTemplate = menuTemplateFromActions(
                     combinedActions,
                     parentResources
@@ -209,7 +203,7 @@ export const ResourceContextMenu: React.FC<ResourceContextMenuProps> = (
                 }
             });
         },
-        [getActionsRef, getParentResources, getResources, popup]
+        [getActions, getParentResources, getResources, popup]
     );
 
     const subContext = useMemo(
@@ -227,12 +221,9 @@ export const ResourceContextMenu: React.FC<ResourceContextMenuProps> = (
     });
 
     return (
-        <>
-            <ResourceContextMenuContext.Provider value={subContext}>
-                {mappedChildren}
-            </ResourceContextMenuContext.Provider>
-            <ActionsCollector getActionsRef={getActionsRef} />
-        </>
+        <ResourceContextMenuContext.Provider value={subContext}>
+            {mappedChildren}
+        </ResourceContextMenuContext.Provider>
     );
 };
 
