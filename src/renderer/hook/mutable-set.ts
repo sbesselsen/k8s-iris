@@ -1,3 +1,4 @@
+import { entries } from "lodash";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { unstable_batchedUpdates } from "react-dom";
 
@@ -17,9 +18,6 @@ export type MutableSetSubscriber<T> = (
 ) => void;
 
 export type MutableSet<T> = {
-    put: (...obj: T[]) => MutableSet<T>;
-    delete: (...obj: T[]) => MutableSet<T>;
-    clear: () => MutableSet<T>;
     has: (obj: T) => boolean;
     hasKey: (key: string) => boolean;
     get: (id: string) => T;
@@ -31,7 +29,13 @@ export type MutableSet<T> = {
     subscribe: (f: MutableSetSubscriber<T>) => { stop: () => void };
 };
 
-class MutableSetImpl<T> implements MutableSet<T> {
+export type WritableMutableSet<T> = MutableSet<T> & {
+    put: (...obj: T[]) => WritableMutableSet<T>;
+    delete: (...obj: T[]) => WritableMutableSet<T>;
+    clear: () => WritableMutableSet<T>;
+};
+
+class MutableSetImpl<T> implements WritableMutableSet<T> {
     private backingMap: Record<string, T>;
     private keyFunction: (obj: T) => string;
     private subscribers: Array<MutableSetSubscriber<T>>;
@@ -153,13 +157,74 @@ export type CreateMutableSetOptions<T> = MutableSetConstructorOptions<T> & {
 
 export function createMutableSet<T>(
     options: CreateMutableSetOptions<T>
-): MutableSet<T> {
+): [MutableSet<T>, WritableMutableSet<T>] {
     const { items, ...rest } = options;
     const set = new MutableSetImpl(rest);
     if (items) {
         set.put(...items());
     }
-    return set;
+    return [set, set];
+}
+
+export function mapMutableSet<T, U>(
+    set: MutableSet<T>,
+    map: (value: T) => U,
+    reverseMap: (value: U) => T,
+    deps: any[] = []
+): MutableSet<U> {
+    return useMemo(() => {
+        return {
+            has(obj: U) {
+                return set.has(reverseMap(obj));
+            },
+            hasKey(key: string) {
+                return set.hasKey(key);
+            },
+            get(key: string) {
+                return map(set.get(key));
+            },
+            key(obj: U) {
+                return set.key(reverseMap(obj));
+            },
+            keys() {
+                return set.keys();
+            },
+            values() {
+                return set.values().map(map);
+            },
+            entries() {
+                return set.entries().map(([k, v]) => [k, map(v)]);
+            },
+            size() {
+                return set.size();
+            },
+            subscribe(f: MutableSetSubscriber<U>) {
+                return set.subscribe((_set, mutations) => {
+                    f(
+                        this,
+                        Object.fromEntries(
+                            Object.entries(mutations).map(
+                                ([key, { value, prevValue }]) => [
+                                    key,
+                                    {
+                                        key,
+                                        value:
+                                            value === undefined
+                                                ? undefined
+                                                : map(value),
+                                        prevValue:
+                                            prevValue === undefined
+                                                ? undefined
+                                                : map(prevValue),
+                                    },
+                                ]
+                            )
+                        )
+                    );
+                });
+            },
+        };
+    }, [set, ...deps]);
 }
 
 export function useMutableSetKeys<T>(
