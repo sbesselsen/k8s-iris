@@ -21,11 +21,13 @@ export type MutableSet<T> = {
     delete: (...obj: T[]) => MutableSet<T>;
     clear: () => MutableSet<T>;
     has: (obj: T) => boolean;
-    get: (id: string) => T | undefined;
+    hasKey: (key: string) => boolean;
+    get: (id: string) => T;
     key: (obj: T) => string;
     keys: () => string[];
     values: () => T[];
     entries: () => Array<[string, T]>;
+    size: () => number;
     subscribe: (f: MutableSetSubscriber<T>) => { stop: () => void };
 };
 
@@ -92,8 +94,15 @@ class MutableSetImpl<T> implements MutableSet<T> {
     has(obj: T) {
         return this.keyFunction(obj) in this.backingMap;
     }
-    get(id: string) {
-        return this.backingMap[id];
+    hasKey(key: string) {
+        return key in this.backingMap;
+    }
+    get(key: string) {
+        const value = this.backingMap[key];
+        if (value === undefined) {
+            throw new Error("Undefined key in MutableSet: " + key);
+        }
+        return value;
     }
     key(obj: T) {
         return this.keyFunction(obj);
@@ -106,6 +115,9 @@ class MutableSetImpl<T> implements MutableSet<T> {
     }
     entries() {
         return Object.entries(this.backingMap);
+    }
+    size() {
+        return Object.keys(this.backingMap).length;
     }
     subscribe(f: MutableSetSubscriber<T>) {
         let isSubscribed = true;
@@ -230,7 +242,9 @@ export function useMutableSetValue<T, U>(
     const currentValueRef = useRef<T | U | undefined>();
 
     const calculateValue = useCallback(() => {
-        let value: T | U | undefined = set.get(key);
+        let value: T | U | undefined = set.hasKey(key)
+            ? set.get(key)
+            : undefined;
         if (value !== undefined && memoMap) {
             value = memoMap(value);
         }
@@ -252,6 +266,31 @@ export function useMutableSetValue<T, U>(
         });
         return stop;
     }, [calculateValue, currentValueRef, key, set, setValue]);
+
+    return value;
+}
+
+export function useMutableSet<T, U>(
+    set: MutableSet<T>,
+    map: (set: MutableSet<T>) => U,
+    deps: any[]
+): U {
+    const memoMap = useMemo(() => map, deps);
+    const currentValueRef = useRef<U | undefined>();
+
+    const [value, setValue] = useState<U>(() => memoMap(set));
+    currentValueRef.current = value;
+
+    useEffect(() => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { stop } = set.subscribe((_set, mutations) => {
+            const newValue = memoMap(set);
+            if (newValue !== currentValueRef.current) {
+                setValue(newValue);
+            }
+        });
+        return stop;
+    }, [memoMap, currentValueRef, set, setValue]);
 
     return value;
 }
