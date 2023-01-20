@@ -7,7 +7,8 @@ import {
 } from "react";
 
 export type SetSubscribedState<T> = (
-    newValue: T | ((oldValue: T) => T)
+    newValue: T | ((oldValue: T) => T),
+    rerender?: boolean
 ) => void;
 
 export function useSubscribedState<T>(
@@ -30,7 +31,7 @@ export function useSubscribedState<T>(
 
     useEffect(() => {
         let subscribed = true;
-        const unsubscribe = memoSubscribe((newValue) => {
+        const unsubscribe = memoSubscribe((newValue, rerender = true) => {
             if (!subscribed) {
                 return false;
             }
@@ -42,7 +43,9 @@ export function useSubscribedState<T>(
                     : newValue;
             if (newValue !== currentValueRef.current.value) {
                 currentValueRef.current.value = updatedValue;
-                setRenderIndex((i) => i + 1);
+                if (rerender) {
+                    setRenderIndex((i) => i + 1);
+                }
             }
         });
         return () => {
