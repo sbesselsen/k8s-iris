@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+    MutableRefObject,
+    useCallback,
+    useEffect,
+    useRef,
+    useState,
+} from "react";
 
 export type SetSubscribedState<T> = (
     newValue: T | ((oldValue: T) => T)
@@ -12,7 +18,7 @@ export function useSubscribedState<T>(
     const memoSubscribe = useCallback(subscribe, deps);
 
     const [, setRenderIndex] = useState(0);
-    const currentValueRef = useRef<undefined | { value: T }>();
+    const currentValueRef = useRef() as MutableRefObject<{ value: T }>;
     if (currentValueRef.current === undefined) {
         currentValueRef.current = {
             value:
@@ -25,10 +31,6 @@ export function useSubscribedState<T>(
     useEffect(() => {
         let subscribed = true;
         const unsubscribe = memoSubscribe((newValue) => {
-            if (!currentValueRef.current) {
-                // Does not happen.
-                throw new Error("Logic error in useSubscribedState");
-            }
             if (!subscribed) {
                 return false;
             }
