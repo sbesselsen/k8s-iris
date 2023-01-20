@@ -83,22 +83,23 @@ export function createStoreHooks<T, S extends Store<T>>(
         deps?: any[]
     ) => {
         const store = useStore();
-        function transform(value: T) {
-            return selector ? selector(value) : value;
-        }
+        const transformValue = useCallback(
+            (value: T) => (selector ? selector(value) : value),
+            deps ?? []
+        );
         return useSubscribedState<T | U>(
-            () => transform(store.get()),
+            () => transformValue(store.get()),
             (set) => {
-                set(transform(store.get()));
+                set(transformValue(store.get()));
                 const listener = (value: T) => {
-                    set(transform(value));
+                    set(transformValue(value));
                 };
                 store.subscribe(listener);
                 return () => {
                     store.unsubscribe(listener);
                 };
             },
-            [store, ...(deps ?? [])]
+            [store, transformValue]
         );
     };
 
