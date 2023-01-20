@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useHibernate } from "../context/hibernate";
+import { useHibernateGetter } from "../context/hibernate";
 
 const currentValues: Record<string, boolean> = {};
 const modifierKeyListeners: Record<
@@ -86,14 +86,20 @@ export function useModifierKey(key: string): boolean {
 export function useKeyListener(
     listener: (eventType: string, key: string, e: KeyboardEvent) => void
 ): void {
-    const hibernate = useHibernate();
+    const getHibernate = useHibernateGetter();
     useEffect(() => {
-        if (hibernate) {
-            return;
-        }
-        keyListeners.push(listener);
-        return () => {
-            keyListeners = keyListeners.filter((kl) => kl !== listener);
+        const wrappedListener = (
+            eventType: string,
+            key: string,
+            e: KeyboardEvent
+        ) => {
+            if (!getHibernate()) {
+                listener(eventType, key, e);
+            }
         };
-    }, [hibernate, listener]);
+        keyListeners.push(wrappedListener);
+        return () => {
+            keyListeners = keyListeners.filter((kl) => kl !== wrappedListener);
+        };
+    }, [getHibernate, listener]);
 }
