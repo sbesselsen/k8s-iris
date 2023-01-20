@@ -1,70 +1,64 @@
-import { useCallback, useEffect, useState } from "react";
 import { K8sVersion } from "../../common/k8s/client";
-import { useHibernate } from "../context/hibernate";
+import { useHibernateGetter } from "../context/hibernate";
 import { useK8sContext } from "../context/k8s-context";
+import { useSubscribedState } from "../hook/subscribed-state";
 import { useK8sClient } from "./client";
+
+const emptyState: {
+    isLoading: boolean;
+    version: K8sVersion | undefined;
+    error: any | undefined;
+} = {
+    isLoading: true,
+    version: undefined,
+    error: undefined,
+};
 
 export function useK8sVersion(opts?: {
     kubeContext?: string;
     pollInterval?: number;
     pauseOnHibernate?: boolean;
-}): [boolean, K8sVersion | undefined, any | undefined, () => void] {
+}): [boolean, K8sVersion | undefined, any | undefined] {
     const { pollInterval, pauseOnHibernate = true } = opts ?? {};
 
     const currentContext = useK8sContext();
     const kubeContext = opts?.kubeContext ?? currentContext;
     const client = useK8sClient(kubeContext);
 
-    const [{ isLoading, version, error }, setState] = useState<{
-        isLoading: boolean;
-        version: K8sVersion | undefined;
-        error: any | undefined;
-    }>({
-        isLoading: true,
-        version: undefined,
-        error: undefined,
-    });
+    const getHibernate = useHibernateGetter();
 
-    const reloadInner = useCallback(
-        async (showAsLoading: boolean) => {
-            if (showAsLoading) {
-                setState({
-                    isLoading: true,
-                    version: undefined,
-                    error: undefined,
-                });
-            }
-            try {
+    const { isLoading, version, error } = useSubscribedState(
+        emptyState,
+        (set) => {
+            const rerender = !pauseOnHibernate || !getHibernate();
+
+            async function update() {
                 const version = await client.getVersion();
-                setState({ isLoading: false, version, error: undefined });
-            } catch (e) {
-                setState({ isLoading: false, version: undefined, error: e });
+                set(
+                    {
+                        isLoading: false,
+                        version,
+                        error: undefined,
+                    },
+                    rerender
+                );
             }
+
+            set(emptyState, rerender);
+            update();
+
+            if (pollInterval === undefined) {
+                return () => {};
+            }
+
+            // Now start polling.
+            const interval = setInterval(update, Math.max(1000, pollInterval));
+            return () => {
+                clearInterval(interval);
+            };
         },
-        [client, setState]
+        [client, getHibernate, pauseOnHibernate, pollInterval]
     );
 
-    const reload = useCallback(async () => {
-        reloadInner(true);
-    }, [reloadInner]);
-
-    useEffect(() => {
-        reload();
-    }, [client, reload]);
-
-    const hibernate = useHibernate();
-
-    useEffect(() => {
-        if (pollInterval === undefined || (pauseOnHibernate && hibernate)) {
-            return;
-        }
-        const interval = setInterval(() => {
-            reloadInner(false);
-        }, Math.max(1000, pollInterval));
-        return () => {
-            clearInterval(interval);
-        };
-    }, [hibernate, pauseOnHibernate, pollInterval, reloadInner]);
-
-    return [isLoading, version, error, reload];
+    return [isLoading, version, error];
 }

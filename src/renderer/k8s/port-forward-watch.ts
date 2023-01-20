@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     K8sPortForwardEntry,
     K8sPortForwardStats,
     K8sPortForwardWatcher,
 } from "../../common/k8s/client";
-import { useHibernate } from "../context/hibernate";
+import { useHibernateGetter, useHibernateListener } from "../context/hibernate";
 import { useK8sClient } from "./client";
 
 const emptyWatcher: K8sPortForwardWatcher = {
@@ -85,49 +85,68 @@ export function useK8sPortForwardsListener(
     const eventsWhilePausedRef = useRef<Array<{ event: string; value: any }>>(
         []
     );
-    const isPaused = useHibernate() && pauseOnHibernate;
+    const getHibernate = useHibernateGetter();
+    const getIsPaused = useCallback(() => {
+        return pauseOnHibernate && getHibernate();
+    }, [pauseOnHibernate]);
 
     const watcher: K8sPortForwardWatcher = useMemo(
-        () =>
-            isPaused
-                ? {
-                      ...emptyWatcher,
-                      onChange(forwards) {
-                          // Coalesce the onChange events.
-                          eventsWhilePausedRef.current =
-                              eventsWhilePausedRef.current.filter(
-                                  (e) => e.event !== "onChange"
-                              );
-                          eventsWhilePausedRef.current.push({
-                              event: "onChange",
-                              value: [forwards],
-                          });
-                      },
-                      onError(err, portForwardId) {
-                          eventsWhilePausedRef.current.push({
-                              event: "onError",
-                              value: [err, portForwardId],
-                          });
-                      },
-                      onStart(entry) {
-                          eventsWhilePausedRef.current.push({
-                              event: "onStart",
-                              value: [entry],
-                          });
-                      },
-                      onStop(entry) {
-                          eventsWhilePausedRef.current.push({
-                              event: "onStop",
-                              value: [entry],
-                          });
-                      },
-                      // Drop onStats events.
-                  }
-                : {
-                      ...emptyWatcher,
-                      ...watcherOptions,
-                  },
-        [isPaused, eventsWhilePausedRef, ...deps]
+        () => ({
+            ...emptyWatcher,
+            ...watcherOptions,
+            onChange(forwards) {
+                if (getIsPaused()) {
+                    // Coalesce the onChange events.
+                    eventsWhilePausedRef.current =
+                        eventsWhilePausedRef.current.filter(
+                            (e) => e.event !== "onChange"
+                        );
+                    eventsWhilePausedRef.current.push({
+                        event: "onChange",
+                        value: [forwards],
+                    });
+                } else {
+                    watcherOptions?.onChange?.(forwards);
+                }
+            },
+            onError(err, portForwardId) {
+                if (getIsPaused()) {
+                    eventsWhilePausedRef.current.push({
+                        event: "onError",
+                        value: [err, portForwardId],
+                    });
+                } else {
+                    watcherOptions?.onError?.(err, portForwardId);
+                }
+            },
+            onStart(entry) {
+                if (getIsPaused()) {
+                    eventsWhilePausedRef.current.push({
+                        event: "onStart",
+                        value: [entry],
+                    });
+                } else {
+                    watcherOptions?.onStart?.(entry);
+                }
+            },
+            onStop(entry) {
+                if (getIsPaused()) {
+                    eventsWhilePausedRef.current.push({
+                        event: "onStop",
+                        value: [entry],
+                    });
+                } else {
+                    watcherOptions?.onStop?.(entry);
+                }
+            },
+            onStats(stats) {
+                // Pass onStats events only if not paused; no use updating during pause.
+                if (!getIsPaused()) {
+                    watcherOptions?.onStats?.(stats);
+                }
+            },
+        }),
+        [getIsPaused, eventsWhilePausedRef, ...deps]
     );
 
     useEffect(() => {
@@ -135,15 +154,18 @@ export function useK8sPortForwardsListener(
         eventsWhilePausedRef.current = [];
     }, [eventsWhilePausedRef, ...deps]);
 
-    useEffect(() => {
-        // If we unpaused, process the changes.
-        if (!isPaused) {
-            for (const e of eventsWhilePausedRef.current) {
-                (watcher as any)[e.event](...e.value);
+    useHibernateListener(
+        (isHibernating) => {
+            // If we unpaused, process the changes.
+            if (!isHibernating) {
+                for (const e of eventsWhilePausedRef.current) {
+                    (watcher as any)[e.event](...e.value);
+                }
+                eventsWhilePausedRef.current = [];
             }
-            eventsWhilePausedRef.current = [];
-        }
-    }, [eventsWhilePausedRef, isPaused, watcher]);
+        },
+        [eventsWhilePausedRef, watcher]
+    );
 
     const client = useK8sClient(kubeContext);
 

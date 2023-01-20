@@ -7,7 +7,7 @@ import {
     K8sObjectListWatch,
     K8sObjectListWatcherMessage,
 } from "../../common/k8s/client";
-import { useHibernate } from "../context/hibernate";
+import { useHibernateGetter, useHibernateListener } from "../context/hibernate";
 import { useK8sContext } from "../context/k8s-context";
 import { useK8sClient } from "./client";
 
@@ -100,12 +100,15 @@ export function useK8sListWatchListener<T extends K8sObject = K8sObject>(
         pauseOnHibernate = true,
     } = options;
 
-    const isPaused = useHibernate() && pauseOnHibernate;
+    const getHibernate = useHibernateGetter();
+    const getIsPaused = useCallback(() => {
+        return pauseOnHibernate && getHibernate();
+    }, [pauseOnHibernate]);
 
     const pausedUpdateRef = useRef<K8sCoalescedObjectListWatcherMessage<T>>();
     const pausableOnUpdate = useCallback(
         (message: K8sCoalescedObjectListWatcherMessage<T>) => {
-            if (!isPaused) {
+            if (!getIsPaused()) {
                 onUpdate(message);
             } else {
                 if (pausedUpdateRef.current) {
@@ -119,16 +122,20 @@ export function useK8sListWatchListener<T extends K8sObject = K8sObject>(
                 }
             }
         },
-        [onUpdate, pausedUpdateRef, isPaused]
+        [onUpdate, pausedUpdateRef, getIsPaused]
     );
-    useEffect(() => {
-        if (!isPaused && pausedUpdateRef.current) {
-            // Updates came in while we were paused.
-            const message = pausedUpdateRef.current;
-            pausedUpdateRef.current = undefined;
-            onUpdate(message);
-        }
-    }, [onUpdate, pausedUpdateRef, isPaused]);
+
+    useHibernateListener(
+        (isHibernating) => {
+            if (!isHibernating && pausedUpdateRef.current) {
+                // Updates came in while we were paused.
+                const message = pausedUpdateRef.current;
+                pausedUpdateRef.current = undefined;
+                onUpdate(message);
+            }
+        },
+        [onUpdate, pausedUpdateRef]
+    );
 
     const lastUpdateTimestampRef = useRef(0);
     const coalescedUpdateRef =
@@ -332,13 +339,16 @@ export function useK8sListWatchesListener<T extends K8sObject = K8sObject>(
         pauseOnHibernate = true,
     } = options;
 
-    const isPaused = useHibernate() && pauseOnHibernate;
+    const getHibernate = useHibernateGetter();
+    const getIsPaused = useCallback(() => {
+        return pauseOnHibernate && getHibernate();
+    }, [pauseOnHibernate]);
 
     const pausedUpdateRef =
         useRef<Record<string, K8sCoalescedObjectListWatcherMessage<T>>>();
     const pausableOnUpdate = useCallback(
         (messages: Record<string, K8sCoalescedObjectListWatcherMessage<T>>) => {
-            if (!isPaused) {
+            if (!getIsPaused()) {
                 onUpdate(messages);
             } else {
                 if (!pausedUpdateRef.current) {
@@ -359,16 +369,19 @@ export function useK8sListWatchesListener<T extends K8sObject = K8sObject>(
                 }
             }
         },
-        [onUpdate, pausedUpdateRef, isPaused]
+        [onUpdate, pausedUpdateRef, getIsPaused]
     );
-    useEffect(() => {
-        if (!isPaused && pausedUpdateRef.current) {
-            // Updates came in while we were paused.
-            const messages = pausedUpdateRef.current;
-            pausedUpdateRef.current = undefined;
-            onUpdate(messages);
-        }
-    }, [onUpdate, pausedUpdateRef, isPaused]);
+    useHibernateListener(
+        (isHibernating) => {
+            if (!isHibernating && pausedUpdateRef.current) {
+                // Updates came in while we were paused.
+                const messages = pausedUpdateRef.current;
+                pausedUpdateRef.current = undefined;
+                onUpdate(messages);
+            }
+        },
+        [onUpdate, pausedUpdateRef]
+    );
 
     const specKeysString = Object.keys(specs).sort().join(",");
 

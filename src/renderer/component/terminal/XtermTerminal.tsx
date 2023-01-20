@@ -3,7 +3,10 @@ import { Box, BoxProps, VStack } from "@chakra-ui/react";
 import { Terminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
-import { useHibernate } from "../../context/hibernate";
+import {
+    useHibernateGetter,
+    useHibernateListener,
+} from "../../context/hibernate";
 import { useAppContentResizeListener } from "../main/AppFrame";
 
 export type XtermTerminalProps = BoxProps & {
@@ -48,20 +51,21 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = (props) => {
         }
     }, [onInitializeTerminal, termRef]);
 
-    const isPaused = useHibernate();
-    const isPausedRef = useRef(isPaused);
-    useEffect(() => {
-        isPausedRef.current = isPaused;
-        if (!isPaused) {
-            fitAddonRef.current?.fit();
-        }
-    }, [containerRef, isPaused, isPausedRef]);
+    useHibernateListener(
+        (isPaused) => {
+            if (!isPaused) {
+                fitAddonRef.current?.fit();
+            }
+        },
+        [fitAddonRef]
+    );
+    const getHibernate = useHibernateGetter();
 
     useAppContentResizeListener(() => {
-        if (!isPausedRef.current) {
+        if (!getHibernate()) {
             fitAddonRef.current?.fit();
         }
-    }, [containerRef, fitAddonRef, isPausedRef]);
+    }, [containerRef, fitAddonRef, getHibernate]);
 
     return (
         <VStack bg="black" p={2} {...boxProps} spacing={0} alignItems="stretch">

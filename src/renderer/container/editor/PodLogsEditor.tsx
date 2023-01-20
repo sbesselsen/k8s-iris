@@ -2,7 +2,6 @@ import { Button, HStack, ScaleFade, Spinner, VStack } from "@chakra-ui/react";
 import { editor, IDisposable, Range } from "monaco-editor";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { MonacoCodeEditor } from "../../component/editor/MonacoCodeEditor";
-import { useHibernate } from "../../context/hibernate";
 import { useK8sLogWatchListener } from "../../k8s/log-watch";
 
 export type PodLogsEditorProps = {
@@ -50,10 +49,6 @@ export const PodLogsEditor: React.FC<PodLogsEditorProps> = (props) => {
 
     const editorRef = useRef<editor.IStandaloneCodeEditor>();
     const logLinesRef = useRef<string[]>([]);
-    const pausedLogLinesRef = useRef<string[]>([]);
-
-    const isPaused = useHibernate();
-    const isPausedRef = useRef<boolean>(isPaused);
 
     const [showScrollToBottom, setShowScrollToBottom] = useState(false);
     const [isEnded, setEnded] = useState(false);
@@ -101,25 +96,6 @@ export const PodLogsEditor: React.FC<PodLogsEditorProps> = (props) => {
         [editorRef, logLinesRef]
     );
 
-    const pauseableAppendLogLines = useCallback(
-        (lines: string[]) => {
-            if (isPausedRef.current) {
-                pausedLogLinesRef.current.push(...lines);
-            } else {
-                appendLogLines(lines);
-            }
-        },
-        [appendLogLines, isPausedRef, pausedLogLinesRef]
-    );
-
-    useEffect(() => {
-        isPausedRef.current = isPaused;
-        if (!isPaused && pausedLogLinesRef.current.length > 0) {
-            appendLogLines(pausedLogLinesRef.current);
-            pausedLogLinesRef.current = [];
-        }
-    }, [appendLogLines, isPaused, isPausedRef, pausedLogLinesRef]);
-
     const updateScrollToBottomTimeoutRef = useRef<any>();
     const updateScrollToBottom = useCallback(() => {
         const editor = editorRef.current;
@@ -147,10 +123,10 @@ export const PodLogsEditor: React.FC<PodLogsEditorProps> = (props) => {
 
             // Write out our backlog of log lines.
             if (logLinesRef.current.length > 0) {
-                pauseableAppendLogLines(logLinesRef.current);
+                appendLogLines(logLinesRef.current);
             }
         },
-        [pauseableAppendLogLines, editorRef, logLinesRef, updateScrollToBottom]
+        [appendLogLines, editorRef, logLinesRef, updateScrollToBottom]
     );
 
     // Empty the editor if we change to a different container.
@@ -166,14 +142,14 @@ export const PodLogsEditor: React.FC<PodLogsEditorProps> = (props) => {
             containerName,
         },
         {
-            onLogLines: pauseableAppendLogLines,
+            onLogLines: appendLogLines,
             onEnd: () => {
                 setEnded(true);
             },
             timestamps: true,
             updateCoalesceInterval: 100,
         },
-        [name, namespace, containerName, pauseableAppendLogLines, setEnded]
+        [name, namespace, containerName, appendLogLines, setEnded]
     );
 
     return (

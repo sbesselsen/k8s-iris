@@ -1,5 +1,5 @@
 import { useConst } from "@chakra-ui/react";
-import React, { PropsWithChildren, useEffect } from "react";
+import React, { PropsWithChildren, useCallback, useEffect } from "react";
 import { create, createStore } from "../util/state";
 
 const { useStore, useStoreValue, useStoreValueGetter } = create(false);
@@ -33,3 +33,17 @@ export const HibernateContainer: React.FC<
         children
     );
 };
+
+export function useHibernateListener(
+    f: (hibernate: boolean) => void,
+    deps: any[] = []
+) {
+    const callback = useCallback(f, deps);
+    const store = useStore();
+    useEffect(() => {
+        store.subscribe(callback);
+        return () => {
+            store.unsubscribe(callback);
+        };
+    }, [callback, store]);
+}

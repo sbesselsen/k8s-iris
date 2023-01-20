@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import { K8sLogSpec, K8sLogWatchOptions } from "../../common/k8s/client";
-import { useHibernate } from "../context/hibernate";
+import { useHibernateGetter, useHibernateListener } from "../context/hibernate";
 import { useK8sClient } from "./client";
 
 export type K8sLogWatchListenerHookOptions = Omit<
@@ -30,16 +30,14 @@ export function useK8sLogWatchListener(
 
     const client = useK8sClient(kubeContext);
 
-    const isPaused = useHibernate() && pauseOnHibernate;
-    const isPausedRef = useRef(isPaused);
+    const getHibernate = useHibernateGetter();
+    const getIsPaused = useCallback(() => {
+        return pauseOnHibernate && getHibernate();
+    }, [pauseOnHibernate]);
 
     const coalescedLogLinesRef = useRef<string[]>([]);
     const coalescedTimeoutRef = useRef<any>();
     const pausedLogLinesRef = useRef<string[]>([]);
-
-    useEffect(() => {
-        isPausedRef.current = isPaused;
-    }, [isPaused, isPausedRef]);
 
     useEffect(() => {
         // If our dependencies change, clear the logs.
@@ -60,23 +58,26 @@ export function useK8sLogWatchListener(
 
     const pauseableLogLines = useCallback(
         (lines: string[]) => {
-            if (isPausedRef.current) {
+            if (getIsPaused()) {
                 pausedLogLinesRef.current.push(...lines);
             } else {
                 logLines(lines);
                 pausedLogLinesRef.current = [];
             }
         },
-        [isPausedRef, logLines, pausedLogLinesRef]
+        [getIsPaused, logLines, pausedLogLinesRef]
     );
 
-    useEffect(() => {
-        if (pausedLogLinesRef.current.length > 0 && !isPaused) {
-            // Get rid of the backlog we incurred while paused.
-            logLines(pausedLogLinesRef.current);
-            pausedLogLinesRef.current = [];
-        }
-    }, [isPaused, logLines, pausedLogLinesRef]);
+    useHibernateListener(
+        (isHibernating) => {
+            if (!isHibernating && pausedLogLinesRef.current.length > 0) {
+                // Get rid of the backlog we incurred while paused.
+                logLines(pausedLogLinesRef.current);
+                pausedLogLinesRef.current = [];
+            }
+        },
+        [logLines, pausedLogLinesRef]
+    );
 
     const coalescedLogLines = useCallback(
         (lines: string[]) => {
