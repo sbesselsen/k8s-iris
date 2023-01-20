@@ -1,13 +1,6 @@
-import {
-    Context,
-    createContext,
-    useCallback,
-    useContext,
-    useEffect,
-    useRef,
-    useState,
-} from "react";
+import { Context, createContext, useCallback, useContext } from "react";
 import { unstable_batchedUpdates } from "react-dom";
+import { useSubscribedState } from "../hook/subscribed-state";
 
 export type StoreUpdate<T> = T | ((oldValue: T) => T);
 
@@ -90,43 +83,27 @@ export function createStoreHooks<T, S extends Store<T>>(
         deps?: any[]
     ) => {
         const store = useStore();
-
-        function getSelectedValue() {
-            const value = store.get();
+        function transform(value: T) {
             return selector ? selector(value) : value;
         }
-
-        const [localValue, setLocalValue] = useState<T | U>(getSelectedValue());
-        const localValueRef = useRef<T | U>(localValue);
-
-        useEffect(() => {
-            const value = getSelectedValue();
-            if (localValueRef.current !== value) {
-                // Value was changed between last render and this useEffect call. Re-render.
-                localValueRef.current = value;
-                setLocalValue(value);
-            }
-            let subscribed = true;
-            const listener = () => {
-                if (subscribed) {
-                    const value = getSelectedValue();
-                    localValueRef.current = value;
-                    setLocalValue(value);
-                }
-            };
-            store.subscribe(listener);
-            return () => {
-                subscribed = false;
-                store.unsubscribe(listener);
-            };
-        }, [localValueRef, setLocalValue, store, ...(deps ?? [])]);
-
-        return localValue;
+        return useSubscribedState<T | U>(
+            () => transform(store.get()),
+            (set) => {
+                set(transform(store.get()));
+                const listener = (value: T) => {
+                    set(transform(value));
+                };
+                store.subscribe(listener);
+                return () => {
+                    store.unsubscribe(listener);
+                };
+            },
+            [store, ...(deps ?? [])]
+        );
     };
 
     const useStoreValueGetter = () => {
-        const store = useStore();
-        return useCallback(() => store.get(), [store]);
+        return useStore().get;
     };
 
     return {
