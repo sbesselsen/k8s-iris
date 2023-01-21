@@ -7,13 +7,11 @@ export function useGuaranteedMemo<T>(value: () => T, deps: any[]): T {
     const valueRef = useRef<T>();
     const depsRef = useRef<any[]>(deps);
     if (valueRef.current === undefined) {
-        console.log("init value");
         valueRef.current = value();
     } else if (
         deps.length !== depsRef.current.length ||
         !deps.every((v, i) => depsRef.current[i] === v)
     ) {
-        console.log("deps changed");
         depsRef.current = deps;
         valueRef.current = value();
     }
