@@ -30,3 +30,19 @@ export function coalesce<T extends () => void>(f: T, ms: number): T {
         }, ms);
     }) as T;
 }
+
+export function coalesceValues<T>(
+    f: (values: T[]) => void,
+    ms: number
+): (value: T) => void {
+    let collectedValues: T[] = [];
+    const coalescedF = coalesce(() => {
+        const values = collectedValues;
+        collectedValues = [];
+        f(values);
+    }, ms);
+    return (value) => {
+        collectedValues.push(value);
+        coalescedF();
+    };
+}
