@@ -83,24 +83,11 @@ export function createStoreHooks<T, S extends Store<T>>(
         deps?: any[]
     ) => {
         const store = useStore();
-        const transformValue = useCallback(
-            (value: T) => (selector ? selector(value) : value),
-            deps ?? []
-        );
-        return useSubscribedState<T | U>(
-            () => transformValue(store.get()),
-            (set) => {
-                set(transformValue(store.get()));
-                const listener = (value: T) => {
-                    set(transformValue(value));
-                };
-                store.subscribe(listener);
-                return () => {
-                    store.unsubscribe(listener);
-                };
-            },
-            [store, transformValue]
-        );
+        if (selector) {
+            return useProvidedStoreValue(store, selector, deps);
+        } else {
+            return useProvidedStoreValue(store);
+        }
     };
 
     const useStoreValueGetter = () => {
@@ -124,4 +111,35 @@ export function create<T>(defaultValue: T): StoreComponents<T, Store<T>> {
         store,
         ...createStoreHooks(store),
     };
+}
+
+export function useProvidedStoreValue<T>(store: Store<T>): T;
+export function useProvidedStoreValue<T, U>(
+    store: Store<T>,
+    selector: (data: T) => U,
+    deps?: any[]
+): U;
+export function useProvidedStoreValue<T, U>(
+    store: Store<T>,
+    selector?: (data: T) => U,
+    deps?: any
+): T | U {
+    const transformValue = useCallback(
+        (value: T) => (selector ? selector(value) : value),
+        deps ?? []
+    );
+    return useSubscribedState<T | U>(
+        () => transformValue(store.get()),
+        (set) => {
+            set(transformValue(store.get()));
+            const listener = (value: T) => {
+                set(transformValue(value));
+            };
+            store.subscribe(listener);
+            return () => {
+                store.unsubscribe(listener);
+            };
+        },
+        [store, transformValue]
+    );
 }
