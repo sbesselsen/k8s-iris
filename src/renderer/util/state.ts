@@ -203,3 +203,36 @@ export function useDerivedReadableStore<T, U>(
     }, [memoTransform, store, subStore]);
     return subStore;
 }
+
+export function useCombinedReadableStore<T, U>(
+    storeA: ReadableStore<T>,
+    storeB: ReadableStore<U>
+): ReadableStore<[T, U]> {
+    const subStore = useMemo(() => {
+        return createStore<[T, U]>([storeA.get(), storeB.get()]);
+    }, []);
+    useEffect(() => {
+        function listenerA(newValue: T) {
+            subStore.set((prevCombined) =>
+                prevCombined[0] === newValue
+                    ? prevCombined
+                    : [newValue, prevCombined[1]]
+            );
+        }
+        function listenerB(newValue: U) {
+            subStore.set((prevCombined) =>
+                prevCombined[1] === newValue
+                    ? prevCombined
+                    : [prevCombined[0], newValue]
+            );
+        }
+        subStore.set([storeA.get(), storeB.get()]);
+        storeA.subscribe(listenerA);
+        storeB.subscribe(listenerB);
+        return () => {
+            storeA.unsubscribe(listenerA);
+            storeB.unsubscribe(listenerB);
+        };
+    }, [storeA, storeB, subStore]);
+    return subStore;
+}
