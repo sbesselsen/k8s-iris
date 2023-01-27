@@ -11,10 +11,7 @@ import {
     VStack,
 } from "@chakra-ui/react";
 import React, { useCallback, useEffect, useMemo } from "react";
-import {
-    K8sObjectListQuery,
-    K8sResourceTypeIdentifier,
-} from "../../../common/k8s/client";
+import { K8sResourceTypeIdentifier } from "../../../common/k8s/client";
 import { reuseShallowEqualObject } from "../../../common/util/deep-equal";
 import {
     BatchGrouping,
@@ -154,22 +151,16 @@ export const ResourceWorkloadsToolbar: React.FC<{}> = () => {
 function useMonitorWorkloads() {
     const namespaces = useK8sNamespaces();
 
-    const defaultSpecItems: Partial<K8sObjectListQuery> = useMemo(
-        () =>
-            namespaces.mode === "all"
-                ? {}
-                : { namespaces: namespaces.selected },
-        [namespaces]
-    );
-
     const specs = useMemo(
         () =>
             Object.values(resourceTypes).map(({ apiVersion, kind }) => ({
                 apiVersion,
                 kind,
-                ...defaultSpecItems,
+                ...(namespaces.mode === "all"
+                    ? {}
+                    : { namespaces: namespaces.selected }),
             })),
-        [defaultSpecItems]
+        [namespaces]
     );
 
     const resourcesStore = useK8sListWatchStore(
@@ -192,8 +183,6 @@ function useMonitorWorkloads() {
         []
     );
 
-    // TODO: rewrite to useDerivedReadableStore
-
     const applyValue = useCallback(
         (oldValue: WorkloadsStoreValue, resources: K8sListWatchStoreValue) => {
             const newValue = { ...oldValue };
@@ -203,6 +192,9 @@ function useMonitorWorkloads() {
             newValue.resources = resources.resources;
             newValue.showNamespace =
                 namespaces.mode === "all" || namespaces.selected.length > 1;
+            newValue.shouldDefaultExpandGroups =
+                namespaces.mode === "selected" &&
+                namespaces.selected.length <= 1;
 
             const { groups, members, ungroupedItems } = groupProcessor(
                 resources.resources,
