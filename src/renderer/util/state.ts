@@ -1,15 +1,27 @@
-import { Context, createContext, useCallback, useContext } from "react";
+import {
+    Context,
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+} from "react";
 import { unstable_batchedUpdates } from "react-dom";
 import { useSubscribedState } from "../hook/subscribed-state";
 
 export type StoreUpdate<T> = T | ((oldValue: T) => T);
 
-export type Store<T> = {
-    get(): T;
+export type WritableStore<T> = {
     set(newValue: StoreUpdate<T>): T;
+};
+
+export type ReadableStore<T> = {
+    get(): T;
     subscribe(listener: (value: T) => void): void;
     unsubscribe(listener: (value: T) => void): void;
 };
+
+export type Store<T> = WritableStore<T> & ReadableStore<T>;
 
 export type UseStore<T, S extends Store<T>> = (() => S) & {
     Context: Context<S>;
@@ -113,14 +125,14 @@ export function create<T>(defaultValue: T): StoreComponents<T, Store<T>> {
     };
 }
 
-export function useProvidedStoreValue<T>(store: Store<T>): T;
+export function useProvidedStoreValue<T>(store: ReadableStore<T>): T;
 export function useProvidedStoreValue<T, U>(
-    store: Store<T>,
+    store: ReadableStore<T>,
     selector: (data: T) => U,
     deps?: any[]
 ): U;
 export function useProvidedStoreValue<T, U>(
-    store: Store<T>,
+    store: ReadableStore<T>,
     selector?: (data: T) => U,
     deps?: any
 ): T | U {
@@ -142,4 +154,30 @@ export function useProvidedStoreValue<T, U>(
         },
         [store, transformValue]
     );
+}
+
+export function useDerivedReadableStore<T, U>(
+    store: ReadableStore<T>,
+    transform: (value: T, prevValue?: T, prevTransformedValue?: U) => U,
+    deps?: any[]
+): ReadableStore<U> {
+    const memoTransform = useCallback(transform, deps ?? []);
+    const subStore = useMemo(() => {
+        return createStore<U>(memoTransform(store.get()));
+    }, [memoTransform]);
+    useEffect(() => {
+        let prevValue = store.get();
+        function listener(newValue: T) {
+            subStore.set((prevTransformedValue) =>
+                memoTransform(newValue, prevValue, prevTransformedValue)
+            );
+            prevValue = newValue;
+        }
+        listener(prevValue);
+        store.subscribe(listener);
+        return () => {
+            store.unsubscribe(listener);
+        };
+    }, [memoTransform, store, subStore]);
+    return subStore;
 }

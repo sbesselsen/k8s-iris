@@ -1,36 +1,21 @@
 import { ChevronDownIcon } from "@chakra-ui/icons";
 import {
-    Badge,
     Box,
     Button,
-    Checkbox,
     Collapse,
     Heading,
     HStack,
     Spinner,
-    Table,
-    TableCellProps,
-    Tbody,
-    Td,
     Text,
-    Th,
-    Thead,
-    Tr,
     useColorModeValue,
     VStack,
 } from "@chakra-ui/react";
-import React, { ChangeEvent, useCallback, useEffect, useMemo } from "react";
+import React, { useCallback, useEffect, useMemo } from "react";
 import {
-    K8sObject,
-    K8sObjectIdentifier,
     K8sObjectListQuery,
     K8sResourceTypeIdentifier,
 } from "../../../common/k8s/client";
-import { toK8sObjectIdentifier } from "../../../common/k8s/util";
-import {
-    reuseShallowEqualObject,
-    shallowEqualWrap,
-} from "../../../common/util/deep-equal";
+import { reuseShallowEqualObject } from "../../../common/util/deep-equal";
 import {
     BatchGrouping,
     combineGroupings,
@@ -40,7 +25,6 @@ import { searchMatch } from "../../../common/util/search";
 import { k8sSmartCompare } from "../../../common/util/sort";
 import { LazyComponent } from "../../component/main/LazyComponent";
 import { ScrollBox } from "../../component/main/ScrollBox";
-import { Selectable } from "../../component/main/Selectable";
 import { useK8sNamespaces } from "../../context/k8s-namespaces";
 import {
     useAppRoute,
@@ -50,14 +34,6 @@ import {
 import { useAppSearch } from "../../context/search";
 import { useIpcCall } from "../../hook/ipc";
 import { useModifierKeyRef } from "../../hook/keyboard";
-import { generateBadges, ResourceBadge } from "../../k8s/badges";
-import {
-    generateResourceDetails,
-    isResourceBox,
-    isResourceColumn,
-    ResourceColumn,
-    ResourceDetail,
-} from "../../k8s/details";
 import {
     K8sListWatchStoreValue,
     useK8sListWatchStore,
@@ -68,10 +44,13 @@ import {
     helmGroup,
     ResourceGroup,
 } from "../../k8s/resource-group";
-import { formatDeveloperDateTime } from "../../util/date";
-import { create } from "../../util/state";
+import {
+    create,
+    useDerivedReadableStore,
+    useProvidedStoreValue,
+} from "../../util/state";
 import { ResourceContextMenu } from "./ResourceContextMenu";
-import { ResourceEditorLink } from "./ResourceEditorLink";
+import { ResourcesTable, ResourcesTableStoreValue } from "./ResourcesTable";
 import { ResourcesToolbar } from "./ResourcesToolbar";
 
 type WorkloadsStoreValue = BatchGrouping<ResourceGroup> &
@@ -135,9 +114,9 @@ const otherGroup: ResourceGroup = {
 };
 
 const { useStore, useStoreValue, store } = create(storeEmptyState);
-store.subscribe((value) => {
-    //console.log("store", value);
-});
+// store.subscribe((value) => {
+//     console.log("store", value);
+// });
 
 export const ResourceWorkloadsOverview: React.FC<{}> = () => {
     useMonitorWorkloads();
@@ -150,12 +129,25 @@ export const ResourceWorkloadsOverview: React.FC<{}> = () => {
 };
 
 export const ResourceWorkloadsToolbar: React.FC<{}> = () => {
-    const store = useStore();
+    const resources = useStoreValue(({ selectedResourceKeys, resources }) =>
+        [...selectedResourceKeys]
+            .map((key) => resources[key])
+            .filter((x) => x !== undefined)
+    );
 
-    // TODO!
+    const store = useStore();
+    const onClearSelection = useCallback(() => {
+        store.set((oldValue) => ({
+            ...oldValue,
+            selectedResourceKeys: new Set(),
+        }));
+    }, [store]);
 
     return (
-        <ResourcesToolbar resources={undefined} onClearSelection={undefined} />
+        <ResourcesToolbar
+            resources={resources}
+            onClearSelection={onClearSelection}
+        />
     );
 };
 
@@ -200,6 +192,8 @@ function useMonitorWorkloads() {
         []
     );
 
+    // TODO: rewrite to useDerivedReadableStore
+
     const applyValue = useCallback(
         (oldValue: WorkloadsStoreValue, resources: K8sListWatchStoreValue) => {
             const newValue = { ...oldValue };
@@ -210,12 +204,10 @@ function useMonitorWorkloads() {
             newValue.showNamespace =
                 namespaces.mode === "all" || namespaces.selected.length > 1;
 
-            const ts = new Date().getTime();
             const { groups, members, ungroupedItems } = groupProcessor(
                 resources.resources,
                 true
             );
-            console.log("group calc", new Date().getTime() - ts);
 
             newValue.groups = groups;
             newValue.members = members;
@@ -237,7 +229,6 @@ function useMonitorWorkloads() {
             resourcesStore.unsubscribe(listener);
         };
     }, [resourcesStore, store]);
-    // TODO
 }
 
 const GroupedResourcesOverview: React.FC<{}> = () => {
@@ -281,14 +272,10 @@ const GroupedResourcesOverview: React.FC<{}> = () => {
     );
 
     const getSelectedObjects = useCallback(() => {
-        // TODO
-        return [];
-        // const { selectedResourceKeys, allResourcesByType } = store.get();
-        // return Object.values(allResourcesByType).flatMap((group) =>
-        //     group.resources.filter((r) =>
-        //         selectedResourceKeys.has(toK8sObjectIdentifierString(r))
-        //     )
-        // );
+        const { selectedResourceKeys, resources } = store.get();
+        return [...selectedResourceKeys]
+            .map((key) => resources[key])
+            .filter((x) => x !== undefined);
     }, [store]);
 
     return (
@@ -481,33 +468,100 @@ type WorkloadResourceSectionProps = {
     groupId: string;
 };
 
+const emptyStringSet: Set<string> = new Set();
+
 const WorkloadResourceSection: React.FC<WorkloadResourceSectionProps> =
     React.memo((props) => {
         const { title, showNamespace, typeKey, groupId } = props;
+        const store = useStore();
 
-        const resources = useStoreValue(
-            shallowEqualWrap((workloads) => {
-                // TODO: this still runs on every group whenever a group changes. That should be unnecessary
-                const groupResourcesKeysSet =
-                    groupId === otherGroup.id
-                        ? workloads.ungroupedItems
-                        : workloads.members[groupId] ?? new Set();
-                const groupResources = [...groupResourcesKeysSet].map(
-                    (key) => workloads.resources[key]
-                );
-                if (groupId === "_") {
-                    console.log(groupResources.length);
-                }
-                // Now filter these resources by type.
-                const { apiVersion, kind } = resourceTypes[typeKey];
-                return groupResources.filter(
-                    (res) => res.apiVersion === apiVersion && res.kind === kind
-                );
-            }),
-            [groupId, typeKey]
+        const onChangeSelectedKeys = useCallback(
+            (keys: Record<string, boolean>) => {
+                store.set((oldValue) => {
+                    let isUpdated = false;
+                    const selectedResourceKeys = new Set(
+                        oldValue.selectedResourceKeys
+                    );
+                    for (const [k, v] of Object.entries(keys)) {
+                        if (v !== selectedResourceKeys.has(k)) {
+                            isUpdated = true;
+                        }
+                        if (v) {
+                            selectedResourceKeys.add(k);
+                        } else {
+                            selectedResourceKeys.delete(k);
+                        }
+                    }
+                    return isUpdated
+                        ? { ...oldValue, selectedResourceKeys }
+                        : oldValue;
+                });
+            },
+            [store]
         );
 
-        if (resources.length === 0) {
+        const resourcesStore = useDerivedReadableStore<
+            WorkloadsStoreValue,
+            ResourcesTableStoreValue
+        >(
+            store,
+            (workloadsValue, prevWorkloadsValue, prevTableValue) => {
+                const { apiVersion, kind } = resourceTypes[typeKey];
+
+                function getGroupResourceKeys(
+                    workloads: WorkloadsStoreValue,
+                    groupId: string
+                ) {
+                    return groupId === otherGroup.id
+                        ? workloads.ungroupedItems
+                        : workloads.members[groupId] ?? emptyStringSet;
+                }
+                const groupResourceKeys = getGroupResourceKeys(
+                    workloadsValue,
+                    groupId
+                );
+
+                const resources = workloadsValue.resources;
+
+                if (
+                    prevTableValue &&
+                    prevWorkloadsValue &&
+                    getGroupResourceKeys(prevWorkloadsValue, groupId) ===
+                        groupResourceKeys
+                ) {
+                    // Resource keys for this group have remained the same.
+                    // Since resources never change type, we don't have to reclassify all resources.
+                    return {
+                        identifiers: prevTableValue.identifiers,
+                        resources,
+                    };
+                }
+
+                const identifiers: Set<string> = new Set(
+                    [...groupResourceKeys].filter((key) => {
+                        const resource = resources[key];
+                        return (
+                            resource.apiVersion === apiVersion &&
+                            resource.kind === kind
+                        );
+                    })
+                );
+
+                return { identifiers, resources };
+            },
+            [typeKey]
+        );
+
+        const selectedKeysStore = useDerivedReadableStore<
+            WorkloadsStoreValue,
+            Set<string>
+        >(store, ({ selectedResourceKeys }) => selectedResourceKeys);
+
+        const hasResources = useProvidedStoreValue(
+            resourcesStore,
+            (v) => v.identifiers.size > 0
+        );
+        if (!hasResources) {
             return null;
         }
 
@@ -516,337 +570,12 @@ const WorkloadResourceSection: React.FC<WorkloadResourceSectionProps> =
                 <Heading fontSize="sm" px={4}>
                     {title}
                 </Heading>
-                <WorkloadResourceList
+                <ResourcesTable
                     showNamespace={showNamespace}
-                    resources={resources}
+                    onChangeSelectedKeys={onChangeSelectedKeys}
+                    selectedKeysStore={selectedKeysStore}
+                    resourcesStore={resourcesStore}
                 />
             </VStack>
         );
     });
-
-type WorkloadResourceListProps = {
-    resources: K8sObject[];
-    showNamespace: boolean;
-};
-
-const WorkloadResourceList: React.FC<WorkloadResourceListProps> = (props) => {
-    const { resources, showNamespace } = props;
-
-    const store = useStore();
-    const sortedKeyedResources = useMemo(
-        () =>
-            [...resources]
-                .sort((a, b) =>
-                    k8sSmartCompare(a.metadata.name, b.metadata.name)
-                )
-                .map((resource) => ({
-                    resource,
-                    key: `${resource.apiVersion}:${resource.kind}:${resource.metadata.namespace}:${resource.metadata.name}`,
-                })),
-        [resources]
-    );
-
-    const resourceKeysSet = useMemo(
-        () => new Set(resources.map((r) => toK8sObjectIdentifierString(r))),
-        [resources]
-    );
-
-    const numListedResourcesSelected = useStoreValue(
-        (value) =>
-            [...value.selectedResourceKeys].filter((key) =>
-                resourceKeysSet.has(key)
-            ).length,
-        [resourceKeysSet]
-    );
-    const allResourcesSelected =
-        numListedResourcesSelected > 0 &&
-        numListedResourcesSelected === resources.length;
-    const someResourcesSelected =
-        numListedResourcesSelected > 0 &&
-        numListedResourcesSelected < resources.length;
-
-    const onChangeSelectAll = useCallback(
-        (e: ChangeEvent<HTMLInputElement>) => {
-            const checked = e.target.checked;
-            store.set((value) => {
-                const newSelectedResourceKeys = new Set(
-                    value.selectedResourceKeys
-                );
-                if (checked) {
-                    for (const key of resourceKeysSet) {
-                        newSelectedResourceKeys.add(key);
-                    }
-                } else {
-                    for (const key of resourceKeysSet) {
-                        newSelectedResourceKeys.delete(key);
-                    }
-                }
-                return {
-                    ...value,
-                    selectedResourceKeys: newSelectedResourceKeys,
-                };
-            });
-        },
-        [resourceKeysSet, store]
-    );
-
-    // TODO: make all this into a nice hook or whatever
-    const resourceTypesString = [
-        ...new Set(resources.map((r) => `${r.apiVersion}:${r.kind}`)),
-    ]
-        .sort()
-        .join(",");
-
-    // Bit weird but it prevents unnecessary rerenders of the columns and, well, why not.
-    const resourceTypes: K8sResourceTypeIdentifier[] = useMemo(
-        () =>
-            resourceTypesString.split(",").map((t) => {
-                const [apiVersion, kind] = t.split(":");
-                return { apiVersion, kind };
-            }),
-        [resourceTypesString]
-    );
-
-    const customDetails = useMemo(
-        () => resourceTypes.flatMap((type) => generateResourceDetails(type)),
-        [resourceTypes]
-    );
-    const customColumns = useMemo(
-        () => customDetails.filter(isResourceColumn),
-        [customDetails]
-    );
-
-    function detailColWidth(col: ResourceColumn): number {
-        return 40 * (col.widthUnits + 1);
-    }
-
-    const detailColumns = customDetails.filter(isResourceColumn);
-    const detailColumnsTotalWidth = detailColumns
-        .map(detailColWidth)
-        .reduce((x, y) => x + y, 0);
-
-    return (
-        <Box overflowX="auto" mx={-4} px={4}>
-            <Table
-                size="sm"
-                sx={{ tableLayout: "fixed" }}
-                minWidth={
-                    350 +
-                    (showNamespace ? 150 : 0) +
-                    detailColumnsTotalWidth +
-                    "px"
-                }
-            >
-                <Thead>
-                    <Tr>
-                        <Th ps={2} width="40px">
-                            <Checkbox
-                                colorScheme="gray"
-                                isIndeterminate={someResourcesSelected}
-                                isChecked={allResourcesSelected}
-                                onChange={onChangeSelectAll}
-                            />
-                        </Th>
-                        <Th ps={0} whiteSpace="nowrap">
-                            Name
-                        </Th>
-                        {customColumns.map((col) => (
-                            <Th key={col.id} width={detailColWidth(col) + "px"}>
-                                {col.header}
-                            </Th>
-                        ))}
-                        {showNamespace && <Th width="150px">Namespace</Th>}
-                        <Th width="120px">Created</Th>
-                    </Tr>
-                </Thead>
-                <Tbody>
-                    {sortedKeyedResources.map(({ key, resource }) => (
-                        <WorkloadResourceRow
-                            resource={resource}
-                            showNamespace={showNamespace}
-                            customDetails={customDetails}
-                            key={key}
-                        />
-                    ))}
-                </Tbody>
-            </Table>
-        </Box>
-    );
-};
-
-type WorkloadResourceRowProps = {
-    resource: K8sObject;
-    showNamespace: boolean;
-    customDetails: ResourceDetail[];
-};
-
-const WorkloadResourceRow: React.FC<WorkloadResourceRowProps> = (props) => {
-    const { resource, showNamespace, customDetails } = props;
-
-    const store = useStore();
-    const creationDate = new Date((resource as any).metadata.creationTimestamp);
-    const isDeleting = Boolean((resource as any).metadata.deletionTimestamp);
-
-    const resourceKey = useMemo(
-        () => toK8sObjectIdentifierString(resource),
-        [resource]
-    );
-    const isSelected = useStoreValue(
-        (value) => value.selectedResourceKeys.has(resourceKey),
-        [resourceKey]
-    );
-    const onChange = useCallback(
-        (e: ChangeEvent<HTMLInputElement>) => {
-            const selected = e.target.checked;
-            store.set((value) => {
-                const prevSelected =
-                    value.selectedResourceKeys.has(resourceKey);
-                let newSelectedResourceKeys = value.selectedResourceKeys;
-                if (selected && !prevSelected) {
-                    newSelectedResourceKeys = new Set(
-                        value.selectedResourceKeys
-                    );
-                    newSelectedResourceKeys.add(resourceKey);
-                } else {
-                    newSelectedResourceKeys = new Set(
-                        value.selectedResourceKeys
-                    );
-                    newSelectedResourceKeys.delete(resourceKey);
-                }
-                if (newSelectedResourceKeys !== value.selectedResourceKeys) {
-                    return {
-                        ...value,
-                        selectedResourceKeys: newSelectedResourceKeys,
-                    };
-                }
-                return value;
-            });
-        },
-        [resourceKey, store]
-    );
-
-    const badges: ResourceBadge[] = useMemo(
-        () => generateBadges(resource),
-        [resource]
-    );
-
-    const customBoxes = useMemo(
-        () =>
-            customDetails
-                .filter(isResourceBox)
-                .map((box) => ({ ...box, value: box.valueFor(resource) }))
-                .filter((v) => !!v.value),
-        [customDetails, resource]
-    );
-    const hasCustomBoxes = customBoxes.length > 0;
-    const commonTdProps: TableCellProps = useMemo(() => {
-        return {
-            ...(hasCustomBoxes ? { borderBottom: "none" } : {}),
-        };
-    }, [hasCustomBoxes]);
-    const customColumns = customDetails.filter(isResourceColumn);
-
-    return (
-        <>
-            <Tr>
-                <Td {...commonTdProps} ps={2} verticalAlign="baseline">
-                    <Checkbox isChecked={isSelected} onChange={onChange} />
-                </Td>
-                <Td
-                    {...commonTdProps}
-                    ps={0}
-                    verticalAlign="baseline"
-                    userSelect="text"
-                >
-                    <HStack p={0}>
-                        <Selectable
-                            display="block"
-                            cursor="inherit"
-                            textColor={isDeleting ? "gray.500" : ""}
-                            isTruncated
-                        >
-                            <ResourceEditorLink
-                                userSelect="text"
-                                editorResource={resource}
-                            >
-                                {resource.metadata.name}
-                            </ResourceEditorLink>
-                        </Selectable>
-                        {badges.map((badge) => {
-                            const { id, text, variant, details, badgeProps } =
-                                badge;
-                            const colorScheme = {
-                                positive: "green",
-                                negative: "red",
-                                changing: "orange",
-                                other: "gray",
-                            }[variant ?? "other"];
-                            return (
-                                <Badge
-                                    key={id}
-                                    colorScheme={colorScheme}
-                                    title={details ?? text}
-                                    {...badgeProps}
-                                >
-                                    {text}
-                                </Badge>
-                            );
-                        })}
-                    </HStack>
-                </Td>
-                {customColumns.map((col) => (
-                    <Td
-                        {...commonTdProps}
-                        verticalAlign="baseline"
-                        key={col.id}
-                    >
-                        {col.valueFor(resource)}
-                    </Td>
-                ))}
-                {showNamespace && (
-                    <Td {...commonTdProps} verticalAlign="baseline">
-                        <Selectable display="block" isTruncated>
-                            {resource.metadata.namespace}
-                        </Selectable>
-                    </Td>
-                )}
-                <Td {...commonTdProps} verticalAlign="baseline">
-                    <Selectable display="block" isTruncated>
-                        {formatDeveloperDateTime(creationDate)}
-                    </Selectable>
-                </Td>
-            </Tr>
-
-            {customBoxes.map((box) => (
-                <Tr key={box.id}>
-                    <Td></Td>
-                    <Td
-                        ps={0}
-                        pt={0}
-                        colSpan={
-                            2 + (showNamespace ? 1 : 0) + customColumns.length
-                        }
-                    >
-                        {box.value}
-                    </Td>
-                </Tr>
-            ))}
-        </>
-    );
-};
-
-/**
- * This is a copy of toK8sObjectIdentifierString() in common/k8s/util.ts.
- * Parcel craps out when I import it.
- */
-function toK8sObjectIdentifierString(
-    obj: K8sObject | K8sObjectIdentifier
-): string {
-    const identifier = toK8sObjectIdentifier(obj);
-    return [
-        identifier.apiVersion,
-        identifier.kind,
-        identifier.namespace ?? "",
-        identifier.name,
-    ].join(":");
-}
