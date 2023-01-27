@@ -26,11 +26,16 @@ import {
     K8sObjectListQuery,
     K8sResourceTypeIdentifier,
 } from "../../../common/k8s/client";
+import { toK8sObjectIdentifier } from "../../../common/k8s/util";
 import {
-    isSetLike,
-    toK8sObjectIdentifier,
-    updateResourceListByVersion,
-} from "../../../common/k8s/util";
+    reuseShallowEqualObject,
+    shallowEqualWrap,
+} from "../../../common/util/deep-equal";
+import {
+    BatchGrouping,
+    combineGroupings,
+    createGroupProcessor,
+} from "../../../common/util/group";
 import { searchMatch } from "../../../common/util/search";
 import { k8sSmartCompare } from "../../../common/util/sort";
 import { LazyComponent } from "../../component/main/LazyComponent";
@@ -54,69 +59,91 @@ import {
     ResourceDetail,
 } from "../../k8s/details";
 import {
-    K8sListWatchesListenerOptions,
-    useK8sListWatchesListener,
+    K8sListWatchStoreValue,
+    useK8sListWatchStore,
 } from "../../k8s/list-watch";
+import {
+    basicGroup,
+    basicPostGroup,
+    helmGroup,
+    ResourceGroup,
+} from "../../k8s/resource-group";
 import { formatDeveloperDateTime } from "../../util/date";
 import { create } from "../../util/state";
 import { ResourceContextMenu } from "./ResourceContextMenu";
 import { ResourceEditorLink } from "./ResourceEditorLink";
 import { ResourcesToolbar } from "./ResourcesToolbar";
 
-type WorkloadsStore = {
-    groups: Record<string, WorkloadResourceGroup>;
-    groupSubResources: Record<string, K8sObject[]>;
-    allResourcesByType: Record<
-        string,
-        { isLoading: boolean; resources: K8sObject[]; error: undefined | any }
-    >;
-    selectedResourceKeys: Set<string>;
-    showNamespace: boolean;
-    shouldDefaultExpandGroups: boolean;
+type WorkloadsStoreValue = BatchGrouping<ResourceGroup> &
+    K8sListWatchStoreValue & {
+        selectedResourceKeys: Set<string>;
+        showNamespace: boolean;
+        shouldDefaultExpandGroups: boolean;
+    };
+
+const resourceTypes: Record<
+    string,
+    { title: string } & K8sResourceTypeIdentifier
+> = {
+    deployments: {
+        title: "Deployments",
+        apiVersion: "apps/v1",
+        kind: "Deployment",
+    },
+    statefulSets: {
+        title: "StatefulSets",
+        apiVersion: "apps/v1",
+        kind: "StatefulSet",
+    },
+    daemonSets: {
+        title: "DaemonSets",
+        apiVersion: "apps/v1",
+        kind: "DaemonSet",
+    },
+    persistentVolumeClaims: {
+        title: "Persistent Volume Claims",
+        apiVersion: "v1",
+        kind: "PersistentVolumeClaim",
+    },
+    ingresses: {
+        title: "Ingresses",
+        apiVersion: "networking.k8s.io/v1",
+        kind: "Ingress",
+    },
+    services: { title: "Services", apiVersion: "v1", kind: "Service" },
+    configMaps: { title: "ConfigMaps", apiVersion: "v1", kind: "ConfigMap" },
+    secrets: { title: "Secrets", apiVersion: "v1", kind: "Secret" },
 };
 
-type WorkloadResourceGroup = {
-    id: string;
-    title: string;
-    contains: (resource: K8sObject) => boolean;
-    shouldDefaultExpand: boolean;
-    sortOrder: number;
-};
-
-const resourceTypes: Record<string, { title: string }> = {
-    deployments: { title: "Deployments" },
-    statefulSets: { title: "StatefulSets" },
-    daemonSets: { title: "DaemonSets" },
-    persistentVolumeClaims: { title: "Persistent Volume Claims" },
-    ingresses: { title: "Ingresses" },
-    services: { title: "Services" },
-    configMaps: { title: "ConfigMaps" },
-    secrets: { title: "Secrets" },
-};
-
-const storeEmptyState: WorkloadsStore = {
+const storeEmptyState: WorkloadsStoreValue = {
+    isLoading: true,
+    identifiers: new Set(),
+    resources: {},
     groups: {},
-    groupSubResources: {},
-    allResourcesByType: Object.fromEntries(
-        Object.keys(resourceTypes).map((k) => [
-            k,
-            { isLoading: true, resources: [], error: undefined },
-        ])
-    ),
+    members: {},
+    ungroupedItems: new Set(),
     selectedResourceKeys: new Set(),
     showNamespace: false,
     shouldDefaultExpandGroups: false,
 };
 
+const otherGroup: ResourceGroup = {
+    id: "_",
+    title: "Other",
+    sortOrder: 105,
+    shouldDefaultExpand: false,
+};
+
 const { useStore, useStoreValue, store } = create(storeEmptyState);
-// store.subscribe((value) => {
-//     console.log("store", value });
-// });
+store.subscribe((value) => {
+    //console.log("store", value);
+});
 
 export const ResourceWorkloadsOverview: React.FC<{}> = () => {
+    useMonitorWorkloads();
+
     return (
         <ScrollBox flex="1 0 0" attachedToolbar={<ResourceWorkloadsToolbar />}>
-            <WorkloadsMonitor />
             <GroupedResourcesOverview />
         </ScrollBox>
     );
@@ -125,609 +152,112 @@ export const ResourceWorkloadsOverview: React.FC<{}> = () => {
 export const ResourceWorkloadsToolbar: React.FC<{}> = () => {
     const store = useStore();
 
-    const onClearSelection = useCallback(() => {
-        store.set((value) => ({ ...value, selectedResourceKeys: new Set() }));
-    }, [store]);
-
-    const selectedResourceKeys = useStoreValue(
-        (value) => value.selectedResourceKeys
-    );
-    const resourcesByType = useStoreValue((value) => value.allResourcesByType);
-    const selectedResources = useMemo(() => {
-        const output: K8sObject[] = [];
-        for (const { resources } of Object.values(resourcesByType)) {
-            const selectedTypeResources = resources.filter((resource) =>
-                selectedResourceKeys.has(toK8sObjectIdentifierString(resource))
-            );
-            output.push(...selectedTypeResources);
-        }
-        return output;
-    }, [resourcesByType, selectedResourceKeys]);
+    // TODO!
 
     return (
-        <ResourcesToolbar
-            resources={selectedResources}
-            onClearSelection={onClearSelection}
-        />
+        <ResourcesToolbar resources={undefined} onClearSelection={undefined} />
     );
-};
-
-// Empty component so we can run the hook without rerendering everything.
-export const WorkloadsMonitor: React.FC<{}> = () => {
-    useMonitorWorkloads();
-    return null;
 };
 
 function useMonitorWorkloads() {
     const namespaces = useK8sNamespaces();
 
-    const store = useStore();
-
-    useEffect(() => {
-        store.set({
-            ...storeEmptyState,
-            shouldDefaultExpandGroups:
-                namespaces.mode === "selected" &&
-                namespaces.selected.length === 1,
-            showNamespace:
-                namespaces.mode === "all" || namespaces.selected.length > 1,
-        });
-    }, [namespaces, store]);
-
-    const listWatchOptions: K8sListWatchesListenerOptions = useMemo(
-        () => ({
-            onUpdate(messages) {
-                store.set((oldValue) => {
-                    const newValue = {
-                        ...oldValue,
-                        allResourcesByType: { ...oldValue.allResourcesByType },
-                    };
-                    for (const [k, message] of Object.entries(messages)) {
-                        newValue.allResourcesByType[k] = {
-                            isLoading: false,
-                            resources: message.list.items,
-                            error: undefined,
-                        };
-                    }
-
-                    // Now find the groups.
-                    const allResources: K8sObject[] = [];
-                    for (const info of Object.values(
-                        newValue.allResourcesByType
-                    )) {
-                        allResources.push(...info.resources);
-                    }
-                    const orderedGroups = computeGroups(allResources);
-                    const groups = Object.fromEntries(
-                        orderedGroups.map((g) => [g.id, g])
-                    );
-                    let newGroups = oldValue.groups;
-                    for (const group of Object.values(groups)) {
-                        if (!newGroups[group.id]) {
-                            // Add group.
-                            newGroups = { ...newGroups, [group.id]: group };
-                        } else if (newGroups[group.id].title !== group.title) {
-                            // Changed group.
-                            newGroups = { ...newGroups, [group.id]: group };
-                        }
-                    }
-                    for (const oldGroupId of Object.keys(oldValue.groups)) {
-                        if (!groups[oldGroupId]) {
-                            // Remove group.
-                            newGroups = { ...newGroups };
-                            delete newGroups[oldGroupId];
-                        }
-                    }
-                    newValue.groups = newGroups;
-
-                    // Now group the updated resources with the new groups.
-                    const newSelectedResourceKeys = new Set(
-                        oldValue.selectedResourceKeys
-                    );
-                    const availableResourceKeys: Set<string> = new Set();
-                    const newGroupSubResources: Record<string, K8sObject[]> =
-                        {};
-                    for (const [type, typeResources] of Object.entries(
-                        newValue.allResourcesByType
-                    )) {
-                        for (const resource of typeResources.resources) {
-                            availableResourceKeys.add(
-                                toK8sObjectIdentifierString(resource)
-                            );
-                            const group = orderedGroups.find((group) =>
-                                group.contains(resource)
-                            );
-                            const subResourcesKey = `${
-                                group?.id ?? ""
-                            }:${type}`;
-                            if (!newGroupSubResources[subResourcesKey]) {
-                                newGroupSubResources[subResourcesKey] = [];
-                            }
-                            newGroupSubResources[subResourcesKey].push(
-                                resource
-                            );
-                        }
-                    }
-                    for (const key of [...newSelectedResourceKeys]) {
-                        if (!availableResourceKeys.has(key)) {
-                            // Remove selected item when it disappears.
-                            newSelectedResourceKeys.delete(key);
-                        }
-                    }
-                    newValue.selectedResourceKeys = newSelectedResourceKeys;
-
-                    newValue.groupSubResources = Object.fromEntries(
-                        Object.entries(newGroupSubResources).map(
-                            ([key, resources]) => {
-                                return [
-                                    key,
-                                    updateResourceListByVersion(
-                                        oldValue.groupSubResources[key] ?? [],
-                                        resources
-                                    ),
-                                ];
-                            }
-                        )
-                    );
-
-                    return newValue;
-                });
-            },
-            onWatchError(key, error) {
-                store.set((oldValue) => ({
-                    ...oldValue,
-                    allResourcesByType: {
-                        ...oldValue.allResourcesByType,
-                        [key]: { isLoading: false, resources: [], error },
-                    },
-                }));
-            },
-            updateCoalesceInterval: 1000,
-        }),
-        [store]
+    const defaultSpecItems: Partial<K8sObjectListQuery> = useMemo(
+        () =>
+            namespaces.mode === "all"
+                ? {}
+                : { namespaces: namespaces.selected },
+        [namespaces]
     );
 
-    const defaultSpecItems: Partial<K8sObjectListQuery> =
-        namespaces.mode === "all" ? {} : { namespaces: namespaces.selected };
-    const specs = {
-        deployments: {
-            apiVersion: "apps/v1",
-            kind: "Deployment",
-            ...defaultSpecItems,
-        },
-        statefulSets: {
-            apiVersion: "apps/v1",
-            kind: "StatefulSet",
-            ...defaultSpecItems,
-        },
-        daemonSets: {
-            apiVersion: "apps/v1",
-            kind: "DaemonSet",
-            ...defaultSpecItems,
-        },
-        services: {
-            apiVersion: "v1",
-            kind: "Service",
-            ...defaultSpecItems,
-        },
-        configMaps: {
-            apiVersion: "v1",
-            kind: "ConfigMap",
-            ...defaultSpecItems,
-        },
-        secrets: {
-            apiVersion: "v1",
-            kind: "Secret",
-            ...defaultSpecItems,
-        },
-        ingresses: {
-            apiVersion: "networking.k8s.io/v1",
-            kind: "Ingress",
-            ...defaultSpecItems,
-        },
-        persistentVolumeClaims: {
-            apiVersion: "v1",
-            kind: "PersistentVolumeClaim",
-            ...defaultSpecItems,
-        },
-    };
+    const specs = useMemo(
+        () =>
+            Object.values(resourceTypes).map(({ apiVersion, kind }) => ({
+                apiVersion,
+                kind,
+                ...defaultSpecItems,
+            })),
+        [defaultSpecItems]
+    );
 
-    useK8sListWatchesListener(specs, listWatchOptions, [namespaces]);
-}
-
-type WorkloadResourceGroupGenerator = (
-    resources: K8sObject[]
-) => WorkloadResourceGroup[];
-
-function computeGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
-    const generators: WorkloadResourceGroupGenerator[] = [
-        computeHelmGroups,
-        computePodSetGroups,
-        computeDefaultGroups,
-    ];
-
-    let remainingResources: K8sObject[] = resources;
-    const outputGroups: WorkloadResourceGroup[] = [];
-    for (const generator of generators) {
-        const groups = generator(remainingResources).filter((group) => {
-            const newRemainingResources: K8sObject[] = [];
-            let groupIsNonEmpty = false;
-            for (const resource of remainingResources) {
-                if (group.contains(resource)) {
-                    groupIsNonEmpty = true;
-                } else {
-                    newRemainingResources.push(resource);
-                }
-            }
-            remainingResources = newRemainingResources;
-            return groupIsNonEmpty;
-        });
-        outputGroups.push(...groups);
-    }
-    return outputGroups;
-}
-
-function computeDefaultGroups(): WorkloadResourceGroup[] {
-    return [
+    const resourcesStore = useK8sListWatchStore(
+        specs,
         {
-            id: "helm-release-data",
-            title: "Helm release data",
-            contains: (resource: K8sObject) =>
-                !!resource.metadata.name.match(/^sh\.helm\.release\./),
-            sortOrder: 101,
-            shouldDefaultExpand: false,
-        },
-        {
-            id: "kube-stuff",
-            title: "Kubernetes stuff",
-            contains: (resource: K8sObject) =>
-                resource.metadata.annotations?.[
-                    "kubernetes.io/service-account.name"
-                ] === "default" ||
-                resource.metadata.name === "kube-root-ca.crt",
-            sortOrder: 102,
-            shouldDefaultExpand: false,
-        },
-        {
-            id: "service-account-tokens",
-            title: "Service account tokens",
-            contains: (resource: K8sObject) =>
-                !!resource.metadata.annotations?.[
-                    "kubernetes.io/service-account.name"
-                ],
-            sortOrder: 103,
-            shouldDefaultExpand: false,
-        },
-        {
-            id: "_",
-            title: "Uncategorized",
-            contains: () => true,
-            sortOrder: 100,
-            shouldDefaultExpand: true,
-        },
-    ];
-}
-
-function computePodSetGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
-    const groupInfo: Record<
-        string,
-        {
-            title: string;
-            namespace: string;
-            labelSelector: Record<string, string>;
-        }
-    > = {};
-    const namespacesByTitle: Record<string, Record<string, string>> = {};
-    const relatedResourceGroupIds: Record<string, string> = {};
-
-    const findLabelSelector = (
-        resource: K8sObject
-    ): Record<string, string> | null => {
-        const r = resource as any;
-        if (
-            r.spec?.selector?.matchLabels &&
-            typeof r.spec.selector.matchLabels === "object"
-        ) {
-            const matchLabels = r.spec.selector.matchLabels;
-            let hasValues = false;
-            for (const k of Object.keys(matchLabels)) {
-                hasValues = true;
-                if (typeof matchLabels[k] !== "string") {
-                    return null;
-                }
-            }
-            if (hasValues) {
-                return matchLabels;
-            }
-        }
-        return null;
-    };
-
-    function matchesLabelSelector(
-        labels: Record<string, string>,
-        selector: Record<string, string>
-    ): boolean {
-        for (const [k, v] of Object.entries(selector)) {
-            if (labels[k] !== v) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    const findPodSetGroup = (resource: K8sObject): string | null => {
-        const resourceId = toK8sObjectIdentifierString(resource);
-        if (relatedResourceGroupIds[resourceId]) {
-            return relatedResourceGroupIds[resourceId];
-        }
-        if (isSetLike(resource)) {
-            const labelSelector = findLabelSelector(resource);
-            if (labelSelector) {
-                // This is the group.
-                groupInfo[resourceId] = {
-                    title: resource.metadata.name,
-                    namespace: resource.metadata.namespace as string,
-                    labelSelector,
-                };
-                return resourceId;
-            }
-        }
-        if (resource.apiVersion === "v1" && resource.kind === "Service") {
-            for (const [groupId, group] of Object.entries(groupInfo)) {
-                if (
-                    matchesLabelSelector(
-                        (resource as any)?.spec?.selector ?? {},
-                        group.labelSelector
-                    ) &&
-                    matchesLabelSelector(
-                        group.labelSelector,
-                        (resource as any)?.spec?.selector ?? {}
-                    )
-                ) {
-                    relatedResourceGroupIds[resourceId] = groupId;
-                    return groupId;
-                }
-            }
-        }
-        // If this is an ingress, check by service.
-        if (
-            resource.apiVersion === "networking.k8s.io/v1" &&
-            resource.kind === "Ingress"
-        ) {
-            for (const rule of (resource as any).spec?.rules ?? []) {
-                for (const path of rule?.http?.paths ?? []) {
-                    if (path?.backend?.service?.name) {
-                        const serviceIdentifier = toK8sObjectIdentifierString({
-                            apiVersion: "v1",
-                            kind: "Service",
-                            name: path.backend.service.name,
-                            namespace: resource.metadata.namespace,
-                        });
-                        if (relatedResourceGroupIds[serviceIdentifier]) {
-                            relatedResourceGroupIds[resourceId] =
-                                relatedResourceGroupIds[serviceIdentifier];
-                            return relatedResourceGroupIds[resourceId];
-                        }
-                    }
-                }
-            }
-        }
-        return null;
-    };
-
-    // Make sure we get the sets first, then the services, then everything else.
-    const sortedResources = resources.sort((r1, r2) => {
-        const r1IsSet = isSetLike(r1);
-        const r2IsSet = isSetLike(r2);
-        if (r1IsSet !== r2IsSet) {
-            return r1IsSet ? -1 : 1;
-        }
-        const r1IsService = r1.apiVersion === "v1" && r1.kind === "Service";
-        const r2IsService = r2.apiVersion === "v1" && r2.kind === "Service";
-        if (r1IsService !== r2IsService) {
-            return r1IsService ? -1 : 1;
-        }
-        return r1.metadata.name.localeCompare(r2.metadata.name);
-    });
-
-    for (const resource of sortedResources) {
-        const groupId = findPodSetGroup(resource);
-        if (
-            groupId !== null &&
-            resource.apiVersion === "networking.k8s.io/v1" &&
-            resource.kind === "Ingress"
-        ) {
-            for (const tlsItem of (resource as any)?.spec?.tls ?? []) {
-                if (tlsItem.secretName) {
-                    relatedResourceGroupIds[
-                        `v1:Secret:${resource.metadata.namespace}:${tlsItem.secretName}`
-                    ] = groupId;
-                }
-            }
-        }
-        if (groupId !== null) {
-            const serviceAccount =
-                (resource as any)?.spec?.template?.spec?.serviceAccount ??
-                (resource as any)?.spec?.template?.spec?.serviceAccountName;
-            if (serviceAccount) {
-                relatedResourceGroupIds[
-                    `v1:ServiceAccount:${resource.metadata.namespace}:${serviceAccount}`
-                ] = groupId;
-            }
-        }
-    }
-
-    return Object.entries(groupInfo).map(([id, info]) => {
-        let title = info.title;
-        if (
-            namespacesByTitle[info.title] &&
-            Object.values(namespacesByTitle[info.title]).length > 1
-        ) {
-            title += ` (${info.namespace})`;
-        }
-        return {
-            id,
-            title,
-            contains(resource) {
-                return findPodSetGroup(resource) === id;
+            updateCoalesceInterval: 100,
+            onWatchError(error) {
+                console.error("Watch error: ", error);
             },
-            sortOrder: 0,
-            shouldDefaultExpand: true,
+        },
+        [specs]
+    );
+
+    const groupProcessor = useMemo(
+        () =>
+            createGroupProcessor(
+                combineGroupings(helmGroup, basicGroup),
+                basicPostGroup
+            ),
+        []
+    );
+
+    const applyValue = useCallback(
+        (oldValue: WorkloadsStoreValue, resources: K8sListWatchStoreValue) => {
+            const newValue = { ...oldValue };
+
+            newValue.isLoading = resources.isLoading;
+            newValue.identifiers = resources.identifiers;
+            newValue.resources = resources.resources;
+            newValue.showNamespace =
+                namespaces.mode === "all" || namespaces.selected.length > 1;
+
+            const ts = new Date().getTime();
+            const { groups, members, ungroupedItems } = groupProcessor(
+                resources.resources,
+                true
+            );
+            console.log("group calc", new Date().getTime() - ts);
+
+            newValue.groups = groups;
+            newValue.members = members;
+            newValue.ungroupedItems = ungroupedItems;
+
+            return reuseShallowEqualObject(oldValue, newValue);
+        },
+        [groupProcessor, namespaces]
+    );
+
+    const store = useStore();
+    useEffect(() => {
+        function listener(resources: K8sListWatchStoreValue) {
+            store.set((oldValue) => applyValue(oldValue, resources));
+        }
+        listener(resourcesStore.get());
+        resourcesStore.subscribe(listener);
+        return () => {
+            resourcesStore.unsubscribe(listener);
         };
-    });
-}
-
-function computeHelmGroups(resources: K8sObject[]): WorkloadResourceGroup[] {
-    const groupInfo: Record<
-        string,
-        {
-            instance: string;
-            namespace: string;
-        }
-    > = {};
-    const namespacesByInstance: Record<string, Record<string, string>> = {};
-    const relatedResourceGroupIds: Record<string, string> = {};
-
-    const findHelmGroup = (resource: K8sObject): string | null => {
-        if (
-            resource.metadata.annotations?.["meta.helm.sh/release-namespace"] &&
-            resource.metadata.annotations?.["meta.helm.sh/release-name"]
-        ) {
-            const namespace =
-                resource.metadata.annotations["meta.helm.sh/release-namespace"];
-            const instance =
-                resource.metadata.annotations?.["meta.helm.sh/release-name"];
-            if (!namespacesByInstance[instance]) {
-                namespacesByInstance[instance] = {};
-            }
-            namespacesByInstance[instance][namespace] = namespace;
-            const groupId = `${namespace}:${instance}`;
-
-            if (!groupInfo[groupId]) {
-                groupInfo[groupId] = { instance, namespace };
-            }
-            return groupId;
-        }
-        if (
-            resource.metadata.annotations?.[
-                "objectset.rio.cattle.io/owner-namespace"
-            ] &&
-            resource.metadata.annotations?.[
-                "objectset.rio.cattle.io/owner-name"
-            ]
-        ) {
-            const namespace =
-                resource.metadata.annotations[
-                    "objectset.rio.cattle.io/owner-namespace"
-                ];
-            const instance =
-                resource.metadata.annotations?.[
-                    "objectset.rio.cattle.io/owner-name"
-                ];
-            if (!namespacesByInstance[instance]) {
-                namespacesByInstance[instance] = {};
-            }
-            namespacesByInstance[instance][namespace] = namespace;
-            const groupId = `${namespace}:${instance}`;
-
-            if (!groupInfo[groupId]) {
-                groupInfo[groupId] = { instance, namespace };
-            }
-            return groupId;
-        }
-        if (
-            resource.metadata.namespace &&
-            resource.metadata.labels?.["app.kubernetes.io/instance"]
-        ) {
-            const namespace = resource.metadata.namespace;
-
-            // Keep track if we have the same instance name in multiple namespaces.
-            const instance =
-                resource.metadata.labels["app.kubernetes.io/instance"];
-            if (!namespacesByInstance[instance]) {
-                namespacesByInstance[instance] = {};
-            }
-            namespacesByInstance[instance][namespace] = namespace;
-            const groupId = `${namespace}:${instance}`;
-
-            if (!groupInfo[groupId]) {
-                groupInfo[groupId] = { instance, namespace };
-            }
-            return groupId;
-        }
-        const relatedResourceKey = `${resource.apiVersion}:${resource.kind}:${resource.metadata.namespace}:${resource.metadata.name}`;
-        if (relatedResourceGroupIds[relatedResourceKey]) {
-            return relatedResourceGroupIds[relatedResourceKey];
-        }
-        if (
-            resource.metadata.annotations?.[
-                "kubernetes.io/service-account.name"
-            ]
-        ) {
-            const relatedServiceAccountKey = `v1:ServiceAccount:${resource.metadata.namespace}:${resource.metadata.annotations["kubernetes.io/service-account.name"]}`;
-            if (relatedResourceGroupIds[relatedServiceAccountKey]) {
-                return relatedResourceGroupIds[relatedServiceAccountKey];
-            }
-        }
-        return null;
-    };
-
-    for (const resource of resources) {
-        const groupId = findHelmGroup(resource);
-        if (
-            groupId !== null &&
-            resource.apiVersion === "networking.k8s.io/v1" &&
-            resource.kind === "Ingress"
-        ) {
-            for (const tlsItem of (resource as any)?.spec?.tls ?? []) {
-                if (tlsItem.secretName) {
-                    relatedResourceGroupIds[
-                        `v1:Secret:${resource.metadata.namespace}:${tlsItem.secretName}`
-                    ] = groupId;
-                }
-            }
-        }
-        if (groupId !== null) {
-            const serviceAccount =
-                (resource as any)?.spec?.template?.spec?.serviceAccount ??
-                (resource as any)?.spec?.template?.spec?.serviceAccountName;
-            if (serviceAccount) {
-                relatedResourceGroupIds[
-                    `v1:ServiceAccount:${resource.metadata.namespace}:${serviceAccount}`
-                ] = groupId;
-            }
-        }
-    }
-
-    return Object.entries(groupInfo).map(([id, info]) => {
-        let title = info.instance;
-        if (
-            namespacesByInstance[info.instance] &&
-            Object.values(namespacesByInstance[info.instance]).length > 1
-        ) {
-            title += ` (${info.namespace})`;
-        }
-        return {
-            id,
-            title,
-            contains(resource) {
-                return findHelmGroup(resource) === id;
-            },
-            sortOrder: 0,
-            shouldDefaultExpand: true,
-        };
-    });
+    }, [resourcesStore, store]);
+    // TODO
 }
 
 const GroupedResourcesOverview: React.FC<{}> = () => {
     const groups = useStoreValue((value) => value.groups);
-    const isAnythingLoading = useStoreValue((value) =>
-        Object.values(value.allResourcesByType).some((r) => r.isLoading)
+    const hasUngrouped = useStoreValue(
+        (value) => value.ungroupedItems.size > 0
     );
+    const isLoading = useStoreValue((value) => value.isLoading);
+
+    // TODO: two groups with the same name in different namespaces should have a suffix
+    const fullGroupsList: ResourceGroup[] = useMemo(() => {
+        if (hasUngrouped) {
+            return [...Object.values(groups), otherGroup];
+        }
+        return Object.values(groups);
+    }, [groups, hasUngrouped]);
 
     const sortedGroups = useMemo(
         () =>
-            Object.values(groups).sort((a, b) => {
+            fullGroupsList.sort((a, b) => {
                 const aSortOrder = a.sortOrder ?? 0;
                 const bSortOrder = b.sortOrder ?? 0;
                 if (aSortOrder !== bSortOrder) {
@@ -735,7 +265,7 @@ const GroupedResourcesOverview: React.FC<{}> = () => {
                 }
                 return k8sSmartCompare(a.title, b.title);
             }),
-        [groups]
+        [fullGroupsList]
     );
 
     const { query } = useAppSearch();
@@ -751,12 +281,14 @@ const GroupedResourcesOverview: React.FC<{}> = () => {
     );
 
     const getSelectedObjects = useCallback(() => {
-        const { selectedResourceKeys, allResourcesByType } = store.get();
-        return Object.values(allResourcesByType).flatMap((group) =>
-            group.resources.filter((r) =>
-                selectedResourceKeys.has(toK8sObjectIdentifierString(r))
-            )
-        );
+        // TODO
+        return [];
+        // const { selectedResourceKeys, allResourcesByType } = store.get();
+        // return Object.values(allResourcesByType).flatMap((group) =>
+        //     group.resources.filter((r) =>
+        //         selectedResourceKeys.has(toK8sObjectIdentifierString(r))
+        //     )
+        // );
     }, [store]);
 
     return (
@@ -765,12 +297,12 @@ const GroupedResourcesOverview: React.FC<{}> = () => {
                 {filteredGroups.map((group) => (
                     <WorkloadGroup groupId={group.id} key={group.id} />
                 ))}
-                {filteredGroups.length === 0 && !isAnythingLoading && (
+                {filteredGroups.length === 0 && !isLoading && (
                     <Box>
                         <Text color="gray">No workloads selected.</Text>
                     </Box>
                 )}
-                {isAnythingLoading && (
+                {isLoading && (
                     <HStack justifyContent="center" py={10}>
                         <Spinner />
                     </HStack>
@@ -788,7 +320,11 @@ const WorkloadGroup: React.FC<{
     const shouldDefaultExpandGroups = useStoreValue(
         (value) => value.shouldDefaultExpandGroups
     );
-    const group = useStoreValue((value) => value.groups[groupId], [groupId]);
+    const group = useStoreValue(
+        (value) =>
+            groupId === otherGroup.id ? otherGroup : value.groups[groupId],
+        [groupId]
+    );
     const showNamespace = useStoreValue((value) => value.showNamespace);
 
     const groupEdgeBg = useColorModeValue("gray.100", "gray.800");
@@ -871,6 +407,10 @@ const WorkloadGroup: React.FC<{
         store,
     ]);
 
+    if (!group) {
+        return null;
+    }
+
     return (
         <VStack
             key={group.id}
@@ -941,24 +481,33 @@ type WorkloadResourceSectionProps = {
     groupId: string;
 };
 
-const emptyResourcesList: K8sObject[] = [];
-
 const WorkloadResourceSection: React.FC<WorkloadResourceSectionProps> =
     React.memo((props) => {
         const { title, showNamespace, typeKey, groupId } = props;
 
-        const isLoading = useStoreValue(
-            (value) => value.allResourcesByType[typeKey]?.isLoading ?? true,
-            [typeKey]
-        );
         const resources = useStoreValue(
-            (value) =>
-                value.groupSubResources[`${groupId}:${typeKey}`] ??
-                emptyResourcesList,
+            shallowEqualWrap((workloads) => {
+                // TODO: this still runs on every group whenever a group changes. That should be unnecessary
+                const groupResourcesKeysSet =
+                    groupId === otherGroup.id
+                        ? workloads.ungroupedItems
+                        : workloads.members[groupId] ?? new Set();
+                const groupResources = [...groupResourcesKeysSet].map(
+                    (key) => workloads.resources[key]
+                );
+                if (groupId === "_") {
+                    console.log(groupResources.length);
+                }
+                // Now filter these resources by type.
+                const { apiVersion, kind } = resourceTypes[typeKey];
+                return groupResources.filter(
+                    (res) => res.apiVersion === apiVersion && res.kind === kind
+                );
+            }),
             [groupId, typeKey]
         );
 
-        if (!isLoading && resources.length === 0) {
+        if (resources.length === 0) {
             return null;
         }
 
@@ -967,17 +516,10 @@ const WorkloadResourceSection: React.FC<WorkloadResourceSectionProps> =
                 <Heading fontSize="sm" px={4}>
                     {title}
                 </Heading>
-                {isLoading && (
-                    <Box px={4}>
-                        <Spinner color="gray" size="sm" />
-                    </Box>
-                )}
-                {!isLoading && (
-                    <WorkloadResourceList
-                        showNamespace={showNamespace}
-                        resources={resources}
-                    />
-                )}
+                <WorkloadResourceList
+                    showNamespace={showNamespace}
+                    resources={resources}
+                />
             </VStack>
         );
     });

@@ -54,13 +54,32 @@ export type PostGrouping<T> = (object: T) => {
     seek?: string[] | undefined;
 };
 
-export type GroupProcessor<T, U> = (objects: Record<string, T | undefined>) => {
+export function combineGroupings<T, U extends { id: string } = { id: string }>(
+    ...groupings: Array<Grouping<T, U>>
+): Grouping<T, U> {
+    return (obj) => {
+        for (const grouping of groupings) {
+            const group = grouping(obj);
+            if (group) {
+                return group;
+            }
+        }
+    };
+}
+
+export type BatchGrouping<U> = {
     groups: Record<string, U>;
     members: Record<string, Set<string>>;
+    ungroupedItems: Set<string>;
 };
 
+export type GroupProcessor<T, U> = (
+    objects: Record<string, T | undefined>,
+    removeOmittedObjects?: boolean
+) => BatchGrouping<U>;
+
 export function createGroupProcessor<
-    T,
+    T extends object,
     U extends { id: string } = { id: string }
 >(
     grouping: Grouping<T, U>,
@@ -68,9 +87,13 @@ export function createGroupProcessor<
 ): GroupProcessor<T, U> {
     let groups: Record<string, U> = {};
     let members: Record<string, Set<string>> = {};
-    let result = { groups, members };
+    let ungroupedItems: Set<string> = new Set();
+    let result = { groups, members, ungroupedItems };
 
     const groupsByKey: Record<string, string> = {};
+
+    // Weakly hold current objects to check for changes.
+    const currentObjects: Record<string, T> = {};
 
     const classifyByObjectKey: Record<
         string,
@@ -80,10 +103,24 @@ export function createGroupProcessor<
     const classifyByTag: Record<string, (obj: T) => string | undefined> = {};
     const seekersByTag: Record<string, Record<string, T>> = {};
 
-    return (objects: Record<string, T | undefined>) => {
+    return (
+        inputObjects: Record<string, T | undefined>,
+        removeOmittedObjects = false
+    ) => {
+        let objects = inputObjects;
+        if (removeOmittedObjects) {
+            objects = { ...objects };
+            for (const k of Object.keys(currentObjects)) {
+                if (!(k in objects)) {
+                    objects[k] = undefined;
+                }
+            }
+        }
+
         const retrySeekersForTags: Set<string> = new Set();
         const initMembers = members;
         const initGroups = groups;
+        const initUngroupedItems = ungroupedItems;
         function updateMembers() {
             if (members === initMembers) {
                 members = { ...members };
@@ -100,6 +137,11 @@ export function createGroupProcessor<
                 members[groupId] = new Set(members[groupId]);
             }
         }
+        function updateUngroupedItems() {
+            if (ungroupedItems === initUngroupedItems) {
+                ungroupedItems = new Set(ungroupedItems);
+            }
+        }
 
         for (const [key, object] of Object.entries(objects)) {
             if (object === undefined) {
@@ -114,14 +156,23 @@ export function createGroupProcessor<
                         delete members[groupId];
                     }
                 } else {
+                    updateUngroupedItems();
+                    ungroupedItems.delete(key);
+
                     // No longer a seeker, that much is for sure.
                     for (const seekers of Object.values(seekersByTag)) {
                         delete seekers[key];
                     }
                 }
+                delete currentObjects[key];
                 delete classifyByObjectKey[key];
                 delete groupsByKey[key];
             } else {
+                if (currentObjects[key] === object) {
+                    continue;
+                }
+                currentObjects[key] = object;
+
                 const group = grouping(object);
                 if (group !== undefined) {
                     // Add object to normal grouping.
@@ -135,6 +186,10 @@ export function createGroupProcessor<
                     if (!members[group.id].has(key)) {
                         updateMembersOf(group.id);
                         members[group.id].add(key);
+                    }
+                    if (ungroupedItems.has(key)) {
+                        updateUngroupedItems();
+                        ungroupedItems.delete(key);
                     }
 
                     // See if this object is able to accept others into the group through post-grouping.
@@ -213,7 +268,14 @@ export function createGroupProcessor<
                                     delete seekers[key];
                                 }
                             }
+                            if (ungroupedItems.has(key)) {
+                                updateUngroupedItems();
+                                ungroupedItems.delete(key);
+                            }
                         } else {
+                            updateUngroupedItems();
+                            ungroupedItems.add(key);
+
                             for (const tag of postGroup.seek) {
                                 if (!seekersByTag[tag]) {
                                     seekersByTag[tag] = { [key]: object };
@@ -222,6 +284,9 @@ export function createGroupProcessor<
                                 }
                             }
                         }
+                    } else {
+                        updateUngroupedItems();
+                        ungroupedItems.add(key);
                     }
                 }
             }
@@ -249,13 +314,21 @@ export function createGroupProcessor<
                                 delete seekers[key];
                             }
                         }
+                        if (ungroupedItems.has(key)) {
+                            updateUngroupedItems();
+                            ungroupedItems.delete(key);
+                        }
                     }
                 }
             }
         }
 
-        if (members !== initMembers || groups !== initGroups) {
-            result = { groups, members };
+        if (
+            members !== initMembers ||
+            groups !== initGroups ||
+            ungroupedItems !== initUngroupedItems
+        ) {
+            result = { groups, members, ungroupedItems };
         }
 
         return result;
