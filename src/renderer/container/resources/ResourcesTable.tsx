@@ -10,15 +10,19 @@ import {
     Thead,
     Tr,
 } from "@chakra-ui/react";
-import React, { ChangeEvent, useCallback, useMemo } from "react";
+import React, { ChangeEvent, useCallback, useMemo, useRef } from "react";
 import {
     K8sObject,
     K8sResourceTypeIdentifier,
 } from "../../../common/k8s/client";
 import { reuseShallowEqualArray } from "../../../common/util/deep-equal";
+import { applyMutations, difference } from "../../../common/util/set";
 import { k8sSmartCompare } from "../../../common/util/sort";
 import { ScrollBoxHorizontalScroll } from "../../component/main/ScrollBox";
 import { Selectable } from "../../component/main/Selectable";
+import { useGuaranteedMemo } from "../../hook/guaranteed-memo";
+import { useModifierKeyRef } from "../../hook/keyboard";
+import { createMultiSelectProcessor } from "../../hook/multi-select";
 import { generateBadges, ResourceBadge } from "../../k8s/badges";
 import {
     generateResourceDetails,
@@ -45,7 +49,7 @@ export type ResourceTableProps = {
 
 export const ResourcesTable: React.FC<ResourceTableProps> = (props) => {
     const {
-        onChangeSelectedKeys,
+        onChangeSelectedKeys: baseOnChangeSelectedKeys,
         resourcesStore,
         selectedKeysStore,
         showNamespace,
@@ -66,6 +70,43 @@ export const ResourcesTable: React.FC<ResourceTableProps> = (props) => {
                 prevReturnValue ?? []
             );
         }
+    );
+
+    const multiSelectProcessor = useGuaranteedMemo(
+        () => createMultiSelectProcessor(keys),
+        [keys]
+    );
+    const prevSelectionRef = useRef<Set<string>>(new Set());
+    const shiftKeyRef = useModifierKeyRef("Shift");
+    const onChangeSelectedKeys = useCallback(
+        (keys: Record<string, boolean>) => {
+            const newSelection = applyMutations(selectedKeysStore.get(), keys);
+            const expandedSelection = multiSelectProcessor(
+                newSelection,
+                selectedKeysStore.get(),
+                shiftKeyRef.current
+            );
+            const expandedKeys = { ...keys };
+            for (const addedKey of difference(
+                expandedSelection,
+                newSelection
+            )) {
+                expandedKeys[addedKey] = true;
+            }
+            for (const removedKey of difference(
+                newSelection,
+                expandedSelection
+            )) {
+                expandedKeys[removedKey] = false;
+            }
+            baseOnChangeSelectedKeys(expandedKeys);
+        },
+        [
+            baseOnChangeSelectedKeys,
+            prevSelectionRef,
+            selectedKeysStore,
+            shiftKeyRef.current,
+        ]
     );
 
     const numSelectedKeys = useProvidedStoreValue(
