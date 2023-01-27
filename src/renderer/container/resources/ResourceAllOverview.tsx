@@ -120,10 +120,12 @@ const InnerResourceTypeOverview: React.FC<{
         if (!resourceTypeInfo) {
             return [];
         }
+        const selectNamespaces =
+            namespaces.mode === "selected" && resourceTypeInfo.namespaced;
         return [
             {
                 ...resourceType,
-                ...(namespaces.mode === "selected"
+                ...(selectNamespaces
                     ? { namespaces: namespaces.selected }
                     : {}),
             },
