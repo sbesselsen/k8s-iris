@@ -29,7 +29,10 @@ export type UseStore<T, S extends Store<T>> = (() => S) & {
 
 export type UseStoreValue<T> = {
     (): T;
-    <U>(selector: (data: T) => U, deps?: any[]): U;
+    <U>(
+        selector: (value: T, prevValue?: T, prevReturnValue?: U) => U,
+        deps?: any[]
+    ): U;
 };
 
 export function transformUseStoreValue<T, R>(
@@ -91,7 +94,7 @@ export function createStoreHooks<T, S extends Store<T>>(
     useStore.Context = StoreContext;
 
     const useStoreValue: UseStoreValue<T> = <U>(
-        selector?: (data: T) => U,
+        selector?: (value: T, prevValue?: T, prevReturnValue?: U) => U,
         deps?: any[]
     ) => {
         const store = useStore();
@@ -128,25 +131,44 @@ export function create<T>(defaultValue: T): StoreComponents<T, Store<T>> {
 export function useProvidedStoreValue<T>(store: ReadableStore<T>): T;
 export function useProvidedStoreValue<T, U>(
     store: ReadableStore<T>,
-    selector: (data: T) => U,
+    selector: (value: T, prevValue?: T, prevReturnValue?: U) => U,
     deps?: any[]
 ): U;
 export function useProvidedStoreValue<T, U>(
     store: ReadableStore<T>,
-    selector?: (data: T) => U,
+    selector?: (value: T, prevValue?: T, prevReturnValue?: U) => U,
     deps?: any
 ): T | U {
     const transformValue = useCallback(
-        (value: T) => (selector ? selector(value) : value),
+        (value: T, prevValue?: T, prevReturnValue?: T | U) =>
+            selector
+                ? selector(value, prevValue, prevReturnValue as U | undefined)
+                : value,
         deps ?? []
     );
+
+    let prevValue: T = store.get();
+    let prevReturnValue: T | U | undefined;
+
     return useSubscribedState<T | U>(
-        () => transformValue(store.get()),
+        () => {
+            prevValue = store.get();
+            const returnValue = transformValue(prevValue);
+            prevReturnValue = returnValue;
+            return returnValue;
+        },
         (set) => {
-            set(transformValue(store.get()));
             const listener = (value: T) => {
-                set(transformValue(value));
+                const returnValue = transformValue(
+                    value,
+                    prevValue,
+                    prevReturnValue
+                );
+                prevValue = value;
+                prevReturnValue = returnValue;
+                set(returnValue);
             };
+            listener(store.get());
             store.subscribe(listener);
             return () => {
                 store.unsubscribe(listener);

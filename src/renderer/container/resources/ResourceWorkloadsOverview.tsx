@@ -205,7 +205,7 @@ function useMonitorWorkloads() {
             newValue.members = members;
             newValue.ungroupedItems = ungroupedItems;
 
-            return reuseShallowEqualObject(oldValue, newValue);
+            return reuseShallowEqualObject(newValue, oldValue);
         },
         [groupProcessor, namespaces]
     );

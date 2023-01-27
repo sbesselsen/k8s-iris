@@ -15,7 +15,7 @@ import {
     K8sObject,
     K8sResourceTypeIdentifier,
 } from "../../../common/k8s/client";
-import { shallowEqualWrap } from "../../../common/util/deep-equal";
+import { reuseShallowEqualArray } from "../../../common/util/deep-equal";
 import { k8sSmartCompare } from "../../../common/util/sort";
 import { ScrollBoxHorizontalScroll } from "../../component/main/ScrollBox";
 import { Selectable } from "../../component/main/Selectable";
@@ -55,14 +55,17 @@ export const ResourcesTable: React.FC<ResourceTableProps> = (props) => {
 
     const keys: string[] = useProvidedStoreValue(
         resourcesStore,
-        shallowEqualWrap(({ identifiers, resources }) =>
-            [...identifiers].sort((k1, k2) =>
-                k8sSmartCompare(
-                    resources[k1].metadata.name,
-                    resources[k2].metadata.name
-                )
-            )
-        )
+        ({ identifiers, resources }, _prevValue, prevReturnValue) => {
+            return reuseShallowEqualArray(
+                [...identifiers].sort((k1, k2) =>
+                    k8sSmartCompare(
+                        resources[k1].metadata.name,
+                        resources[k2].metadata.name
+                    )
+                ),
+                prevReturnValue ?? []
+            );
+        }
     );
 
     const numSelectedKeys = useProvidedStoreValue(
