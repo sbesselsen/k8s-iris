@@ -16,7 +16,11 @@ import {
     K8sResourceTypeIdentifier,
 } from "../../../common/k8s/client";
 import { reuseShallowEqualArray } from "../../../common/util/deep-equal";
-import { applyMutations, difference } from "../../../common/util/set";
+import {
+    applyMutations,
+    difference,
+    intersection,
+} from "../../../common/util/set";
 import { k8sSmartCompare } from "../../../common/util/sort";
 import { ScrollBoxHorizontalScroll } from "../../component/main/ScrollBox";
 import { Selectable } from "../../component/main/Selectable";
@@ -80,6 +84,8 @@ export const ResourcesTable: React.FC<ResourceTableProps> = (props) => {
     const shiftKeyRef = useModifierKeyRef("Shift");
     const onChangeSelectedKeys = useCallback(
         (keys: Record<string, boolean>) => {
+            const scopedIdentifiers = resourcesStore.get().identifiers;
+
             const newSelection = applyMutations(selectedKeysStore.get(), keys);
             const expandedSelection = multiSelectProcessor(
                 newSelection,
@@ -93,9 +99,9 @@ export const ResourcesTable: React.FC<ResourceTableProps> = (props) => {
             )) {
                 expandedKeys[addedKey] = true;
             }
-            for (const removedKey of difference(
-                newSelection,
-                expandedSelection
+            for (const removedKey of intersection(
+                difference(newSelection, expandedSelection),
+                scopedIdentifiers
             )) {
                 expandedKeys[removedKey] = false;
             }
@@ -104,6 +110,7 @@ export const ResourcesTable: React.FC<ResourceTableProps> = (props) => {
         [
             baseOnChangeSelectedKeys,
             prevSelectionRef,
+            resourcesStore,
             selectedKeysStore,
             shiftKeyRef.current,
         ]
