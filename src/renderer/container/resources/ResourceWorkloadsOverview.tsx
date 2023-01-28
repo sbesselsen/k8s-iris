@@ -67,17 +67,22 @@ const resourceTypes: Record<
         kind: "Deployment",
     },
     statefulSets: {
-        title: "StatefulSets",
+        title: "Statefulsets",
         apiVersion: "apps/v1",
         kind: "StatefulSet",
     },
     daemonSets: {
-        title: "DaemonSets",
+        title: "Daemonsets",
         apiVersion: "apps/v1",
         kind: "DaemonSet",
     },
+    cronJobs: {
+        title: "Cronjobs",
+        apiVersion: "batch/v1",
+        kind: "CronJob",
+    },
     persistentVolumeClaims: {
-        title: "Persistent Volume Claims",
+        title: "Persistent volume claims",
         apiVersion: "v1",
         kind: "PersistentVolumeClaim",
     },
@@ -87,7 +92,7 @@ const resourceTypes: Record<
         kind: "Ingress",
     },
     services: { title: "Services", apiVersion: "v1", kind: "Service" },
-    configMaps: { title: "ConfigMaps", apiVersion: "v1", kind: "ConfigMap" },
+    configMaps: { title: "Configmaps", apiVersion: "v1", kind: "ConfigMap" },
     secrets: { title: "Secrets", apiVersion: "v1", kind: "Secret" },
 };
 
