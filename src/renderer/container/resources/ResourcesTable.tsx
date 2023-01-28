@@ -38,7 +38,11 @@ import {
     ResourceDetail,
 } from "../../k8s/details";
 import { formatDeveloperDateTime } from "../../util/date";
-import { ReadableStore, useProvidedStoreValue } from "../../util/state";
+import {
+    createStore,
+    ReadableStore,
+    useProvidedStoreValue,
+} from "../../util/state";
 import { ResourceEditorLink } from "./ResourceEditorLink";
 
 export type ResourcesTableStoreValue = {
@@ -46,19 +50,25 @@ export type ResourcesTableStoreValue = {
     resources: Record<string, K8sObject>;
 };
 
+const emptySelectedKeysStore = createStore(new Set<string>());
+const emptyOnChangeSelectedKeys = () => {};
+
 export type ResourceTableProps = {
-    selectedKeysStore: ReadableStore<Set<string>>;
-    onChangeSelectedKeys: (keys: Record<string, boolean>) => void;
+    selectedKeysStore?: ReadableStore<Set<string>>;
+    onChangeSelectedKeys?: (keys: Record<string, boolean>) => void;
     resourcesStore: ReadableStore<ResourcesTableStoreValue>;
     showNamespace: boolean;
+    showSelect?: boolean;
 };
 
 export const ResourcesTable: React.FC<ResourceTableProps> = (props) => {
     const {
-        onChangeSelectedKeys: baseOnChangeSelectedKeys,
+        onChangeSelectedKeys:
+            baseOnChangeSelectedKeys = emptyOnChangeSelectedKeys,
         resourcesStore,
-        selectedKeysStore,
+        selectedKeysStore = emptySelectedKeysStore,
         showNamespace,
+        showSelect = true,
     } = props;
 
     const { query } = useAppSearch();
@@ -121,7 +131,7 @@ export const ResourcesTable: React.FC<ResourceTableProps> = (props) => {
             prevSelectionRef,
             resourcesStore,
             selectedKeysStore,
-            shiftKeyRef.current,
+            shiftKeyRef,
         ]
     );
 
@@ -204,15 +214,18 @@ export const ResourcesTable: React.FC<ResourceTableProps> = (props) => {
             >
                 <Thead>
                     <Tr>
-                        <Th ps={2} width="40px">
-                            <Checkbox
-                                colorScheme="gray"
-                                isIndeterminate={someResourcesSelected}
-                                isChecked={allResourcesSelected}
-                                onChange={onChangeSelectAll}
-                            />
-                        </Th>
-                        <Th ps={0} whiteSpace="nowrap">
+                        {showSelect && (
+                            <Th ps={2} width="40px">
+                                <Checkbox
+                                    colorScheme="gray"
+                                    isIndeterminate={someResourcesSelected}
+                                    isChecked={allResourcesSelected}
+                                    onChange={onChangeSelectAll}
+                                />
+                            </Th>
+                        )}
+
+                        <Th ps={showSelect ? 0 : 2} whiteSpace="nowrap">
                             Name
                         </Th>
                         {customColumns.map((col) => (
@@ -233,6 +246,7 @@ export const ResourcesTable: React.FC<ResourceTableProps> = (props) => {
                             customDetails={customDetails}
                             selectedKeysStore={selectedKeysStore}
                             onChangeSelectedKeys={onChangeSelectedKeys}
+                            showSelect={showSelect}
                             key={key}
                         />
                     ))}
@@ -248,6 +262,7 @@ type ResourcesTableRowProps = {
     resourcesStore: ReadableStore<ResourcesTableStoreValue>;
     resourceKey: string;
     showNamespace: boolean;
+    showSelect: boolean;
     customDetails: ResourceDetail[];
 };
 
@@ -259,6 +274,7 @@ const ResourcesTableRow: React.FC<ResourcesTableRowProps> = React.memo(
             resourcesStore,
             resourceKey,
             showNamespace,
+            showSelect,
             customDetails,
         } = props;
 
@@ -311,12 +327,18 @@ const ResourcesTableRow: React.FC<ResourcesTableRowProps> = React.memo(
         return (
             <>
                 <Tr>
-                    <Td {...commonTdProps} ps={2} verticalAlign="baseline">
-                        <Checkbox isChecked={isSelected} onChange={onChange} />
-                    </Td>
+                    {showSelect && (
+                        <Td {...commonTdProps} ps={2} verticalAlign="baseline">
+                            <Checkbox
+                                isChecked={isSelected}
+                                onChange={onChange}
+                            />
+                        </Td>
+                    )}
+
                     <Td
                         {...commonTdProps}
-                        ps={0}
+                        ps={showSelect ? 0 : 2}
                         verticalAlign="baseline"
                         userSelect="text"
                     >

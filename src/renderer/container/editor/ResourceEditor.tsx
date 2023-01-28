@@ -88,11 +88,11 @@ import {
     PortForwardStats,
     usePeriodStats,
 } from "../../component/k8s/PortForwardStats";
-import { useK8sAssociatedPods } from "../../k8s/associated-pods";
-import { Selectable } from "../../component/main/Selectable";
-import { ResourceEditorLink } from "../resources/ResourceEditorLink";
+import {
+    K8sAssociatedPodsStoreValue,
+    useK8sAssociatedPodsStore,
+} from "../../k8s/associated-pods";
 import { generateBadges, ResourceBadge } from "../../k8s/badges";
-import { formatDeveloperDateTime } from "../../util/date";
 import { isSetLike } from "../../../common/k8s/util";
 import {
     ContextMenuButton,
@@ -101,6 +101,8 @@ import {
 import { useContextMenu } from "../../hook/context-menu";
 import { ContextMenuTemplate } from "../../../common/contextmenu";
 import { ResourceActionButtons } from "../resources/ResourceActionButtons";
+import { ReadableStore, useProvidedStoreValue } from "../../util/state";
+import { ResourcesTable } from "../resources/ResourcesTable";
 
 export type ResourceEditorProps = {
     editorResource: K8sObjectIdentifier;
@@ -772,108 +774,35 @@ export const NewResourceEditor: React.FC<NewResourceEditorProps> = (props) => {
 
 const AssociatedPods: React.FC<{ object: K8sObject }> = (props) => {
     const { object } = props;
-    const { hasAssociatedPods, isLoadingAssociatedPods, associatedPods } =
-        useK8sAssociatedPods(object);
 
+    const store = useK8sAssociatedPodsStore(object);
+    return <AssociatedPodsInner store={store} />;
+};
+
+const AssociatedPodsInner: React.FC<{
+    store: ReadableStore<K8sAssociatedPodsStoreValue>;
+}> = React.memo((props) => {
+    const { store } = props;
+    const hasAssociatedPods = useProvidedStoreValue(
+        store,
+        (v) => v.hasAssociatedPods
+    );
     if (!hasAssociatedPods) {
         return null;
     }
-
     return (
-        <VStack alignItems="stretch">
+        <>
             <Heading size="sm">Pods</Heading>
-            {isLoadingAssociatedPods && <Spinner />}
-            {!isLoadingAssociatedPods && associatedPods.length === 0 && (
-                <Text fontSize="sm" color="gray">
-                    No associated pods.
-                </Text>
-            )}
-            {!isLoadingAssociatedPods && associatedPods.length > 0 && (
-                <Table
-                    size="sm"
-                    sx={{ tableLayout: "fixed" }}
-                    width="100%"
-                    maxWidth="1000px"
-                >
-                    <Thead>
-                        <Tr>
-                            <Th whiteSpace="nowrap" ps={0}>
-                                Name
-                            </Th>
-                            <Th width="150px">Created</Th>
-                        </Tr>
-                    </Thead>
-                    <Tbody>
-                        {associatedPods.map((pod) => (
-                            <AssociatedPodRow
-                                key={pod.metadata.name}
-                                object={pod}
-                            />
-                        ))}
-                    </Tbody>
-                </Table>
-            )}
-        </VStack>
+            <Box mx={-4}>
+                <ResourcesTable
+                    showNamespace={false}
+                    showSelect={false}
+                    resourcesStore={store}
+                />
+            </Box>
+        </>
     );
-};
-
-const AssociatedPodRow: React.FC<{ object: K8sObject }> = (props) => {
-    const { object } = props;
-    const creationDate = new Date((object as any).metadata.creationTimestamp);
-    const isDeleting = Boolean((object as any).metadata.deletionTimestamp);
-
-    const badges: ResourceBadge[] = useMemo(
-        () => generateBadges(object),
-        [object]
-    );
-
-    return (
-        <Tr>
-            <Td ps={0} userSelect="text">
-                <HStack p={0}>
-                    <Selectable
-                        display="block"
-                        cursor="inherit"
-                        textColor={isDeleting ? "gray.500" : ""}
-                        isTruncated
-                    >
-                        <ResourceEditorLink
-                            userSelect="text"
-                            editorResource={object}
-                        >
-                            {object.metadata.name}
-                        </ResourceEditorLink>
-                    </Selectable>
-                    {badges.map((badge) => {
-                        const { id, text, variant, details, badgeProps } =
-                            badge;
-                        const colorScheme = {
-                            positive: "green",
-                            negative: "red",
-                            changing: "orange",
-                            other: "gray",
-                        }[variant ?? "other"];
-                        return (
-                            <Badge
-                                key={id}
-                                colorScheme={colorScheme}
-                                title={details ?? text}
-                                {...badgeProps}
-                            >
-                                {text}
-                            </Badge>
-                        );
-                    })}
-                </HStack>
-            </Td>
-            <Td>
-                <Selectable display="block" isTruncated>
-                    {formatDeveloperDateTime(creationDate)}
-                </Selectable>
-            </Td>
-        </Tr>
-    );
-};
+});
 
 const PortForwardingMenu: React.FC<{ object: K8sObject }> = (props) => {
     const { object } = props;

@@ -57,13 +57,19 @@ export function shallowEqualObjects(a: any, b: any): boolean {
 
 export function reuseShallowEqualObject<
     T extends Record<string | number | symbol, unknown>
->(newObject: T, oldObject: T): T {
+>(newObject: T, oldObject: T | undefined | null): T {
+    if (oldObject === undefined || oldObject === null) {
+        return newObject;
+    }
     return shallowEqualObjects(oldObject, newObject) ? oldObject : newObject;
 }
 
 export function reuseShallowEqualArray<T extends any[]>(
     newArray: T,
-    oldArray: T
+    oldArray: T | undefined | null
 ): T {
+    if (oldArray === undefined || oldArray === null) {
+        return newArray;
+    }
     return shallowEqualArrays(oldArray, newArray) ? oldArray : newArray;
 }
