@@ -181,7 +181,9 @@ export const basicPostGroup: PostGrouping<K8sObject> = (resource) => {
                 );
             };
             for (const [k, v] of Object.entries(labels)) {
-                customAccepters[`pvc:${k}=${v}`] = accept;
+                customAccepters[
+                    `pvc:${resource.metadata.namespace}:${k}=${v}`
+                ] = accept;
             }
         }
         return {
@@ -197,7 +199,7 @@ export const basicPostGroup: PostGrouping<K8sObject> = (resource) => {
         // Try to hook up to our volumeTemplate.
         seek.push(
             ...Object.entries(resource.metadata.labels ?? {}).map(
-                ([k, v]) => `pvc:${k}=${v}`
+                ([k, v]) => `pvc:${resource.metadata.namespace}:${k}=${v}`
             )
         );
     }
