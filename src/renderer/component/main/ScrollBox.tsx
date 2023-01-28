@@ -38,7 +38,7 @@ export const ScrollBox = forwardRef<ScrollBoxProps, "div">((props, ref) => {
     );
     const updateAttachedToolbarSpace = useCallback(() => {
         setAttachedToolbarSpace(
-            (space) =>
+            () =>
                 attachedToolbarRef.current?.offsetHeight ??
                 defaultAttachedToolbarSpace
         );

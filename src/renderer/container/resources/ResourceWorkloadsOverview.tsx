@@ -67,7 +67,7 @@ const resourceTypes: Record<
         kind: "Deployment",
     },
     statefulSets: {
-        title: "Statefulsets",
+        title: "Stateful sets",
         apiVersion: "apps/v1",
         kind: "StatefulSet",
     },
@@ -124,9 +124,38 @@ export const ResourceWorkloadsOverview: React.FC<{}> = () => {
     useMonitorWorkloads();
 
     return (
-        <ScrollBox flex="1 0 0" attachedToolbar={<ResourceWorkloadsToolbar />}>
-            <GroupedResourcesOverview />
-        </ScrollBox>
+        <VStack
+            flex="1 0 0"
+            alignItems="stretch"
+            position="relative"
+            spacing={0}
+        >
+            <ResourceWorkloadsSpinner />
+            <ScrollBox
+                flex="1 0 0"
+                attachedToolbar={<ResourceWorkloadsToolbar />}
+            >
+                <GroupedResourcesOverview />
+            </ScrollBox>
+        </VStack>
+    );
+};
+
+const ResourceWorkloadsSpinner: React.FC<{}> = () => {
+    const isLoading = useStoreValue((v) => v.isLoading);
+    if (!isLoading) {
+        return null;
+    }
+    return (
+        <Box
+            position="absolute"
+            pointerEvents="none"
+            right={6}
+            bottom={4}
+            zIndex={2}
+        >
+            <Spinner size="md" label="Loading all workloads..." />
+        </Box>
     );
 };
 
@@ -296,11 +325,6 @@ const GroupedResourcesOverview: React.FC<{}> = () => {
                     <Box>
                         <Text color="gray">No workloads selected.</Text>
                     </Box>
-                )}
-                {isLoading && (
-                    <HStack justifyContent="center" py={10}>
-                        <Spinner />
-                    </HStack>
                 )}
             </VStack>
         </ResourceContextMenu>
