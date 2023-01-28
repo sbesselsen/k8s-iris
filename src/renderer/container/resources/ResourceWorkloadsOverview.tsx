@@ -235,13 +235,20 @@ const GroupedResourcesOverview: React.FC<{}> = () => {
     );
     const isLoading = useStoreValue((value) => value.isLoading);
 
-    // TODO: two groups with the same name in different namespaces should have a suffix
     const fullGroupsList: ResourceGroup[] = useMemo(() => {
         if (hasUngrouped) {
             return [...Object.values(groups), otherGroup];
         }
         return Object.values(groups);
     }, [groups, hasUngrouped]);
+
+    const groupTitlesCount = useMemo(() => {
+        const count: Record<string, number> = {};
+        for (const group of fullGroupsList) {
+            count[group.title] = (count[group.title] ?? 0) + 1;
+        }
+        return count;
+    }, [fullGroupsList]);
 
     const sortedGroups = useMemo(
         () =>
@@ -279,7 +286,11 @@ const GroupedResourcesOverview: React.FC<{}> = () => {
         <ResourceContextMenu objects={getSelectedObjects}>
             <VStack alignItems="stretch" spacing={2}>
                 {filteredGroups.map((group) => (
-                    <WorkloadGroup groupId={group.id} key={group.id} />
+                    <WorkloadGroup
+                        qualifyTitle={(groupTitlesCount[group.title] ?? 1) > 1}
+                        groupId={group.id}
+                        key={group.id}
+                    />
                 ))}
                 {filteredGroups.length === 0 && !isLoading && (
                     <Box>
@@ -298,8 +309,9 @@ const GroupedResourcesOverview: React.FC<{}> = () => {
 
 const WorkloadGroup: React.FC<{
     groupId: string;
+    qualifyTitle: boolean;
 }> = (props) => {
-    const { groupId } = props;
+    const { groupId, qualifyTitle } = props;
 
     const shouldDefaultExpandGroups = useStoreValue(
         (value) => value.shouldDefaultExpandGroups
@@ -431,6 +443,9 @@ const WorkloadGroup: React.FC<{
                     }
                 >
                     {group.title}
+                    {qualifyTitle && group.titleQualifier
+                        ? ` (${group.titleQualifier})`
+                        : ""}
                 </Button>
             </Box>
             <Collapse animateOpacity in={isExpanded}>
