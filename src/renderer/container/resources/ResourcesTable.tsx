@@ -21,9 +21,11 @@ import {
     difference,
     intersection,
 } from "../../../common/util/set";
+import { resourceMatch } from "../../../common/util/search";
 import { k8sSmartCompare } from "../../../common/util/sort";
 import { ScrollBoxHorizontalScroll } from "../../component/main/ScrollBox";
 import { Selectable } from "../../component/main/Selectable";
+import { useAppSearch } from "../../context/search";
 import { useGuaranteedMemo } from "../../hook/guaranteed-memo";
 import { useModifierKeyRef } from "../../hook/keyboard";
 import { createMultiSelectProcessor } from "../../hook/multi-select";
@@ -59,13 +61,19 @@ export const ResourcesTable: React.FC<ResourceTableProps> = (props) => {
         showNamespace,
     } = props;
 
-    // TODO: multi-select, in some better way too
+    const { query } = useAppSearch();
 
     const keys: string[] = useProvidedStoreValue(
         resourcesStore,
         ({ identifiers, resources }, _prevValue, prevReturnValue) => {
+            let identifiersArray = [...identifiers];
+            if (query) {
+                identifiersArray = identifiersArray.filter((key) =>
+                    resourceMatch(query, resources[key])
+                );
+            }
             return reuseShallowEqualArray(
-                [...identifiers].sort((k1, k2) =>
+                identifiersArray.sort((k1, k2) =>
                     k8sSmartCompare(
                         resources[k1].metadata.name,
                         resources[k2].metadata.name
@@ -73,7 +81,8 @@ export const ResourcesTable: React.FC<ResourceTableProps> = (props) => {
                 ),
                 prevReturnValue ?? []
             );
-        }
+        },
+        [query]
     );
 
     const multiSelectProcessor = useGuaranteedMemo(
