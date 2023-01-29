@@ -129,6 +129,7 @@ export const ResourcesTable: React.FC<ResourceTableProps> = (props) => {
         [
             baseOnChangeSelectedKeys,
             prevSelectionRef,
+            multiSelectProcessor,
             resourcesStore,
             selectedKeysStore,
             shiftKeyRef,
