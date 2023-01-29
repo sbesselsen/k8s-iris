@@ -361,7 +361,6 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
                         <>
                             {shouldShowBackButton && onBackPressed && (
                                 <Button
-                                    variant="ghost"
                                     onClick={onBackPressed}
                                     leftIcon={<Icon as={AiFillCaretLeft} />}
                                 >
@@ -390,7 +389,6 @@ export const ResourceYamlEditor: React.FC<ResourceYamlEditorProps> = (
                     {phase === "review" && (
                         <>
                             <Button
-                                variant="ghost"
                                 onClick={onBackToEditor}
                                 leftIcon={<Icon as={AiFillCaretLeft} />}
                             >
