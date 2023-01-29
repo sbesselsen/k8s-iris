@@ -213,13 +213,10 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
             }
         }, [filteredContextOptions, onSelectContext]);
 
-        const popupBackground = useColorModeValue("gray.50", "gray.800");
-        const popupSearchBackground = useColorModeValue("gray.200", "black");
         const popupSearchPlaceholderColor = useColorModeValue(
             "gray.500",
             "gray.400"
         );
-        const popupBorderColor = useColorModeValue("gray.200", "gray.700");
 
         const focusBoxShadow = useToken("shadows", "outline");
         const isWindowFocused = useWindowFocus();
@@ -267,8 +264,6 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
                     maxHeight="calc(100vh - 100px)"
                     overflowY="scroll"
                     boxShadow="xl"
-                    borderColor={popupBorderColor}
-                    bg={popupBackground}
                     zIndex={40}
                 >
                     <MenuInput
@@ -278,12 +273,12 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
                         onPressEnter={onPressSearchEnter}
                         size="sm"
                         borderRadius="md"
-                        bg={popupSearchBackground}
-                        border="0"
-                        mb={2}
+                        bg="rgba(0, 0, 0, 0.1)"
                         _placeholder={{
                             textColor: popupSearchPlaceholderColor,
                         }}
+                        border="0"
+                        mb={2}
                         autoCapitalize="off"
                         autoCorrect="off"
                         autoComplete="off"

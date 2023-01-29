@@ -10,6 +10,7 @@ import {
     MenuList,
     Spinner,
     Text,
+    useColorModeValue,
     useControllableState,
     useDisclosure,
     useToken,
@@ -223,6 +224,11 @@ export const ResourceTypeSelector: React.FC<ResourceTypeSelectorProps> = (
     const focusBoxShadow = useToken("shadows", "outline");
     const focusShadow = useToken("shadows", "outline");
 
+    const popupSearchPlaceholderColor = useColorModeValue(
+        "gray.500",
+        "gray.400"
+    );
+
     const stateValueSuffix = useMemo(() => {
         if (!stateValue) {
             return null;
@@ -277,6 +283,11 @@ export const ResourceTypeSelector: React.FC<ResourceTypeSelectorProps> = (
                         onPressEnter={onPressSearchEnter}
                         size="sm"
                         borderRadius="md"
+                        bg="rgba(0, 0, 0, 0.1)"
+                        _placeholder={{
+                            textColor: popupSearchPlaceholderColor,
+                        }}
+                        border="0"
                         mb={2}
                         autoCapitalize="off"
                         autoCorrect="off"
