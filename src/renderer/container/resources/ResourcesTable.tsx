@@ -53,7 +53,7 @@ export type ResourcesTableStoreValue = {
 const emptySelectedKeysStore = createStore(new Set<string>());
 const emptyOnChangeSelectedKeys = () => {};
 
-export type ResourceTableProps = {
+export type ResourcesTableProps = {
     selectedKeysStore?: ReadableStore<Set<string>>;
     onChangeSelectedKeys?: (keys: Record<string, boolean>) => void;
     resourcesStore: ReadableStore<ResourcesTableStoreValue>;
@@ -61,7 +61,7 @@ export type ResourceTableProps = {
     showSelect?: boolean;
 };
 
-export const ResourcesTable: React.FC<ResourceTableProps> = (props) => {
+export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
     const {
         onChangeSelectedKeys:
             baseOnChangeSelectedKeys = emptyOnChangeSelectedKeys,
