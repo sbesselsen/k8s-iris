@@ -18,7 +18,12 @@ export const ResourceEditorLink: React.FC<ResourceEditorLinkProps> = (
     const { openEditor } = useEditorLink(editorResource);
     return (
         <ResourceContextMenu object={editorResource}>
-            <HStack display="inline-flex" alignItems="center" spacing={0}>
+            <HStack
+                display={linkProps.display ?? "inline-flex"}
+                fontSize={linkProps.fontSize ?? "inherit"}
+                alignItems="center"
+                spacing={0}
+            >
                 <Link onClick={openEditor} {...linkProps} />
                 <ResourceContextMenuTriggerButton />
             </HStack>

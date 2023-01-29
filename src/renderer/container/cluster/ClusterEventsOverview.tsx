@@ -121,7 +121,7 @@ const EventContent: React.FC<{
                     fontSize="xs"
                     fontWeight="bold"
                     mt={1}
-                    display="block"
+                    display="flex"
                     editorResource={event.regarding}
                 >
                     {event?.regarding?.kind}:{" "}
