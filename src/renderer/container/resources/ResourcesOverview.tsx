@@ -6,6 +6,7 @@ import {
     useAppRouteSetter,
 } from "../../context/route";
 import { useIpcCall } from "../../hook/ipc";
+import { ResourceActivityOverview } from "./ResourceActivityOverview";
 import {
     ResourceAllOverview,
     ResourceTypeOverview,
@@ -70,6 +71,11 @@ export const ResourcesOverview: React.FC<{}> = () => {
             id: "workloads",
             title: "Workloads",
             content: <ResourceWorkloadsOverview />,
+        },
+        {
+            id: "activity",
+            title: "Activity",
+            content: <ResourceActivityOverview />,
         },
         {
             id: "namespaces",
