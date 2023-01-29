@@ -19,6 +19,7 @@ import {
     createGroupProcessor,
 } from "../../../common/util/group";
 import { searchMatch } from "../../../common/util/search";
+import { intersection } from "../../../common/util/set";
 import { k8sSmartCompare } from "../../../common/util/sort";
 import { LazyComponent } from "../../component/main/LazyComponent";
 import { ScrollBox } from "../../component/main/ScrollBox";
@@ -238,6 +239,15 @@ function useMonitorWorkloads() {
             newValue.groups = groups;
             newValue.members = members;
             newValue.ungroupedItems = ungroupedItems;
+
+            // Make sure that when resources drop out of our selection, they get deselected.
+            const selectedKeys = intersection(
+                newValue.selectedResourceKeys,
+                newValue.identifiers
+            );
+            if (selectedKeys.size < newValue.selectedResourceKeys.size) {
+                newValue.selectedResourceKeys = selectedKeys;
+            }
 
             return reuseShallowEqualObject(newValue, oldValue);
         },
