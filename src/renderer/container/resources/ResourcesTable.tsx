@@ -183,10 +183,15 @@ export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
         [resourceTypesString]
     );
 
-    const customDetails = useMemo(
-        () => resourceTypes.flatMap((type) => generateResourceDetails(type)),
-        [resourceTypes]
-    );
+    const customDetails = useMemo(() => {
+        const details = new Map<string, ResourceDetail>();
+        for (const type of resourceTypes) {
+            for (const detail of generateResourceDetails(type)) {
+                details.set(detail.id, detail);
+            }
+        }
+        return [...details.values()];
+    }, [resourceTypes]);
     const customColumns = useMemo(
         () => customDetails.filter(isResourceColumn),
         [customDetails]
