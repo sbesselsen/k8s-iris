@@ -246,12 +246,16 @@ export const ResourceContextMenuTriggerButton: React.FC<{}> = () => {
             h={4}
             size="xs"
             colorScheme="gray"
-            cursor="pointer"
             _focus={{}}
             _focusVisible={{
                 boxShadow: "outline",
             }}
-            icon={<TriangleDownIcon cursor="pointer" w={2} h={2} />}
+            __css={{
+                "&, & *": {
+                    cursor: "pointer",
+                },
+            }}
+            icon={<TriangleDownIcon w={2} h={2} />}
         />
     );
 };
