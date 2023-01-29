@@ -59,6 +59,7 @@ export type ResourcesTableProps = {
     resourcesStore: ReadableStore<ResourcesTableStoreValue>;
     showNamespace: boolean;
     showSelect?: boolean;
+    filter?: (obj: K8sObject) => boolean;
 };
 
 export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
@@ -69,6 +70,7 @@ export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
         selectedKeysStore = emptySelectedKeysStore,
         showNamespace,
         showSelect = true,
+        filter,
     } = props;
 
     const { query } = useAppSearch();
@@ -76,10 +78,15 @@ export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
     const keys: string[] = useProvidedStoreValue(
         resourcesStore,
         ({ identifiers, resources }, _prevValue, prevReturnValue) => {
-            let identifiersArray = [...identifiers];
+            let identifiersArray: string[] = [...identifiers];
             if (query) {
                 identifiersArray = identifiersArray.filter((key) =>
                     resourceMatch(query, resources[key])
+                );
+            }
+            if (filter) {
+                identifiersArray = identifiersArray.filter((key) =>
+                    filter(resources[key])
                 );
             }
             return reuseShallowEqualArray(
@@ -92,7 +99,7 @@ export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
                 prevReturnValue ?? []
             );
         },
-        [query]
+        [filter, query]
     );
 
     const multiSelectProcessor = useGuaranteedMemo(
