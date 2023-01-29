@@ -41,6 +41,8 @@ import { formatDeveloperDateTime } from "../../util/date";
 import {
     createStore,
     ReadableStore,
+    useCombinedReadableStore,
+    useDerivedReadableStore,
     useProvidedStoreValue,
 } from "../../util/state";
 import { ResourceEditorLink } from "./ResourceEditorLink";
@@ -59,7 +61,6 @@ export type ResourcesTableProps = {
     resourcesStore: ReadableStore<ResourcesTableStoreValue>;
     showNamespace: boolean;
     showSelect?: boolean;
-    filter?: (obj: K8sObject) => boolean;
 };
 
 export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
@@ -70,7 +71,6 @@ export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
         selectedKeysStore = emptySelectedKeysStore,
         showNamespace,
         showSelect = true,
-        filter,
     } = props;
 
     const { query } = useAppSearch();
@@ -84,11 +84,6 @@ export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
                     resourceMatch(query, resources[key])
                 );
             }
-            if (filter) {
-                identifiersArray = identifiersArray.filter((key) =>
-                    filter(resources[key])
-                );
-            }
             return reuseShallowEqualArray(
                 identifiersArray.sort((k1, k2) =>
                     k8sSmartCompare(
@@ -99,7 +94,7 @@ export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
                 prevReturnValue ?? []
             );
         },
-        [filter, query]
+        [query]
     );
 
     const multiSelectProcessor = useGuaranteedMemo(
@@ -141,27 +136,6 @@ export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
             selectedKeysStore,
             shiftKeyRef,
         ]
-    );
-
-    const numSelectedKeys = useProvidedStoreValue(
-        selectedKeysStore,
-        (selected) => keys.filter((key) => selected.has(key)).length,
-        [keys]
-    );
-
-    const allResourcesSelected =
-        numSelectedKeys > 0 && numSelectedKeys === keys.length;
-    const someResourcesSelected =
-        numSelectedKeys > 0 && numSelectedKeys < keys.length;
-
-    const onChangeSelectAll = useCallback(
-        (e: ChangeEvent<HTMLInputElement>) => {
-            const checked = e.target.checked;
-            onChangeSelectedKeys(
-                Object.fromEntries(keys.map((key) => [key, checked]))
-            );
-        },
-        [keys, onChangeSelectedKeys]
     );
 
     const resourceTypesString = useProvidedStoreValue(
@@ -229,11 +203,12 @@ export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
                     <Tr>
                         {showSelect && (
                             <Th ps={2} width="40px">
-                                <Checkbox
-                                    colorScheme="gray"
-                                    isIndeterminate={someResourcesSelected}
-                                    isChecked={allResourcesSelected}
-                                    onChange={onChangeSelectAll}
+                                <ResourceTableSelectAll
+                                    keys={keys}
+                                    selectedKeysStore={selectedKeysStore}
+                                    onChangeSelectedKeys={
+                                        baseOnChangeSelectedKeys
+                                    }
                                 />
                             </Th>
                         )}
@@ -266,6 +241,51 @@ export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
                 </Tbody>
             </Table>
         </ScrollBoxHorizontalScroll>
+    );
+};
+
+type ResourceTableSelectAllProps = {
+    keys: string[];
+    selectedKeysStore: ReadableStore<Set<string>>;
+    onChangeSelectedKeys: (keys: Record<string, boolean>) => void;
+};
+
+const ResourceTableSelectAll: React.FC<ResourceTableSelectAllProps> = (
+    props
+) => {
+    const { keys, selectedKeysStore, onChangeSelectedKeys } = props;
+
+    const allResourcesSelected = useProvidedStoreValue(
+        selectedKeysStore,
+        (selected) => keys.length > 0 && keys.every((key) => selected.has(key)),
+        [keys]
+    );
+    const someResourcesSelected = useProvidedStoreValue(
+        selectedKeysStore,
+        (selected) => {
+            const selectedKeys = keys.filter((key) => selected.has(key)).length;
+            return selectedKeys > 0 && selectedKeys < keys.length;
+        },
+        [keys]
+    );
+
+    const onChangeSelectAll = useCallback(
+        (e: ChangeEvent<HTMLInputElement>) => {
+            const checked = e.target.checked;
+            onChangeSelectedKeys(
+                Object.fromEntries(keys.map((key) => [key, checked]))
+            );
+        },
+        [keys, onChangeSelectedKeys]
+    );
+
+    return (
+        <Checkbox
+            colorScheme="gray"
+            isIndeterminate={someResourcesSelected}
+            isChecked={allResourcesSelected}
+            onChange={onChangeSelectAll}
+        />
     );
 };
 
@@ -439,3 +459,34 @@ const ResourcesTableRow: React.FC<ResourcesTableRowProps> = React.memo(
         );
     }
 );
+
+export function useFilteredResourceTableStore<T>(
+    store: ReadableStore<ResourcesTableStoreValue>,
+    filterStore: ReadableStore<T>,
+    filter: (obj: K8sObject, filterValue: T) => boolean,
+    deps?: any[]
+): ReadableStore<ResourcesTableStoreValue> {
+    return useDerivedReadableStore(
+        useCombinedReadableStore(store, filterStore),
+        ([data, filterValue]) => {
+            const resources: Record<string, K8sObject> = data.resources;
+            let identifiers = data.identifiers;
+            if (filterValue !== undefined) {
+                identifiers = new Set(
+                    [...identifiers].filter((key) => {
+                        const resource = resources[key];
+                        if (!resource) {
+                            return false;
+                        }
+                        return filter(resource, filterValue);
+                    })
+                );
+            }
+            return {
+                identifiers,
+                resources,
+            };
+        },
+        deps ?? []
+    );
+}

@@ -16,7 +16,11 @@ import {
     useProvidedStoreValue,
 } from "../../util/state";
 import { ClusterEventsOverview } from "../cluster/ClusterEventsOverview";
-import { ResourcesTable, ResourcesTableStoreValue } from "./ResourcesTable";
+import {
+    ResourcesTable,
+    ResourcesTableStoreValue,
+    useFilteredResourceTableStore,
+} from "./ResourcesTable";
 import { ResourcesToolbar } from "./ResourcesToolbar";
 
 const workloadTypes = [
@@ -66,8 +70,28 @@ export const ResourceActivityOverview: React.FC<{}> = () => {
         [namespacesSelector]
     );
 
-    const allResourcesStore = useDerivedReadableStore(
-        useCombinedReadableStore(workloadsStore, podsStore),
+    const workloadsSelectedBadgeStore = useGuaranteedMemo(
+        () => createStore<string | undefined>(undefined),
+        []
+    );
+    const podsSelectedBadgeStore = useGuaranteedMemo(
+        () => createStore<string | undefined>(undefined),
+        []
+    );
+
+    const filteredWorkloadsStore = useFilteredResourceTableStore(
+        workloadsStore,
+        workloadsSelectedBadgeStore,
+        (obj, badgeId) => generateBadges(obj).some(({ id }) => id === badgeId)
+    );
+    const filteredPodsStore = useFilteredResourceTableStore(
+        podsStore,
+        podsSelectedBadgeStore,
+        (obj, badgeId) => generateBadges(obj).some(({ id }) => id === badgeId)
+    );
+
+    const allVisibleResourcesStore = useDerivedReadableStore(
+        useCombinedReadableStore(filteredWorkloadsStore, filteredPodsStore),
         (
             [workloads, pods],
             prevValue,
@@ -89,37 +113,9 @@ export const ResourceActivityOverview: React.FC<{}> = () => {
         }
     );
 
-    const [selectedWorkloadsBadgeId, setSelectedWorkloadsBadgeId] = useState<
-        string | undefined
-    >();
-    const [selectedPodsBadgeId, setSelectedPodsBadgeId] = useState<
-        string | undefined
-    >();
-
-    const workloadsFilter = useMemo(
-        () =>
-            selectedWorkloadsBadgeId
-                ? (obj: K8sObject) =>
-                      generateBadges(obj).some(
-                          ({ id }) => id === selectedWorkloadsBadgeId
-                      )
-                : undefined,
-        [selectedWorkloadsBadgeId]
-    );
-    const podsFilter = useMemo(
-        () =>
-            selectedPodsBadgeId
-                ? (obj: K8sObject) =>
-                      generateBadges(obj).some(
-                          ({ id }) => id === selectedPodsBadgeId
-                      )
-                : undefined,
-        [selectedPodsBadgeId]
-    );
-
     const selectedKeysStore = useGuaranteedMemo(
         () => createStore(new Set<string>()),
-        [allResourcesStore]
+        [allVisibleResourcesStore]
     );
 
     const onChangeSelectedKeys = useCallback(
@@ -139,7 +135,7 @@ export const ResourceActivityOverview: React.FC<{}> = () => {
             <ActivityToolbar
                 selectedKeysStore={selectedKeysStore}
                 onChangeSelectedKeys={onChangeSelectedKeys}
-                resourcesStore={allResourcesStore}
+                resourcesStore={allVisibleResourcesStore}
             />
             <VStack
                 pt={4}
@@ -159,18 +155,18 @@ export const ResourceActivityOverview: React.FC<{}> = () => {
                     </Heading>
                     <HStack px={4}>
                         <ResourcesBadgeCounts
-                            selectedBadge={selectedWorkloadsBadgeId}
-                            onChangeSelectedBadge={setSelectedWorkloadsBadgeId}
+                            onChangeSelectedBadge={
+                                workloadsSelectedBadgeStore.set
+                            }
                             resourcesStore={workloadsStore}
                         />
                     </HStack>
                     <ScrollBox>
                         <ResourcesTable
-                            resourcesStore={workloadsStore}
+                            resourcesStore={filteredWorkloadsStore}
                             showNamespace={showNamespace}
                             selectedKeysStore={selectedKeysStore}
                             onChangeSelectedKeys={onChangeSelectedKeys}
-                            filter={workloadsFilter}
                         />
                     </ScrollBox>
                 </VStack>
@@ -180,18 +176,16 @@ export const ResourceActivityOverview: React.FC<{}> = () => {
                     </Heading>
                     <HStack px={4}>
                         <ResourcesBadgeCounts
-                            selectedBadge={selectedPodsBadgeId}
-                            onChangeSelectedBadge={setSelectedPodsBadgeId}
+                            onChangeSelectedBadge={podsSelectedBadgeStore.set}
                             resourcesStore={podsStore}
                         />
                     </HStack>
                     <ScrollBox>
                         <ResourcesTable
-                            resourcesStore={podsStore}
+                            resourcesStore={filteredPodsStore}
                             showNamespace={showNamespace}
                             selectedKeysStore={selectedKeysStore}
                             onChangeSelectedKeys={onChangeSelectedKeys}
-                            filter={podsFilter}
                         />
                     </ScrollBox>
                 </VStack>
@@ -251,12 +245,13 @@ const ActivityToolbar: React.FC<ActivityToolbarProps> = (props) => {
 
 type ResourcesBadgeCountsProps = {
     resourcesStore: ReadableStore<ResourcesTableStoreValue>;
-    selectedBadge: string | undefined;
     onChangeSelectedBadge: (id: string | undefined) => void;
 };
 
 const ResourcesBadgeCounts: React.FC<ResourcesBadgeCountsProps> = (props) => {
-    const { onChangeSelectedBadge, resourcesStore, selectedBadge } = props;
+    const { onChangeSelectedBadge, resourcesStore } = props;
+
+    const [selectedBadge, setSelectedBadge] = useState<string | undefined>();
 
     const badges = useProvidedStoreValue(resourcesStore, (v) => {
         const badges = new Map<
@@ -303,6 +298,7 @@ const ResourcesBadgeCounts: React.FC<ResourcesBadgeCountsProps> = (props) => {
                                 ? undefined
                                 : badge.id;
                         onChangeSelectedBadge(newSelectedBadge);
+                        setSelectedBadge(newSelectedBadge);
                     },
                 ])
             ),
