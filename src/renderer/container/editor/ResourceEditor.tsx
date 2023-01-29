@@ -7,9 +7,9 @@ import {
 import { CgDetailsLess, CgDetailsMore } from "react-icons/cg";
 import { MdOutlinePause, MdPlayArrow } from "react-icons/md";
 import {
-    Badge,
     Box,
     Button,
+    ButtonGroup,
     FormControl,
     FormLabel,
     Heading,
@@ -596,10 +596,14 @@ const ScalePopoverContent: React.FC<{
                 </VStack>
             </PopoverBody>
             <PopoverFooter>
-                <HStack justifyContent="end">
-                    <Button variant="ghost" onClick={onClose}>
-                        Cancel
-                    </Button>
+                <ButtonGroup
+                    w="100%"
+                    variant="toolbar"
+                    size="sm"
+                    justifyContent="end"
+                    spacing={0.5}
+                >
+                    <Button onClick={onClose}>Cancel</Button>
                     {!isLoadingHpas && !isAutoScaled && currentScale > 0 && (
                         <Button
                             onClick={onClickPause}
@@ -633,7 +637,7 @@ const ScalePopoverContent: React.FC<{
                     {isAutoScaled && (
                         <Button onClick={onClickOpenHpa}>Open HPA</Button>
                     )}
-                </HStack>
+                </ButtonGroup>
             </PopoverFooter>
         </>
     );

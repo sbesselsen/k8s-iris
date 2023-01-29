@@ -3,6 +3,7 @@ import { Button } from "./component/button";
 import { Checkbox } from "./component/checkbox";
 import { Heading } from "./component/heading";
 import { Menu } from "./component/menu";
+import { Popover } from "./component/popover";
 import { Tabs } from "./component/tabs";
 
 const config: ThemeConfig = {
@@ -51,6 +52,7 @@ export const theme = extendTheme({
         },
         Heading,
         Menu,
+        Popover,
         Tabs,
     },
 });
