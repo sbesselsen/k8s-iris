@@ -88,9 +88,29 @@ const InnerResourceTypeOverview: React.FC<{
         [resourceType, resourceTypes]
     );
 
+    const namespaces = useK8sNamespaces();
+
+    const queries = useMemo(() => {
+        if (!resourceTypeInfo) {
+            return [];
+        }
+        const selectNamespaces =
+            namespaces.mode === "selected" && resourceTypeInfo.namespaced;
+        return [
+            {
+                ...resourceType,
+                ...(selectNamespaces
+                    ? { namespaces: namespaces.selected }
+                    : {}),
+            },
+        ];
+    }, [namespaces, resourceTypeInfo]);
+
+    const resourcesStore = useK8sListWatchStore(queries, {}, [queries]);
+
     const selectedKeysStore = useGuaranteedMemo(
         () => createStore<Set<string>>(new Set()),
-        [resourceType]
+        [resourcesStore]
     );
 
     const onChangeSelectedKeys = useCallback(
@@ -113,26 +133,6 @@ const InnerResourceTypeOverview: React.FC<{
         },
         [selectedKeysStore]
     );
-
-    const namespaces = useK8sNamespaces();
-
-    const queries = useMemo(() => {
-        if (!resourceTypeInfo) {
-            return [];
-        }
-        const selectNamespaces =
-            namespaces.mode === "selected" && resourceTypeInfo.namespaced;
-        return [
-            {
-                ...resourceType,
-                ...(selectNamespaces
-                    ? { namespaces: namespaces.selected }
-                    : {}),
-            },
-        ];
-    }, [namespaces, resourceTypeInfo]);
-
-    const resourcesStore = useK8sListWatchStore(queries, {}, [queries]);
 
     const showNamespace =
         (namespaces.mode === "all" || namespaces.selected.length > 1) &&
