@@ -51,7 +51,7 @@ export const ViewportLazyContainer: React.FC<ViewportLazyContainerProps> = (
                     }
                 }
                 if (visible !== isVisible) {
-                    if (!visible) {
+                    if (visible) {
                         // The element is coming into view. Drop our current remembered height.
                         heightRef.current = undefined;
                     } else {
