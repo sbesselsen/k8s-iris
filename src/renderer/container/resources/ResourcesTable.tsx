@@ -46,6 +46,7 @@ import {
     useProvidedStoreValue,
 } from "../../util/state";
 import { ResourceEditorLink } from "./ResourceEditorLink";
+import { ViewportLazyTbody } from "../../component/main/ViewportLazyTbody";
 
 export type ResourcesTableStoreValue = {
     identifiers: Set<string>;
@@ -225,7 +226,11 @@ export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
                         <Th width="120px">Created</Th>
                     </Tr>
                 </Thead>
-                <Tbody>
+                <ViewportLazyTbody
+                    chunkSize={100}
+                    rootMargin="1000px"
+                    defaultHeight="30px"
+                >
                     {keys.map((key) => (
                         <ResourcesTableRow
                             resourcesStore={resourcesStore}
@@ -238,7 +243,7 @@ export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
                             key={key}
                         />
                     ))}
-                </Tbody>
+                </ViewportLazyTbody>
             </Table>
         </ScrollBoxHorizontalScroll>
     );
