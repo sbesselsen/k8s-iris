@@ -220,15 +220,16 @@ const PortForwardRow: React.FC<PortForwardRowProps> = (props) => {
 
     const periodStats = usePeriodStats(stats);
 
-    const podResource: K8sObjectIdentifier = useMemo(
-        () => ({
+    const remoteResource: K8sObjectIdentifier = useMemo(() => {
+        const { remoteType, remoteName, namespace } = portForward.spec;
+        const kinds = { pod: "Pod", service: "Service" } as const;
+        return {
             apiVersion: "v1",
-            kind: "Pod",
-            name: portForward.spec.podName,
-            namespace: portForward.spec.namespace,
-        }),
-        [portForward]
-    );
+            kind: kinds[remoteType],
+            name: remoteName,
+            namespace,
+        };
+    }, [portForward]);
 
     const openInBrowser = useIpcCall((ipc) => ipc.app.openUrlInBrowser);
 
@@ -240,7 +241,7 @@ const PortForwardRow: React.FC<PortForwardRowProps> = (props) => {
         if (!portForward) {
             return null;
         }
-        const looksLikeSecureLink = portForward.spec.podPort % 1000 === 443;
+        const looksLikeSecureLink = portForward.spec.remotePort % 1000 === 443;
         const guessedProtocol = looksLikeSecureLink ? "https" : "http";
         return `${guessedProtocol}://localhost:${portForward.localPort}`;
     }, [portForwardHostPort]);
@@ -317,10 +318,10 @@ const PortForwardRow: React.FC<PortForwardRowProps> = (props) => {
                 <ResourceEditorLink
                     userSelect="text"
                     display="block"
-                    editorResource={podResource}
+                    editorResource={remoteResource}
                     isTruncated
                 >
-                    {portForward.spec.podName}
+                    {portForward.spec.remoteName}
                 </ResourceEditorLink>
             </Td>
             {showNamespace && (
@@ -331,7 +332,7 @@ const PortForwardRow: React.FC<PortForwardRowProps> = (props) => {
                 </Td>
             )}
             <Td verticalAlign="baseline" userSelect="text">
-                <Selectable>{portForward.spec.podPort}</Selectable>
+                <Selectable>{portForward.spec.remotePort}</Selectable>
             </Td>
             <Td verticalAlign="baseline" userSelect="text">
                 <HStack>

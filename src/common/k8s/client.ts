@@ -155,8 +155,9 @@ export type K8sLogWatch = {
 
 export type K8sPortForwardSpec = {
     namespace: string;
-    podName: string;
-    podPort: number;
+    remoteName: string;
+    remotePort: number;
+    remoteType: "service" | "pod";
     localPort?: number;
     localOnly?: boolean;
 };

@@ -1144,6 +1144,10 @@ export function createClient(
     const portForward = async (
         spec: K8sPortForwardSpec
     ): Promise<K8sPortForwardEntry> => {
+        if (spec.remoteType !== "pod") {
+            throw new Error("TODO");
+        }
+
         const id = `pfwd:${portForwardIndex++}`;
         const entry: Partial<K8sPortForwardEntry> = {
             id,
@@ -1232,8 +1236,8 @@ export function createClient(
             try {
                 await portForward.portForward(
                     spec.namespace,
-                    spec.podName,
-                    [spec.podPort],
+                    spec.remoteName,
+                    [spec.remotePort],
                     downstream,
                     null,
                     upstream

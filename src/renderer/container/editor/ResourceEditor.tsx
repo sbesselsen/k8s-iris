@@ -857,8 +857,11 @@ const PortForwardingMenu: React.FC<{ object: K8sObject }> = (props) => {
                                 (fwd) =>
                                     fwd.spec.namespace ===
                                         object.metadata.namespace &&
-                                    fwd.spec.podName === object.metadata.name &&
-                                    fwd.spec.podPort === port.containerPort &&
+                                    fwd.spec.remoteType === "pod" &&
+                                    fwd.spec.remoteName ===
+                                        object.metadata.name &&
+                                    fwd.spec.remotePort ===
+                                        port.containerPort &&
                                     forwardable
                             ),
                             forwardable,
@@ -872,7 +875,7 @@ const PortForwardingMenu: React.FC<{ object: K8sObject }> = (props) => {
 
     const addForward = useCallback(
         (
-            podPort: number,
+            remotePort: number,
             localPort: number | undefined,
             localOnly: boolean
         ) => {
@@ -882,10 +885,11 @@ const PortForwardingMenu: React.FC<{ object: K8sObject }> = (props) => {
                 }
                 try {
                     await client.portForward({
-                        podName: object.metadata.name,
+                        remoteType: "pod",
+                        remoteName: object.metadata.name,
                         namespace: object.metadata.namespace as string,
                         localOnly,
-                        podPort,
+                        remotePort,
                         ...(localPort !== undefined ? { localPort } : {}),
                     });
                 } catch (e: any) {
@@ -1078,7 +1082,7 @@ const PortForwardingRow: React.FC<PortForwardingRowProps> = (props) => {
         if (!portForward) {
             return null;
         }
-        const looksLikeSecureLink = portForward.spec.podPort % 1000 === 443;
+        const looksLikeSecureLink = portForward.spec.remotePort % 1000 === 443;
         const guessedProtocol = looksLikeSecureLink ? "https" : "http";
         return `${guessedProtocol}://localhost:${portForward.localPort}`;
     }, [portForwardHostPort]);
