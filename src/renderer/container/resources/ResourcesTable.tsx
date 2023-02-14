@@ -227,7 +227,7 @@ export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
                     </Tr>
                 </Thead>
                 <ViewportLazyTbody
-                    chunkSize={100}
+                    chunkSize={10}
                     rootMargin="1000px"
                     defaultHeight="30px"
                 >
