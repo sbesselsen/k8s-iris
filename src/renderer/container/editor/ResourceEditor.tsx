@@ -59,6 +59,7 @@ import {
     K8sObject,
     K8sObjectIdentifier,
     K8sPortForwardEntry,
+    K8sPortForwardSpec,
     K8sPortForwardStats,
     K8sResourceTypeIdentifier,
 } from "../../../common/k8s/client";
@@ -808,9 +809,21 @@ const AssociatedPodsInner: React.FC<{
     );
 });
 
+const remoteTypes: Record<string, string> = {
+    Pod: "pod",
+    Service: "service",
+};
+
 const PortForwardingMenu: React.FC<{ object: K8sObject }> = (props) => {
     const { object } = props;
-    if (!object || object.apiVersion !== "v1" || object.kind !== "Pod") {
+    if (!object || object.apiVersion !== "v1") {
+        return null;
+    }
+
+    const remoteType = remoteTypes[
+        object.kind
+    ] as K8sPortForwardSpec["remoteType"];
+    if (!remoteType) {
         return null;
     }
 
@@ -837,41 +850,61 @@ const PortForwardingMenu: React.FC<{ object: K8sObject }> = (props) => {
             portForward: K8sPortForwardEntry | undefined;
             forwardable: boolean;
         }> = [];
-        const containers = (object as any).spec?.containers;
-        if (containers) {
-            for (const container of containers) {
-                if (container?.ports) {
-                    for (const port of container.ports) {
-                        if (!port) {
-                            continue;
+        if (object.kind === "Pod") {
+            const containers = (object as any).spec?.containers;
+            if (containers) {
+                for (const container of containers) {
+                    if (container?.ports) {
+                        for (const port of container.ports) {
+                            if (!port) {
+                                continue;
+                            }
+                            const forwardable =
+                                !port.protocol || port.protocol === "TCP";
+                            ports.push({
+                                id: String(
+                                    port.containerPort + ":" + port.protocol
+                                ),
+                                port: port.containerPort,
+                                name: port.name ?? String(port.containerPort),
+                                portForward: forwards.find(
+                                    (fwd) =>
+                                        fwd.spec.namespace ===
+                                            object.metadata.namespace &&
+                                        fwd.spec.remoteType === remoteType &&
+                                        fwd.spec.remoteName ===
+                                            object.metadata.name &&
+                                        fwd.spec.remotePort ===
+                                            port.containerPort &&
+                                        forwardable
+                                ),
+                                forwardable,
+                            });
                         }
-                        const forwardable =
-                            !port.protocol || port.protocol === "TCP";
-                        ports.push({
-                            id: String(
-                                port.containerPort + ":" + port.protocol
-                            ),
-                            port: port.containerPort,
-                            name: port.name ?? String(port.containerPort),
-                            portForward: forwards.find(
-                                (fwd) =>
-                                    fwd.spec.namespace ===
-                                        object.metadata.namespace &&
-                                    fwd.spec.remoteType === "pod" &&
-                                    fwd.spec.remoteName ===
-                                        object.metadata.name &&
-                                    fwd.spec.remotePort ===
-                                        port.containerPort &&
-                                    forwardable
-                            ),
-                            forwardable,
-                        });
                     }
                 }
             }
+        } else if (object.kind === "Service") {
+            for (const port of (object as any).spec?.ports ?? []) {
+                const forwardable = !port.protocol || port.protocol === "TCP";
+                ports.push({
+                    id: String(port.port + ":" + port.protocol),
+                    port: port.port,
+                    name: port.name ?? String(port.port),
+                    portForward: forwards.find(
+                        (fwd) =>
+                            fwd.spec.namespace === object.metadata.namespace &&
+                            fwd.spec.remoteType === remoteType &&
+                            fwd.spec.remoteName === object.metadata.name &&
+                            fwd.spec.remotePort === port.port &&
+                            forwardable
+                    ),
+                    forwardable,
+                });
+            }
         }
         return ports;
-    }, [forwards, object]);
+    }, [forwards, object, remoteType]);
 
     const addForward = useCallback(
         (
@@ -885,7 +918,7 @@ const PortForwardingMenu: React.FC<{ object: K8sObject }> = (props) => {
                 }
                 try {
                     await client.portForward({
-                        remoteType: "pod",
+                        remoteType,
                         remoteName: object.metadata.name,
                         namespace: object.metadata.namespace as string,
                         localOnly,
@@ -905,7 +938,7 @@ const PortForwardingMenu: React.FC<{ object: K8sObject }> = (props) => {
                 }
             })();
         },
-        [client, checkContextLock, object, showDialog]
+        [client, checkContextLock, object, remoteType, showDialog]
     );
 
     const stopForward = useCallback(
@@ -958,7 +991,7 @@ const PortForwardingMenu: React.FC<{ object: K8sObject }> = (props) => {
             {loading && <Spinner />}
             {!loading && availablePorts.length === 0 && (
                 <Text fontSize="sm" color="gray">
-                    Pod exposes no ports.
+                    {object.kind} exposes no ports.
                 </Text>
             )}
             {!loading && availablePorts.length > 0 && (
