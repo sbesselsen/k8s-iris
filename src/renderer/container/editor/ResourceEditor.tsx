@@ -810,18 +810,20 @@ const AssociatedPodsInner: React.FC<{
 });
 
 const remoteTypes: Record<string, string> = {
-    Pod: "pod",
-    Service: "service",
+    "v1:Pod": "pod",
+    "v1:Service": "service",
+    "apps/v1:Deployment": "deployment",
+    "apps/v1:StatefulSet": "statefulset",
 };
 
 const PortForwardingMenu: React.FC<{ object: K8sObject }> = (props) => {
     const { object } = props;
-    if (!object || object.apiVersion !== "v1") {
+    if (!object) {
         return null;
     }
 
     const remoteType = remoteTypes[
-        object.kind
+        `${object.apiVersion}:${object.kind}`
     ] as K8sPortForwardSpec["remoteType"];
     if (!remoteType) {
         return null;
@@ -901,6 +903,43 @@ const PortForwardingMenu: React.FC<{ object: K8sObject }> = (props) => {
                     ),
                     forwardable,
                 });
+            }
+        } else if (
+            object.kind === "Deployment" ||
+            object.kind === "StatefulSet"
+        ) {
+            const containers = (object as any).spec?.template?.spec?.containers;
+            if (containers) {
+                for (const container of containers) {
+                    if (container?.ports) {
+                        for (const port of container.ports) {
+                            if (!port) {
+                                continue;
+                            }
+                            const forwardable =
+                                !port.protocol || port.protocol === "TCP";
+                            ports.push({
+                                id: String(
+                                    port.containerPort + ":" + port.protocol
+                                ),
+                                port: port.containerPort,
+                                name: port.name ?? String(port.containerPort),
+                                portForward: forwards.find(
+                                    (fwd) =>
+                                        fwd.spec.namespace ===
+                                            object.metadata.namespace &&
+                                        fwd.spec.remoteType === remoteType &&
+                                        fwd.spec.remoteName ===
+                                            object.metadata.name &&
+                                        fwd.spec.remotePort ===
+                                            port.containerPort &&
+                                        forwardable
+                                ),
+                                forwardable,
+                            });
+                        }
+                    }
+                }
             }
         }
         return ports;

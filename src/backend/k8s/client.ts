@@ -1150,12 +1150,27 @@ export function createClient(
             spec,
         };
 
-        const fetchPodEndpoint = async (
+        const fetchPodNameForLabelMap = async (
+            labels: Record<string, string>
+        ): Promise<string | undefined> => {
+            const podList = await list({
+                apiVersion: "v1",
+                kind: "Pod",
+                namespaces: [spec.namespace],
+                labelSelector: Object.entries(labels).map(([name, value]) => ({
+                    name,
+                    value: String(value),
+                })),
+            });
+            if (podList.items.length === 0) {
+                return;
+            }
+            return podList.items[0].metadata.name;
+        };
+
+        const fetchPodEndpointForService = async (
             spec: K8sPortForwardSpec
         ): Promise<{ podName: string; podPort: number } | undefined> => {
-            if (spec.remoteType === "pod") {
-                return { podName: spec.remoteName, podPort: spec.remotePort };
-            }
             const service = await read({
                 apiVersion: "v1",
                 kind: "Service",
@@ -1177,21 +1192,72 @@ export function createClient(
             if (!selector) {
                 return;
             }
-            const podList = await list({
-                apiVersion: "v1",
-                kind: "Pod",
-                namespaces: [spec.namespace],
-                labelSelector: Object.entries(selector).map(
-                    ([name, value]) => ({ name, value: String(value) })
-                ),
-            });
-            if (podList.items.length === 0) {
+            const podName = await fetchPodNameForLabelMap(selector);
+            if (!podName) {
                 return;
             }
             return {
                 podPort: port.targetPort,
-                podName: podList.items[0].metadata.name,
+                podName,
             };
+        };
+
+        const fetchPodEndpointForSet = async (
+            spec: K8sPortForwardSpec
+        ): Promise<{ podName: string; podPort: number } | undefined> => {
+            const kind = (
+                {
+                    deployment: "Deployment",
+                    statefulset: "StatefulSet",
+                } as Record<string, string>
+            )[spec.remoteType];
+            if (!kind) {
+                return;
+            }
+            const object = await read({
+                apiVersion: "apps/v1",
+                kind,
+                metadata: {
+                    namespace: spec.namespace,
+                    name: spec.remoteName,
+                },
+            });
+            if (!object) {
+                return;
+            }
+            const selector = (object as any).spec?.selector?.matchLabels;
+            if (!selector) {
+                return;
+            }
+            const podName = await fetchPodNameForLabelMap(selector);
+            if (!podName) {
+                return;
+            }
+            return {
+                podPort: spec.remotePort,
+                podName,
+            };
+        };
+
+        const fetchPodEndpoint = async (
+            spec: K8sPortForwardSpec
+        ): Promise<{ podName: string; podPort: number } | undefined> => {
+            switch (spec.remoteType) {
+                case "pod":
+                    return {
+                        podName: spec.remoteName,
+                        podPort: spec.remotePort,
+                    };
+                case "service":
+                    return await fetchPodEndpointForService(spec);
+                case "deployment":
+                case "statefulset":
+                    return await fetchPodEndpointForSet(spec);
+                default:
+                    throw new Error(
+                        "Unsupported remoteType: " + spec.remoteType
+                    );
+            }
         };
 
         let numConnections = 0;

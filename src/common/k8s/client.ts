@@ -157,7 +157,7 @@ export type K8sPortForwardSpec = {
     namespace: string;
     remoteName: string;
     remotePort: number;
-    remoteType: "service" | "pod";
+    remoteType: "service" | "pod" | "deployment" | "statefulset";
     localPort?: number;
     localOnly?: boolean;
 };

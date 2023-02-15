@@ -18,6 +18,7 @@ import React, { ChangeEvent, useCallback, useMemo, useState } from "react";
 import {
     K8sObjectIdentifier,
     K8sPortForwardEntry,
+    K8sPortForwardSpec,
     K8sPortForwardStats,
 } from "../../../common/k8s/client";
 import { ScrollBox } from "../../component/main/ScrollBox";
@@ -147,7 +148,7 @@ export const ClusterPortForwardsOverview: React.FC<{}> = () => {
                             />
                         </Th>
                         <Th ps={0} whiteSpace="nowrap">
-                            Pod
+                            Target
                         </Th>
                         {showNamespace && <Th width="130px">Namespace</Th>}
                         <Th width="70px">Port</Th>
@@ -220,16 +221,10 @@ const PortForwardRow: React.FC<PortForwardRowProps> = (props) => {
 
     const periodStats = usePeriodStats(stats);
 
-    const remoteResource: K8sObjectIdentifier = useMemo(() => {
-        const { remoteType, remoteName, namespace } = portForward.spec;
-        const kinds = { pod: "Pod", service: "Service" } as const;
-        return {
-            apiVersion: "v1",
-            kind: kinds[remoteType],
-            name: remoteName,
-            namespace,
-        };
-    }, [portForward]);
+    const remoteResource: K8sObjectIdentifier = useMemo(
+        () => k8sObjectIdentifierForPortForward(portForward.spec),
+        [portForward]
+    );
 
     const openInBrowser = useIpcCall((ipc) => ipc.app.openUrlInBrowser);
 
@@ -317,7 +312,6 @@ const PortForwardRow: React.FC<PortForwardRowProps> = (props) => {
             <Td ps={0} verticalAlign="baseline" userSelect="text">
                 <ResourceEditorLink
                     userSelect="text"
-                    display="block"
                     editorResource={remoteResource}
                     isTruncated
                 >
@@ -400,6 +394,10 @@ const PortForwardsToolbar: React.FC<PortForwardsToolbarProps> = (props) => {
         )
     );
 
+    if (portForwards.length === 0) {
+        return null;
+    }
+
     return (
         <Toolbar>
             {portForwards.length > 0 && (
@@ -414,3 +412,40 @@ const PortForwardsToolbar: React.FC<PortForwardsToolbarProps> = (props) => {
         </Toolbar>
     );
 };
+
+function k8sObjectIdentifierForPortForward(
+    spec: K8sPortForwardSpec
+): K8sObjectIdentifier {
+    switch (spec.remoteType) {
+        case "deployment":
+            return {
+                apiVersion: "apps/v1",
+                kind: "Deployment",
+                namespace: spec.namespace,
+                name: spec.remoteName,
+            };
+        case "pod":
+            return {
+                apiVersion: "v1",
+                kind: "Pod",
+                namespace: spec.namespace,
+                name: spec.remoteName,
+            };
+        case "service":
+            return {
+                apiVersion: "v1",
+                kind: "Service",
+                namespace: spec.namespace,
+                name: spec.remoteName,
+            };
+        case "statefulset":
+            return {
+                apiVersion: "apps/v1",
+                kind: "StatefulSet",
+                namespace: spec.namespace,
+                name: spec.remoteName,
+            };
+        default:
+            throw new Error("Unsupported remoteType: " + spec.remoteType);
+    }
+}
