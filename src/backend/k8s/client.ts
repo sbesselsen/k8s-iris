@@ -1144,14 +1144,54 @@ export function createClient(
     const portForward = async (
         spec: K8sPortForwardSpec
     ): Promise<K8sPortForwardEntry> => {
-        if (spec.remoteType !== "pod") {
-            throw new Error("TODO");
-        }
-
         const id = `pfwd:${portForwardIndex++}`;
         const entry: Partial<K8sPortForwardEntry> = {
             id,
             spec,
+        };
+
+        const fetchPodEndpoint = async (
+            spec: K8sPortForwardSpec
+        ): Promise<{ podName: string; podPort: number } | undefined> => {
+            if (spec.remoteType === "pod") {
+                return { podName: spec.remoteName, podPort: spec.remotePort };
+            }
+            const service = await read({
+                apiVersion: "v1",
+                kind: "Service",
+                metadata: {
+                    namespace: spec.namespace,
+                    name: spec.remoteName,
+                },
+            });
+            if (!service) {
+                return;
+            }
+            const port = ((service as any).spec?.ports ?? []).find(
+                (pt: any) => pt.port === spec.remotePort
+            );
+            if (!port) {
+                return;
+            }
+            const selector = (service as any).spec?.selector;
+            if (!selector) {
+                return;
+            }
+            const podList = await list({
+                apiVersion: "v1",
+                kind: "Pod",
+                namespaces: [spec.namespace],
+                labelSelector: Object.entries(selector).map(
+                    ([name, value]) => ({ name, value: String(value) })
+                ),
+            });
+            if (podList.items.length === 0) {
+                return;
+            }
+            return {
+                podPort: port.targetPort,
+                podName: podList.items[0].metadata.name,
+            };
         };
 
         let numConnections = 0;
@@ -1234,16 +1274,23 @@ export function createClient(
                 );
             });
             try {
+                const podEndpoint = await fetchPodEndpoint(spec);
+                if (!podEndpoint) {
+                    throw new Error("No pod endpoint found for port forward");
+                }
+                const { podName, podPort } = podEndpoint;
                 await portForward.portForward(
                     spec.namespace,
-                    spec.remoteName,
-                    [spec.remotePort],
+                    podName,
+                    [podPort],
                     downstream,
                     null,
                     upstream
                 );
             } catch (e) {
                 console.error("Error initializing port forward", e);
+                socket.destroy();
+                return;
             }
             numConnections++;
             sendStats();
