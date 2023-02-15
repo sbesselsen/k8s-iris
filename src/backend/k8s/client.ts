@@ -1321,7 +1321,7 @@ export function createClient(
             statsUpdateFunctions.push(statsUpdateFunction);
 
             const socketEndFunction = () => {
-                socket.end();
+                socket.destroy();
             };
             socketEndFunctions.push(socketEndFunction);
 
