@@ -1,4 +1,4 @@
-import { TableBodyProps, Tbody } from "@chakra-ui/react";
+import { TableBodyProps, Tbody, Tr } from "@chakra-ui/react";
 import React, { Children, ReactNode } from "react";
 import {
     ViewportLazyContainer,
@@ -37,7 +37,8 @@ export const ViewportLazyTbody: React.FC<ViewportLazyTbodyProps> = (props) => {
         height,
         children,
     }: ViewportLazyRenderParams) => (
-        <Tbody ref={ref} height={height ?? "initial"} {...tbodyProps}>
+        <Tbody ref={ref} {...tbodyProps}>
+            {height && <Tr height={height}></Tr>}
             {children}
         </Tbody>
     );
