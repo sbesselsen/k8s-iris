@@ -1,3 +1,5 @@
+import { leftPad } from "../../common/util/pad";
+
 export function formatDeveloperDate(date: Date): string {
     return `${date.getFullYear()}-${leftPad(
         String(date.getMonth() + 1),
@@ -18,15 +20,4 @@ export function formatDeveloperDateTime(date: Date): string {
         );
     }
     return formatDeveloperDate(date);
-}
-
-function leftPad(str: string, pad: string, length: number): string {
-    const padLength = length - str.length;
-    if (padLength <= 0) {
-        return str;
-    }
-    return (
-        pad.repeat(Math.ceil(padLength / pad.length)).substring(0, padLength) +
-        str
-    );
 }

@@ -98,7 +98,11 @@ const EventContent: React.FC<{
 
     return (
         <Box maxWidth="1000px">
-            <Selectable containerRef={selectionContainerRef} fontSize="sm">
+            <Selectable
+                containerRef={selectionContainerRef}
+                fontSize="sm"
+                lineHeight={1.5}
+            >
                 {event.type !== "Normal" && (
                     <Badge
                         colorScheme={event.type === "Warning" ? "red" : "gray"}
