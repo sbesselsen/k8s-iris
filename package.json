@@ -18,7 +18,7 @@
         "local-install": "killall Iris; rm -rf /Applications/Iris.app; cp -R Iris-darwin-universal/Iris.app /Applications/Iris.app; open /Applications/Iris.app",
         "distribute": "cd Iris-darwin-universal; rm -f Iris.zip; zip --symlinks -r Iris.zip Iris.app; share -e7d Iris.zip",
         "typecheck": "tsc --noEmit",
-        "lint": "eslint . --ext .ts",
+        "lint": "eslint . --ext .ts,.tsx",
         "check": "npm run lint && npm run typecheck"
     },
     "author": "Sebastiaan Besselsen <sebastiaan.besselsen@gmail.com>",

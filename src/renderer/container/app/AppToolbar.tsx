@@ -1,11 +1,5 @@
 import React, { useCallback } from "react";
-import {
-    ButtonGroup,
-    HStack,
-    Icon,
-    IconButton,
-    useColorModeValue,
-} from "@chakra-ui/react";
+import { ButtonGroup, HStack, Icon, IconButton } from "@chakra-ui/react";
 
 import { MdArrowBackIosNew, MdArrowForwardIos } from "react-icons/md";
 import { FiLock, FiUnlock } from "react-icons/fi";

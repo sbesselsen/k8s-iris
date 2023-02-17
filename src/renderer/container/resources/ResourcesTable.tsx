@@ -4,7 +4,6 @@ import {
     HStack,
     Table,
     TableCellProps,
-    Tbody,
     Td,
     Th,
     Thead,

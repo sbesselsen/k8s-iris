@@ -1,6 +1,6 @@
 import { Badge, Heading, HStack, VStack } from "@chakra-ui/react";
 import React, { useCallback, useMemo, useState } from "react";
-import { K8sObject, K8sObjectListQuery } from "../../../common/k8s/client";
+import { K8sObjectListQuery } from "../../../common/k8s/client";
 import { reuseShallowEqualObject } from "../../../common/util/deep-equal";
 import { applyMutations, union } from "../../../common/util/set";
 import { ScrollBox } from "../../component/main/ScrollBox";
