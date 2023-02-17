@@ -61,7 +61,11 @@ export const Timeline: React.FC<TimelineProps> = (props) => {
                         <Th whiteSpace="nowrap">Event</Th>
                     </Tr>
                 </Thead>
-                <ViewportLazyTbody rootMargin="1000px" defaultHeight="100px">
+                <ViewportLazyTbody
+                    chunkSize={10}
+                    rootMargin="1000px"
+                    defaultHeight="100px"
+                >
                     {sortedEvents.map((event) => (
                         <Tr key={event.id}>
                             <Td verticalAlign="baseline">

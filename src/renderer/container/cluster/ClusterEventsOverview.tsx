@@ -25,7 +25,7 @@ export const ClusterEventsOverview: React.FC = () => {
                 : { namespaces: namespaces.selected }),
         },
         {
-            updateCoalesceInterval: 5000,
+            updateCoalesceInterval: 1000,
         },
         [namespaces]
     );
@@ -68,7 +68,7 @@ export const ClusterEventsOverview: React.FC = () => {
                 return { when, content, id };
             })
             .sort((x, y) => y.when.getTime() - x.when.getTime())
-            .slice(0, 100);
+            .slice(0, 1000);
     }, [events, query, scrollBoxRef]);
 
     return (
