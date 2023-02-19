@@ -2,7 +2,7 @@
 
 ## Contributing
 
-Contribution guidelines can be found (here)[https://github.com/sbesselsen/k8s-iris/blob/main/CONTRIBUTING.md].
+Contribution guidelines can be found [here](https://github.com/sbesselsen/k8s-iris/blob/main/CONTRIBUTING.md).
 
 ## License (MIT)
 
