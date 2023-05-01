@@ -212,6 +212,21 @@ function generateNodeDetails(
                 );
             },
         });
+        output.push({
+            id: "node-version",
+            header: "Version",
+            importance: 1,
+            style: "column",
+            widthUnits: 2,
+            valueFor(node) {
+                let version = (node as any).status?.nodeInfo?.kubeletVersion;
+                if (version) {
+                    // TODO: AWS-specific hack
+                    version = String(version).replace(/-eks-.*$/, "");
+                }
+                return version;
+            },
+        });
     }
     return output;
 }
