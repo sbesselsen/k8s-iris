@@ -9,7 +9,7 @@ export const TextActions: React.FC<{}> = () => {
         const identifiers = resources.map(toK8sObjectIdentifier);
         const text = identifiers
             .map((identifier) => identifier.name)
-            .join(", ");
+            .join("\n");
         if (text) {
             navigator.clipboard.writeText(text);
         }
