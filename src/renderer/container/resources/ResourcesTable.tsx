@@ -380,19 +380,14 @@ const ResourcesTableRow: React.FC<ResourcesTableRowProps> = React.memo(
                         userSelect="text"
                     >
                         <HStack p={0}>
-                            <Selectable
-                                display="block"
+                            <ResourceEditorLink
+                                userSelect="text"
                                 cursor="inherit"
                                 textColor={isDeleting ? "gray.500" : ""}
-                                isTruncated
+                                editorResource={resource}
                             >
-                                <ResourceEditorLink
-                                    userSelect="text"
-                                    editorResource={resource}
-                                >
-                                    {resource.metadata.name}
-                                </ResourceEditorLink>
-                            </Selectable>
+                                {resource.metadata.name}
+                            </ResourceEditorLink>
                             {badges.map((badge) => {
                                 const {
                                     id,

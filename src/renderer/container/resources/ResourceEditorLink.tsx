@@ -22,9 +22,10 @@ export const ResourceEditorLink: React.FC<ResourceEditorLinkProps> = (
                 display={linkProps.display ?? "inline-flex"}
                 fontSize={linkProps.fontSize ?? "inherit"}
                 alignItems="center"
+                overflow="hidden"
                 spacing={0}
             >
-                <Link onClick={openEditor} {...linkProps} />
+                <Link onClick={openEditor} isTruncated {...linkProps} />
                 <ResourceContextMenuTriggerButton />
             </HStack>
         </ResourceContextMenu>

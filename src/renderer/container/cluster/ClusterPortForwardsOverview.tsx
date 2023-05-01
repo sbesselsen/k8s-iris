@@ -313,7 +313,6 @@ const PortForwardRow: React.FC<PortForwardRowProps> = (props) => {
                 <ResourceEditorLink
                     userSelect="text"
                     editorResource={remoteResource}
-                    isTruncated
                 >
                     {portForward.spec.remoteName}
                 </ResourceEditorLink>

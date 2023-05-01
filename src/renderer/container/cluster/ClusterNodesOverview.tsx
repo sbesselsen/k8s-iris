@@ -182,11 +182,9 @@ const NodeInfo: React.FC<NodeInfoProps> = React.memo((props) => {
             </Td>
             <Td verticalAlign="baseline">
                 <HStack>
-                    <Selectable isTruncated>
-                        <ResourceEditorLink editorResource={node}>
-                            {node.metadata.name}
-                        </ResourceEditorLink>
-                    </Selectable>
+                    <ResourceEditorLink editorResource={node}>
+                        {node.metadata.name}
+                    </ResourceEditorLink>
                     {isNew && <Badge colorScheme="green">new</Badge>}
                 </HStack>
                 {(node as any)?.spec?.taints?.length > 0 && (

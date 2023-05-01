@@ -1,4 +1,4 @@
-import { Box, Link, List, ListItem } from "@chakra-ui/react";
+import { Box, Link, List, ListItem, Text } from "@chakra-ui/react";
 import React, { MouseEvent, ReactNode, useCallback } from "react";
 import { K8sObject, K8sResourceTypeIdentifier } from "../../common/k8s/client";
 import { isSetLike } from "../../common/k8s/util";
@@ -219,12 +219,15 @@ function generateNodeDetails(
             style: "column",
             widthUnits: 2,
             valueFor(node) {
-                let version = (node as any).status?.nodeInfo?.kubeletVersion;
-                if (version) {
-                    // TODO: AWS-specific hack
-                    version = String(version).replace(/-eks-.*$/, "");
+                const version = (node as any).status?.nodeInfo?.kubeletVersion;
+                if (!version) {
+                    return null;
                 }
-                return version;
+                return (
+                    <Text userSelect="text" isTruncated>
+                        {version}
+                    </Text>
+                );
             },
         });
     }
