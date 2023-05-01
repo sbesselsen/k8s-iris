@@ -1,5 +1,9 @@
 import { useMemo } from "react";
-import { K8sObject, K8sObjectListQuery } from "../../common/k8s/client";
+import {
+    K8sClient,
+    K8sObject,
+    K8sObjectListQuery,
+} from "../../common/k8s/client";
 import { isSetLike } from "../../common/k8s/util";
 import { reuseShallowEqualObject } from "../../common/util/deep-equal";
 import { k8sSmartCompare } from "../../common/util/sort";
@@ -64,52 +68,12 @@ export function useK8sAssociatedPodsStore(
         return false;
     }, [object, ...(deps ?? [])]);
 
-    const specs: K8sObjectListQuery[] = useMemo(() => {
-        if (!object || !hasAssociatedPods) {
-            // Return a spec that returns zero pods.
-            return [];
-        }
-        if (object.apiVersion === "v1" && object.kind === "Service") {
-            // Service.
-            const selector = (object as any)?.spec?.selector;
-            if (!selector) {
-                return [];
-            }
-            return [
-                {
-                    apiVersion: "v1",
-                    kind: "Pod",
-                    ...(object?.metadata.namespace
-                        ? { namespaces: [object.metadata.namespace] }
-                        : {}),
-                    labelSelector: Object.entries(selector).map(([k, v]) => ({
-                        name: k,
-                        value: v as string | string[],
-                    })),
-                },
-            ];
-        }
-        if (isSetLike(object)) {
-            const selector = (object as any)?.spec?.selector?.matchLabels;
-            if (!selector) {
-                return [];
-            }
-            return [
-                {
-                    apiVersion: "v1",
-                    kind: "Pod",
-                    ...(object?.metadata.namespace
-                        ? { namespaces: [object.metadata.namespace] }
-                        : {}),
-                    labelSelector: Object.entries(selector).map(([k, v]) => ({
-                        name: k,
-                        value: v as string | string[],
-                    })),
-                },
-            ];
-        }
-        return [];
-    }, [kind, apiVersion, name, namespace, hasAssociatedPods, ...(deps ?? [])]);
+    // Memo by kind, apiVersion, name, namespace because changes to the object should not lead to new queries.
+    // That would make for example the detail page of a deployment very jumpy if we change things to it.
+    const specs: K8sObjectListQuery[] = useMemo(
+        () => (object ? getAssociatedPodsQueries(object) : []),
+        [kind, apiVersion, name, namespace, hasAssociatedPods, ...(deps ?? [])]
+    );
 
     const store = useK8sListWatchStore(specs, options ?? {}, [specs]);
 
@@ -121,4 +85,63 @@ export function useK8sAssociatedPodsStore(
         },
         [hasAssociatedPods]
     );
+}
+
+function getAssociatedPodsQueries(object: K8sObject): K8sObjectListQuery[] {
+    if (!object) {
+        return [];
+    }
+    if (object.apiVersion === "v1" && object.kind === "Service") {
+        // Service.
+        const selector = (object as any)?.spec?.selector;
+        if (!selector) {
+            return [];
+        }
+        return [
+            {
+                apiVersion: "v1",
+                kind: "Pod",
+                ...(object?.metadata.namespace
+                    ? { namespaces: [object.metadata.namespace] }
+                    : {}),
+                labelSelector: Object.entries(selector).map(([k, v]) => ({
+                    name: k,
+                    value: v as string | string[],
+                })),
+            },
+        ];
+    }
+    if (isSetLike(object)) {
+        const selector = (object as any)?.spec?.selector?.matchLabels;
+        if (!selector) {
+            return [];
+        }
+        return [
+            {
+                apiVersion: "v1",
+                kind: "Pod",
+                ...(object?.metadata.namespace
+                    ? { namespaces: [object.metadata.namespace] }
+                    : {}),
+                labelSelector: Object.entries(selector).map(([k, v]) => ({
+                    name: k,
+                    value: v as string | string[],
+                })),
+            },
+        ];
+    }
+    return [];
+}
+
+export async function fetchAssociatedPods(
+    client: K8sClient,
+    object: K8sObject
+): Promise<K8sObject[]> {
+    const results = await Promise.all(
+        getAssociatedPodsQueries(object).map((q) => client.list(q))
+    );
+    return results.reduce((objects, result) => {
+        objects.push(...result.items);
+        return objects;
+    }, [] as K8sObject[]);
 }

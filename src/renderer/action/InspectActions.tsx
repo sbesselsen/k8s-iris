@@ -4,14 +4,18 @@ import { FiTerminal } from "react-icons/fi";
 import { RiTextWrap } from "react-icons/ri";
 import { Action, ActionClickResult, ActionGroup } from ".";
 import { K8sObject, K8sObjectIdentifier } from "../../common/k8s/client";
-import { isK8sObject } from "../../common/k8s/util";
+import { isK8sObject, isSetLike } from "../../common/k8s/util";
 import { useContextLockHelpers } from "../context/context-lock";
 import { logsEditor, shellEditor } from "../context/editors";
 import { useEditorOpener } from "../hook/editor-link";
+import { fetchAssociatedPods } from "../k8s/associated-pods";
+import { useK8sClient } from "../k8s/client";
 
 export const InspectActions: React.FC<{}> = () => {
     const { checkContextLock } = useContextLockHelpers();
     const openEditor = useEditorOpener();
+
+    const client = useK8sClient();
 
     const isSinglePod = useCallback(
         (resources: Array<K8sObject | K8sObjectIdentifier>) => {
@@ -29,12 +33,32 @@ export const InspectActions: React.FC<{}> = () => {
         },
         []
     );
-    const isShellVisible = isSinglePod;
+
+    const isSingleSetLike = useCallback(
+        (resources: Array<K8sObject | K8sObjectIdentifier>) => {
+            if (resources.length !== 1) {
+                return false;
+            }
+            const resource = resources[0];
+            return isSetLike(resource);
+        },
+        [isSetLike]
+    );
+
+    const isShellVisible = useCallback(
+        (resources: Array<K8sObject | K8sObjectIdentifier>) => {
+            return isSinglePod(resources) || isSingleSetLike(resources);
+        },
+        [isSinglePod, isSingleSetLike]
+    );
 
     const containerOptions = useCallback(
         (resources: Array<K8sObject | K8sObjectIdentifier>) => {
             const resource = resources[0];
-            const containers = (resource as any).spec?.containers ?? [];
+            const containers =
+                (resource as any).spec?.template?.spec?.containers ??
+                (resource as any).spec?.containers ??
+                [];
             if (containers.length <= 1) {
                 return undefined;
             }
@@ -49,13 +73,21 @@ export const InspectActions: React.FC<{}> = () => {
 
     const onClickShell = useCallback(
         async (result: ActionClickResult) => {
-            const resource = result.resources[0];
+            let resource = result.resources[0];
+            if (resource && !isSinglePod([resource]) && isK8sObject(resource)) {
+                const pods = await fetchAssociatedPods(client, resource);
+                if (pods.length === 0) {
+                    return;
+                }
+                resource = pods[0];
+            }
             if (!resource || !isK8sObject(resource)) {
                 return;
             }
-            const containerName =
-                result.subOptionId ??
-                (resource as any).spec?.containers?.[0]?.name;
+            const containers =
+                (resource as any).spec?.template?.spec.containers ??
+                (resource as any).spec?.containers;
+            const containerName = result.subOptionId ?? containers?.[0]?.name;
             if (!containerName) {
                 return;
             }
@@ -68,20 +100,33 @@ export const InspectActions: React.FC<{}> = () => {
                 requestBackground: result.altKey,
             });
         },
-        [checkContextLock, openEditor]
+        [checkContextLock, isSinglePod, openEditor]
     );
 
-    const isLogsVisible = isSinglePod;
+    const isLogsVisible = useCallback(
+        (resources: Array<K8sObject | K8sObjectIdentifier>) => {
+            return isSinglePod(resources) || isSingleSetLike(resources);
+        },
+        [isSinglePod, isSingleSetLike]
+    );
 
     const onClickLogs = useCallback(
         async (result: ActionClickResult) => {
-            const resource = result.resources[0];
+            let resource = result.resources[0];
+            if (resource && !isSinglePod([resource]) && isK8sObject(resource)) {
+                const pods = await fetchAssociatedPods(client, resource);
+                if (pods.length === 0) {
+                    return;
+                }
+                resource = pods[0];
+            }
             if (!resource || !isK8sObject(resource)) {
                 return;
             }
-            const containerName =
-                result.subOptionId ??
-                (resource as any).spec?.containers?.[0]?.name;
+            const containers =
+                (resource as any).spec?.template?.spec.containers ??
+                (resource as any).spec?.containers;
+            const containerName = result.subOptionId ?? containers?.[0]?.name;
             if (!containerName) {
                 return;
             }
@@ -91,7 +136,7 @@ export const InspectActions: React.FC<{}> = () => {
                 requestBackground: result.altKey,
             });
         },
-        [openEditor]
+        [client, isSinglePod, openEditor]
     );
 
     return (
