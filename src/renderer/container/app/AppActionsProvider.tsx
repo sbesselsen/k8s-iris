@@ -4,11 +4,13 @@ import { BrowseActions } from "../../action/BrowseActions";
 import { EditActions } from "../../action/EditActions";
 import { InspectActions } from "../../action/InspectActions";
 import { LifecycleActions } from "../../action/LifecycleActions";
+import { TextActions } from "../../action/TextActions";
 import { useOptionalK8sContext } from "../../context/k8s-context";
 
 const actionGroups = [
     BrowseActions,
     EditActions,
+    TextActions,
     LifecycleActions,
     InspectActions,
 ];
