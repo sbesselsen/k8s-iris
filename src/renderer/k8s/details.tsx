@@ -1,5 +1,10 @@
 import { Box, Link, List, ListItem, Text } from "@chakra-ui/react";
-import React, { MouseEvent, ReactNode, useCallback } from "react";
+import React, {
+    MouseEvent,
+    MouseEventHandler,
+    ReactNode,
+    useCallback,
+} from "react";
 import { K8sObject, K8sResourceTypeIdentifier } from "../../common/k8s/client";
 import { isSetLike } from "../../common/k8s/util";
 import { AppTooltip } from "../component/main/AppTooltip";
@@ -152,6 +157,32 @@ export const IngressHostLink: React.FC<{ url: string }> = (props) => {
         [ipcOpenUrl, url]
     );
 
+    const popup = useIpcCall((ipc) => ipc.contextMenu.popup);
+
+    const onContextMenu: MouseEventHandler = useCallback(() => {
+        popup({
+            menuTemplate: [
+                { label: "Open", actionId: "open" },
+                { label: "Copy URL", actionId: "copy-url" },
+                { label: "Copy Host Name", actionId: "copy-hostname" },
+            ],
+        }).then(({ actionId }) => {
+            switch (actionId) {
+                case "open":
+                    ipcOpenUrl({ url });
+                    break;
+                case "copy-url":
+                    navigator.clipboard.writeText(url);
+                    break;
+                case "copy-hostname":
+                    navigator.clipboard.writeText(
+                        url.replace(/^https?:\/\//, "").replace(/\/.*$/, "")
+                    );
+                    break;
+            }
+        });
+    }, [ipcOpenUrl, url, popup]);
+
     return (
         <Link
             href={url}
@@ -159,6 +190,7 @@ export const IngressHostLink: React.FC<{ url: string }> = (props) => {
             onClick={onClick}
             fontSize="xs"
             textColor="gray"
+            onContextMenu={onContextMenu}
         >
             {url}
         </Link>
