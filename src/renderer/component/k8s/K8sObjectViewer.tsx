@@ -578,25 +578,27 @@ const K8sObjectCustomDetails: React.FC<K8sObjectCustomDetailsProps> = (
                     <Stat
                         key={col.id}
                         display="inline-block"
+                        overflow="hidden"
                         border="1px solid"
                         borderColor={borderColor}
                         bg={bg}
                         borderRadius="8px"
                         boxShadow={boxShadow}
+                        maxWidth={60 * (col.widthUnits + 1) + "px"}
                         px={3}
                         py={1}
                         me={2}
                         mb={2}
                     >
                         <StatLabel
-                            fontSize="sm"
+                            fontSize="xs"
                             whiteSpace="nowrap"
                             fontWeight="normal"
                         >
                             {col.header}
                         </StatLabel>
                         <StatNumber
-                            fontSize="md"
+                            fontSize="sm"
                             whiteSpace="nowrap"
                             userSelect="text"
                             cursor="text"
