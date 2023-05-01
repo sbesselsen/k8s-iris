@@ -38,7 +38,7 @@ export const ViewportLazyTbody: React.FC<ViewportLazyTbodyProps> = (props) => {
         children,
     }: ViewportLazyRenderParams) => (
         <Tbody ref={ref} {...tbodyProps}>
-            {height && <Tr height={height}></Tr>}
+            {height !== undefined && <Tr height={height}></Tr>}
             {children}
         </Tbody>
     );
