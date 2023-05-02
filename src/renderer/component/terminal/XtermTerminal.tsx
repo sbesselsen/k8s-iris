@@ -8,17 +8,22 @@ import {
     useHibernateListener,
 } from "../../context/hibernate";
 import { useAppContentResizeListener } from "../main/AppFrame";
+import { WebLinksAddon } from "xterm-addon-web-links";
+import { useModifierKeyRef } from "../../hook/keyboard";
 
 export type XtermTerminalProps = BoxProps & {
     onInitializeTerminal?: (terminal: Terminal) => void;
+    onClickLink?: (uri: string) => void;
 };
 
 export const XtermTerminal: React.FC<XtermTerminalProps> = (props) => {
-    const { onInitializeTerminal, ...boxProps } = props;
+    const { onClickLink, onInitializeTerminal, ...boxProps } = props;
 
     const containerRef = useRef<HTMLDivElement>();
     const fitAddonRef = useRef<FitAddon>();
     const termRef = useRef<Terminal>();
+
+    const metaKeyRef = useModifierKeyRef("Meta");
 
     useEffect(() => {
         if (!containerRef.current) {
@@ -32,6 +37,15 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = (props) => {
         const fitAddon = new FitAddon();
         term.loadAddon(fitAddon);
 
+        if (onClickLink) {
+            const linksAddon = new WebLinksAddon((e, uri) => {
+                if (metaKeyRef.current) {
+                    onClickLink?.(uri);
+                }
+            });
+            term.loadAddon(linksAddon);
+        }
+
         term.open(containerRef.current);
 
         fitAddon.fit();
@@ -43,7 +57,7 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = (props) => {
             term.dispose();
             termRef.current = undefined;
         };
-    }, [containerRef, fitAddonRef, termRef]);
+    }, [containerRef, fitAddonRef, metaKeyRef, onClickLink, termRef]);
 
     useEffect(() => {
         if (termRef.current && onInitializeTerminal) {

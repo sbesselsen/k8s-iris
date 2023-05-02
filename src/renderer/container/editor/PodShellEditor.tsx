@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { IDisposable, Terminal } from "xterm";
 import { K8sExecHandler } from "../../../common/k8s/client";
 import { XtermTerminal } from "../../component/terminal/XtermTerminal";
+import { useIpcCall } from "../../hook/ipc";
 import { useK8sClient } from "../../k8s/client";
 
 export type PodShellEditorProps = {
@@ -15,6 +16,14 @@ export const PodShellEditor: React.FC<PodShellEditorProps> = (props) => {
 
     const client = useK8sClient();
     const [terminal, setTerminal] = useState<Terminal>();
+
+    const openInBrowser = useIpcCall((ipc) => ipc.app.openUrlInBrowser);
+    const onClickLink = useCallback(
+        (url) => {
+            openInBrowser({ url });
+        },
+        [openInBrowser]
+    );
 
     useEffect(() => {
         let handler: K8sExecHandler;
@@ -88,5 +97,11 @@ export const PodShellEditor: React.FC<PodShellEditorProps> = (props) => {
         };
     }, [client, name, namespace, containerName, terminal]);
 
-    return <XtermTerminal flex="1 0 0" onInitializeTerminal={setTerminal} />;
+    return (
+        <XtermTerminal
+            flex="1 0 0"
+            onInitializeTerminal={setTerminal}
+            onClickLink={onClickLink}
+        />
+    );
 };

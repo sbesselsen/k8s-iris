@@ -1,12 +1,21 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { IDisposable, Terminal } from "xterm";
 import { ShellHandler } from "../../../common/shell";
 import { XtermTerminal } from "../../component/terminal/XtermTerminal";
+import { useIpcCall } from "../../hook/ipc";
 import { useLocalShellOpener } from "../../shell";
 
 export const LocalShellEditor: React.FC<{}> = () => {
     const [terminal, setTerminal] = useState<Terminal>();
     const openShell = useLocalShellOpener();
+
+    const openInBrowser = useIpcCall((ipc) => ipc.app.openUrlInBrowser);
+    const onClickLink = useCallback(
+        (url) => {
+            openInBrowser({ url });
+        },
+        [openInBrowser]
+    );
 
     useEffect(() => {
         let handler: ShellHandler;
@@ -70,5 +79,11 @@ export const LocalShellEditor: React.FC<{}> = () => {
         };
     }, [terminal]);
 
-    return <XtermTerminal flex="1 0 0" onInitializeTerminal={setTerminal} />;
+    return (
+        <XtermTerminal
+            flex="1 0 0"
+            onInitializeTerminal={setTerminal}
+            onClickLink={onClickLink}
+        />
+    );
 };
