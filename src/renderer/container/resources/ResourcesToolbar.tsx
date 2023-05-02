@@ -1,4 +1,3 @@
-import { AddIcon } from "@chakra-ui/icons";
 import React, { useCallback } from "react";
 import {
     K8sObject,
