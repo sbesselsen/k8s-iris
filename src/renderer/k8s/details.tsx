@@ -8,6 +8,7 @@ import React, {
 import { K8sObject, K8sResourceTypeIdentifier } from "../../common/k8s/client";
 import { isSetLike } from "../../common/k8s/util";
 import { AppTooltip } from "../component/main/AppTooltip";
+import { ResourceEditorLink } from "../container/resources/ResourceEditorLink";
 import { useIpcCall } from "../hook/ipc";
 
 export type ResourceDetailCommon = {
@@ -43,6 +44,7 @@ export function generateResourceDetails(
         generateSetSizeDetails,
         generateIngressDetails,
         generateNodeDetails,
+        generatePvcDetails,
     ].flatMap((f) => f(resourceType));
 }
 
@@ -259,6 +261,47 @@ function generateNodeDetails(
                     <Text userSelect="text" isTruncated>
                         {version}
                     </Text>
+                );
+            },
+        });
+    }
+    return output;
+}
+
+function generatePvcDetails(
+    resourceType: K8sResourceTypeIdentifier
+): ResourceDetail[] {
+    const output: ResourceDetail[] = [];
+    if (
+        resourceType.apiVersion === "v1" &&
+        resourceType.kind === "PersistentVolumeClaim"
+    ) {
+        output.push({
+            id: "pvc-volume",
+            header: "Volume name",
+            importance: 1,
+            style: "box",
+            valueFor(pvc) {
+                const name = (pvc as any).spec?.volumeName;
+                if (!name) {
+                    return null;
+                }
+                const editorResource = {
+                    apiVersion: "v1",
+                    kind: "PersistentVolume",
+                    name,
+                };
+                return (
+                    <ResourceEditorLink
+                        fontSize="xs"
+                        textColor="gray"
+                        userSelect="text"
+                        isTruncated
+                        showMenuAffordance={false}
+                        editorResource={editorResource}
+                    >
+                        {name}
+                    </ResourceEditorLink>
                 );
             },
         });

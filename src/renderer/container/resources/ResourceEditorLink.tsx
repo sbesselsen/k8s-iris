@@ -9,12 +9,13 @@ import {
 
 export type ResourceEditorLinkProps = LinkProps & {
     editorResource: K8sObject | K8sObjectIdentifier;
+    showMenuAffordance?: boolean;
 };
 
 export const ResourceEditorLink: React.FC<ResourceEditorLinkProps> = (
     props
 ) => {
-    const { editorResource, ...linkProps } = props;
+    const { editorResource, showMenuAffordance = true, ...linkProps } = props;
     const { openEditor } = useEditorLink(editorResource);
     return (
         <ResourceContextMenu object={editorResource}>
@@ -26,7 +27,7 @@ export const ResourceEditorLink: React.FC<ResourceEditorLinkProps> = (
                 spacing={0}
             >
                 <Link onClick={openEditor} isTruncated {...linkProps} />
-                <ResourceContextMenuTriggerButton />
+                {showMenuAffordance && <ResourceContextMenuTriggerButton />}
             </HStack>
         </ResourceContextMenu>
     );
