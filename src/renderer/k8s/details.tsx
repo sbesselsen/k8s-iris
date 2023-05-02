@@ -112,7 +112,7 @@ function generateIngressDetails(
     ) {
         output.push({
             id: "ingress-urls",
-            header: "Scale",
+            header: "URL",
             importance: 1,
             style: "box",
             valueFor(resource) {
@@ -277,8 +277,18 @@ function generatePvcDetails(
         resourceType.kind === "PersistentVolumeClaim"
     ) {
         output.push({
+            id: "pvc-phase",
+            header: "Phase",
+            importance: 1,
+            style: "column",
+            widthUnits: 1,
+            valueFor(pvc) {
+                return (pvc as any).status?.phase;
+            },
+        });
+        output.push({
             id: "pvc-volume",
-            header: "Volume name",
+            header: "Volume",
             importance: 1,
             style: "box",
             valueFor(pvc) {

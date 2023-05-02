@@ -104,6 +104,7 @@ import { ContextMenuTemplate } from "../../../common/contextmenu";
 import { ResourceActionButtons } from "../resources/ResourceActionButtons";
 import { ReadableStore, useProvidedStoreValue } from "../../util/state";
 import { ResourcesTable } from "../resources/ResourcesTable";
+import { generateResourceDetails } from "../../k8s/details";
 
 export type ResourceEditorProps = {
     editorResource: K8sObjectIdentifier;
@@ -350,6 +351,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
                         }
                     />
                 )}
+                {object && <K8sObjectBoxes object={object} />}
                 {object && <PortForwardingMenu object={object} />}
                 {object && <AssociatedPods object={object} />}
             </VStack>
@@ -808,6 +810,33 @@ const AssociatedPodsInner: React.FC<{
         </>
     );
 });
+
+const K8sObjectBoxes: React.FC<{ object: K8sObject }> = (props) => {
+    const { object } = props;
+
+    const { kind, apiVersion } = object;
+    const details = useMemo(() => {
+        const details = generateResourceDetails({ apiVersion, kind }).filter(
+            (d) => d.style === "box"
+        );
+        details.sort((a, b) => (a.importance ?? 0) - (b.importance ?? 0));
+        return details;
+    }, [apiVersion, kind]);
+
+    if (details.length === 0) {
+        return null;
+    }
+    return (
+        <VStack alignItems="stretch">
+            {details.map((detail) => (
+                <VStack alignItems="stretch" key={detail.id}>
+                    <Heading size="sm">{detail.header}</Heading>
+                    {detail.valueFor(object)}
+                </VStack>
+            ))}
+        </VStack>
+    );
+};
 
 const remoteTypes: Record<string, string> = {
     "v1:Pod": "pod",
