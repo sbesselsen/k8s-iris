@@ -38,17 +38,15 @@ export const ClusterOverview: React.FC<{}> = () => {
         (id: string, requestNewWindow = false) => {
             if (requestNewWindow) {
                 const oldRoute = getAppRoute();
-                if (oldRoute.menuItem) {
-                    createWindow({
-                        route: {
-                            ...oldRoute,
-                            menuTab: {
-                                ...oldRoute.menuTab,
-                                [oldRoute.menuItem]: id,
-                            },
+                createWindow({
+                    route: {
+                        ...oldRoute,
+                        menuTab: {
+                            ...oldRoute.menuTab,
+                            [oldRoute.menuItem ?? "cluster"]: id,
                         },
-                    });
-                }
+                    },
+                });
             } else {
                 setActiveTab(id);
             }
