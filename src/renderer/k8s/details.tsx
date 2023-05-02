@@ -45,6 +45,7 @@ export function generateResourceDetails(
         generateIngressDetails,
         generateNodeDetails,
         generatePvcDetails,
+        generatePvDetails,
     ].flatMap((f) => f(resourceType));
 }
 
@@ -258,7 +259,7 @@ function generateNodeDetails(
                     return null;
                 }
                 return (
-                    <Text userSelect="text" isTruncated>
+                    <Text title={version} userSelect="text" isTruncated>
                         {version}
                     </Text>
                 );
@@ -277,13 +278,21 @@ function generatePvcDetails(
         resourceType.kind === "PersistentVolumeClaim"
     ) {
         output.push({
-            id: "pvc-phase",
-            header: "Phase",
+            id: "pvc-class",
+            header: "Class",
             importance: 1,
             style: "column",
-            widthUnits: 1,
+            widthUnits: 2,
             valueFor(pvc) {
-                return (pvc as any).status?.phase;
+                const name = (pvc as any).spec?.storageClassName;
+                if (!name) {
+                    return null;
+                }
+                return (
+                    <Text title={name} userSelect="text" isTruncated>
+                        {name}
+                    </Text>
+                );
             },
         });
         output.push({
@@ -311,6 +320,66 @@ function generatePvcDetails(
                         editorResource={editorResource}
                     >
                         {name}
+                    </ResourceEditorLink>
+                );
+            },
+        });
+    }
+    return output;
+}
+
+function generatePvDetails(
+    resourceType: K8sResourceTypeIdentifier
+): ResourceDetail[] {
+    const output: ResourceDetail[] = [];
+    if (
+        resourceType.apiVersion === "v1" &&
+        resourceType.kind === "PersistentVolume"
+    ) {
+        output.push({
+            id: "pv-class",
+            header: "Class",
+            importance: 1,
+            style: "column",
+            widthUnits: 2,
+            valueFor(pv) {
+                const name = (pv as any).spec?.storageClassName;
+                if (!name) {
+                    return null;
+                }
+                return (
+                    <Text title={name} userSelect="text" isTruncated>
+                        {name}
+                    </Text>
+                );
+            },
+        });
+        output.push({
+            id: "pv-claim",
+            header: "Claim",
+            importance: 1,
+            style: "box",
+            valueFor(pvc) {
+                const ref = (pvc as any).spec?.claimRef;
+                if (!ref) {
+                    return null;
+                }
+                const editorResource = {
+                    apiVersion: "v1",
+                    kind: "PersistentVolumeClaim",
+                    name: ref.name,
+                    namespace: ref.namespace,
+                };
+                return (
+                    <ResourceEditorLink
+                        fontSize="xs"
+                        textColor="gray"
+                        userSelect="text"
+                        isTruncated
+                        showMenuAffordance={false}
+                        editorResource={editorResource}
+                    >
+                        {ref.name}
                     </ResourceEditorLink>
                 );
             },

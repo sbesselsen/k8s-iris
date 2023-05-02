@@ -15,6 +15,7 @@ export function generateBadges(resource: K8sObject): ResourceBadge[] {
         deploymentStatusBadges,
         podStatusBadges,
         isDeletingBadges,
+        unboundVolumeBadges,
     ].flatMap((f) => f(resource));
 }
 
@@ -117,4 +118,21 @@ export function isDeletingBadges(resource: K8sObject): ResourceBadge[] {
     return isDeleting
         ? [{ id: "is-deleting", text: "deleting", variant: "negative" }]
         : [];
+}
+
+export function unboundVolumeBadges(resource: K8sObject): ResourceBadge[] {
+    if (resource.apiVersion !== "v1") {
+        return [];
+    }
+    if (
+        resource.kind !== "PersistentVolume" &&
+        resource.kind !== "PersistentVolumeClaim"
+    ) {
+        return [];
+    }
+    const phase = (resource as any).status?.phase;
+    if (phase === "Bound" || phase === undefined) {
+        return [];
+    }
+    return [{ id: "not-bound", text: phase, variant: "other" }];
 }
