@@ -79,10 +79,15 @@ export function useK8sNodeMetrics(
 
 const metricsInterval = 15000;
 
+let isFetching: Record<string, boolean> = {};
+
 function registerMonitor(store: Store<SharedMetrics>) {
     if (store.get().isMonitoring) {
         return;
     }
+
+    isFetching = {};
+
     store.set((value) => ({ ...value, isMonitoring: true }));
 
     const subscriptions: Record<string, any> = {};
@@ -126,22 +131,36 @@ async function fetchMetrics(store: Store<SharedMetrics>, key: string) {
         return;
     }
 
-    if (type === "nodes") {
-        const client = clients[context];
-        const data = await client.list({
-            apiVersion: "metrics.k8s.io/v1beta1",
-            kind: "NodeMetrics",
-        });
-        store.set((value) => ({
-            ...value,
-            metricsTimestamps: {
-                ...value.metricsTimestamps,
-                [key]: ts,
-            },
-            metrics: {
-                ...value.metrics,
-                [key]: data.items,
-            },
-        }));
+    if (isFetching[key]) {
+        // Already fetching these metrics.
+        console.log("Skip fetching metrics, already fetching", key);
+        return;
+    }
+
+    isFetching[key] = true;
+
+    try {
+        if (type === "nodes") {
+            const client = clients[context];
+            const data = await client.list({
+                apiVersion: "metrics.k8s.io/v1beta1",
+                kind: "NodeMetrics",
+            });
+            store.set((value) => ({
+                ...value,
+                metricsTimestamps: {
+                    ...value.metricsTimestamps,
+                    [key]: ts,
+                },
+                metrics: {
+                    ...value.metrics,
+                    [key]: data.items,
+                },
+            }));
+        }
+        delete isFetching[key];
+    } catch (e) {
+        delete isFetching[key];
+        throw e;
     }
 }
