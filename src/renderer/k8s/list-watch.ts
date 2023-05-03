@@ -9,10 +9,14 @@ import {
 } from "../../common/k8s/client";
 import { toK8sObjectIdentifierString } from "../../common/k8s/util";
 import { coalesceValues } from "../../common/util/async";
-import { useHibernateGetter, useHibernateListener } from "../context/hibernate";
+import {
+    useHibernatableReadableStore,
+    useHibernateGetter,
+    useHibernateListener,
+} from "../context/hibernate";
 import { useK8sContext } from "../context/k8s-context";
 import { useGuaranteedMemo } from "../hook/guaranteed-memo";
-import { createStore, Store } from "../util/state";
+import { createStore, ReadableStore } from "../util/state";
 import { useK8sClient } from "./client";
 
 const loadingValue: [boolean, undefined, undefined] = [
@@ -270,7 +274,7 @@ export function useK8sListWatchStore<T extends K8sObject = K8sObject>(
     specs: K8sObjectListQuery | K8sObjectListQuery[],
     options: K8sListWatchStoreHookOptions,
     deps: any[] = []
-): Store<K8sListWatchStoreValue<T>> {
+): ReadableStore<K8sListWatchStoreValue<T>> {
     const {
         pauseOnHibernate = true,
         updateCoalesceInterval = 0,
@@ -416,7 +420,7 @@ export function useK8sListWatchStore<T extends K8sObject = K8sObject>(
             // Stop all the listWatches.
             listWatches.forEach((l) => l.stop());
         };
-    }, [client, pauseOnHibernate, updateCoalesceInterval, ...deps]);
+    }, [client, updateCoalesceInterval, ...deps]);
 
-    return store;
+    return useHibernatableReadableStore(store, pauseOnHibernate);
 }

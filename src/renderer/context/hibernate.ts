@@ -1,6 +1,11 @@
 import { useConst } from "@chakra-ui/react";
 import React, { PropsWithChildren, useCallback, useEffect } from "react";
-import { create, createStore } from "../util/state";
+import {
+    create,
+    createStore,
+    ReadableStore,
+    useDerivedReadableStore,
+} from "../util/state";
 
 const { useStore, useStoreValue, useStoreValueGetter } = create(false);
 
@@ -46,4 +51,21 @@ export function useHibernateListener(
             store.unsubscribe(callback);
         };
     }, [callback, store]);
+}
+
+export function useHibernatableReadableStore<T>(
+    store: ReadableStore<T>,
+    pauseOnHibernate = true
+): ReadableStore<T> {
+    const hibernate = useHibernate();
+    return useDerivedReadableStore<T, T>(
+        store,
+        (value, prevValue, prevTransformedValue) => {
+            if (!hibernate || !pauseOnHibernate) {
+                return value;
+            }
+            return prevTransformedValue ?? value;
+        },
+        [hibernate]
+    );
 }
