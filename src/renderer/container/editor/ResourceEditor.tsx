@@ -828,12 +828,18 @@ const K8sObjectBoxes: React.FC<{ object: K8sObject }> = (props) => {
     }
     return (
         <VStack alignItems="stretch">
-            {details.map((detail) => (
-                <VStack alignItems="stretch" key={detail.id}>
-                    <Heading size="sm">{detail.header}</Heading>
-                    {detail.valueFor(object)}
-                </VStack>
-            ))}
+            {details.map((detail) => {
+                const value = detail.valueFor(object);
+                if (!value) {
+                    return;
+                }
+                return (
+                    <VStack alignItems="stretch" key={detail.id}>
+                        <Heading size="sm">{detail.header}</Heading>
+                        {value}
+                    </VStack>
+                );
+            })}
         </VStack>
     );
 };

@@ -584,6 +584,7 @@ const K8sObjectCustomDetails: React.FC<K8sObjectCustomDetailsProps> = (
                         bg={bg}
                         borderRadius="8px"
                         boxShadow={boxShadow}
+                        minWidth="120px"
                         maxWidth={60 * (col.widthUnits + 1) + "px"}
                         px={3}
                         py={1}

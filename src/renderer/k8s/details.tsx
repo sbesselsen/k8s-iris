@@ -1,4 +1,12 @@
-import { Box, Link, List, ListItem, Text } from "@chakra-ui/react";
+import {
+    Badge,
+    Box,
+    HStack,
+    Link,
+    List,
+    ListItem,
+    Text,
+} from "@chakra-ui/react";
 import React, {
     MouseEvent,
     MouseEventHandler,
@@ -6,10 +14,12 @@ import React, {
     useCallback,
 } from "react";
 import { K8sObject, K8sResourceTypeIdentifier } from "../../common/k8s/client";
-import { isSetLike } from "../../common/k8s/util";
+import { isSetLike, parseCpu, parseMemory } from "../../common/k8s/util";
 import { AppTooltip } from "../component/main/AppTooltip";
+import { PercentageBadge } from "../component/main/PercentageBadge";
 import { ResourceEditorLink } from "../container/resources/ResourceEditorLink";
 import { useIpcCall } from "../hook/ipc";
+import { useK8sNodeMetrics } from "./metrics";
 
 export type ResourceDetailCommon = {
     id: string;
@@ -265,9 +275,132 @@ function generateNodeDetails(
                 );
             },
         });
+        output.push({
+            id: "node-cpu",
+            header: "CPU",
+            importance: 1,
+            style: "column",
+            widthUnits: 2,
+            valueFor(node) {
+                return <NodeCPU node={node} />;
+            },
+        });
+        output.push({
+            id: "node-memory",
+            header: "Memory",
+            importance: 1,
+            style: "column",
+            widthUnits: 2,
+            valueFor(node) {
+                return <NodeMemory node={node} />;
+            },
+        });
+        output.push({
+            id: "node-taints",
+            header: "Taints",
+            importance: 1,
+            style: "box",
+            valueFor(node) {
+                const taints: Array<{ key: string; effect: string }> =
+                    (node as any)?.spec?.taints ?? [];
+
+                if (taints.length === 0) {
+                    return null;
+                }
+
+                return (
+                    <HStack>
+                        {taints.map((taint, index) => (
+                            <Badge
+                                key={index}
+                                textTransform="none"
+                                verticalAlign="baseline"
+                            >
+                                {taint.key}:{taint.effect}
+                            </Badge>
+                        ))}
+                    </HStack>
+                );
+            },
+        });
     }
     return output;
 }
+
+const NodeCPU: React.FC<{ node: K8sObject }> = (props) => {
+    const { node } = props;
+
+    const metrics = useK8sNodeMetrics(node);
+
+    const cpu = (metrics as any)?.usage?.cpu
+        ? parseCpu((metrics as any)?.usage?.cpu)
+        : null;
+
+    const totalCpu = (node as any)?.status?.capacity?.cpu
+        ? parseCpu((node as any)?.status?.capacity?.cpu)
+        : null;
+
+    return (
+        <>
+            {totalCpu !== null && totalCpu > 0 && cpu !== null && (
+                <AppTooltip
+                    label={
+                        cpu.toFixed(1) + " / " + totalCpu.toFixed(1) + " cores"
+                    }
+                >
+                    <PercentageBadge
+                        value={cpu / totalCpu}
+                        colorScheme={cpu / totalCpu > 0.8 ? "red" : "gray"}
+                        w="100%"
+                    />
+                </AppTooltip>
+            )}
+            {!totalCpu && cpu !== null && <Badge>{cpu.toFixed(1)}</Badge>}
+        </>
+    );
+};
+
+const NodeMemory: React.FC<{ node: K8sObject }> = (props) => {
+    const { node } = props;
+
+    const metrics = useK8sNodeMetrics(node);
+
+    const memory = (metrics as any)?.usage?.memory
+        ? parseMemory((metrics as any)?.usage?.memory, "Gi")
+        : null;
+
+    const totalMemory = (node as any)?.status?.capacity?.memory
+        ? parseMemory((node as any)?.status?.capacity?.memory, "Gi")
+        : null;
+
+    return (
+        <>
+            {totalMemory !== null && totalMemory > 0 && memory !== null && (
+                <AppTooltip
+                    w="100%"
+                    label={
+                        memory.toFixed(1) +
+                        " / " +
+                        totalMemory.toFixed(1) +
+                        " Gi"
+                    }
+                >
+                    <PercentageBadge
+                        value={memory / totalMemory}
+                        colorScheme={
+                            memory / totalMemory > 0.8 ? "red" : "gray"
+                        }
+                        w="100%"
+                        textTransform="none"
+                    />
+                </AppTooltip>
+            )}
+            {!totalMemory && memory !== null && (
+                <Badge>{memory.toFixed(1)}</Badge>
+            )}
+        </>
+    );
+};
 
 function generatePvcDetails(
     resourceType: K8sResourceTypeIdentifier
