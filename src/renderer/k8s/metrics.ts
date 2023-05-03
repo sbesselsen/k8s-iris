@@ -1,18 +1,28 @@
 import { useEffect } from "react";
-import { K8sObject, K8sObjectIdentifier } from "../../common/k8s/client";
+import {
+    K8sClient,
+    K8sObject,
+    K8sObjectIdentifier,
+} from "../../common/k8s/client";
 import { toK8sObjectIdentifier } from "../../common/k8s/util";
 import { useOptionalK8sContext } from "../context/k8s-context";
-import { create } from "../util/state";
+import { create, Store } from "../util/state";
 import { useK8sClient } from "./client";
 
 type SharedMetrics = {
-    nodeMetricsByContext: Record<string, K8sObject[]>;
-    nodeMetricsListenersByContext: Record<string, number>;
+    requestedMetrics: Record<string, number>;
+    metrics: Record<string, K8sObject[]>;
+    metricsTimestamps: Record<string, number>;
+    clients: Record<string, K8sClient>;
+    isMonitoring: boolean;
 };
 
 const defaultSharedMetrics: SharedMetrics = {
-    nodeMetricsByContext: {},
-    nodeMetricsListenersByContext: {},
+    requestedMetrics: {},
+    metrics: {},
+    metricsTimestamps: {},
+    clients: {},
+    isMonitoring: false,
 };
 
 const { useStore, useStoreValue } = create(defaultSharedMetrics);
@@ -20,12 +30,6 @@ const { useStore, useStoreValue } = create(defaultSharedMetrics);
 export type K8sNodeMetricsOptions = {
     kubeContext?: string;
 };
-
-export type K8sNodeMetricsListenerOptions = K8sNodeMetricsOptions & {
-    onUpdate: (metrics: K8sObject | null) => void;
-};
-
-const emptyOnUpdate = () => {};
 
 export function useK8sNodeMetrics(
     node: K8sObject | K8sObjectIdentifier,
@@ -36,129 +40,108 @@ export function useK8sNodeMetrics(
     if (!kubeContext) {
         throw new Error("Calling useK8sNodeMetrics() without kubeContext");
     }
-    const nodeName = toK8sObjectIdentifier(node).name;
-    useK8sNodeMetricsListener(node, {
-        ...options,
-        onUpdate: emptyOnUpdate,
-    });
-    return (
-        useStoreValue().nodeMetricsByContext[kubeContext]?.find(
-            (m) => m.metadata.name === nodeName
-        ) ?? null
-    );
-}
 
-export function useK8sNodeMetricsListener(
-    node: K8sObject | K8sObjectIdentifier,
-    options: K8sNodeMetricsListenerOptions
-): void {
-    const sharedContext = useOptionalK8sContext();
-    const { kubeContext = sharedContext, onUpdate } = options ?? {};
-    if (!kubeContext) {
-        throw new Error(
-            "Calling useK8sNodeMetricsListener() without kubeContext"
-        );
-    }
+    const nodeName = toK8sObjectIdentifier(node).name;
 
     const client = useK8sClient(kubeContext);
-    const nodeName = toK8sObjectIdentifier(node).name;
 
     const store = useStore();
+    const key = JSON.stringify([kubeContext, "nodes"]);
 
     useEffect(() => {
-        let prevMetrics: K8sObject | null = null;
-        const listener = (metrics: SharedMetrics) => {
-            const newMetrics =
-                (metrics.nodeMetricsByContext[kubeContext] ?? []).find(
-                    (metrics) => metrics.metadata.name === nodeName
-                ) ?? null;
-            if (newMetrics !== prevMetrics) {
-                prevMetrics = newMetrics;
-                onUpdate(newMetrics);
-            }
-        };
+        registerMonitor(store);
 
         // Subscribe.
-        store.subscribe(listener);
-
-        // Serve cached metrics.
-        listener(store.get());
-
-        // Update listener count.
-        const sharedMetrics = store.set((value) => {
-            return {
-                ...value,
-                nodeMetricsListenersByContext: {
-                    ...value.nodeMetricsListenersByContext,
-                    [kubeContext]:
-                        (value.nodeMetricsListenersByContext[kubeContext] ??
-                            0) + 1,
-                },
-            };
-        });
-
-        // Subscribe to node metrics if this is the first listener.
-        if (sharedMetrics.nodeMetricsListenersByContext[kubeContext] === 1) {
-            // we are the first listener!
-            console.log("subscribe to nodeMetrics", kubeContext);
-            const updateMetrics = async () => {
-                const result = await client.list({
-                    apiVersion: "metrics.k8s.io/v1beta1",
-                    kind: "NodeMetrics",
-                });
-                console.log("have metrics");
-                store.set((value) => {
-                    return {
-                        ...value,
-                        nodeMetricsByContext: {
-                            ...value.nodeMetricsByContext,
-                            [kubeContext]: result.items,
-                        },
-                    };
-                });
-            };
-
-            // Get metrics on a periodic interval.
-            const interval = setInterval(() => {
-                if (
-                    sharedMetrics.nodeMetricsListenersByContext[kubeContext] ===
-                    0
-                ) {
-                    console.log("unsubscribe from nodeMetrics", kubeContext);
-
-                    // Stop if we have no listeners any more.
-                    clearInterval(interval);
-
-                    // Clear currently cached data.
-                    delete sharedMetrics.nodeMetricsByContext[kubeContext];
-
-                    return;
-                }
-                updateMetrics();
-            }, 10000);
-
-            if (!sharedMetrics.nodeMetricsByContext[kubeContext]) {
-                // Immediately fetch metrics.
-                updateMetrics();
-            }
-        }
+        store.set((value) => ({
+            ...value,
+            requestedMetrics: {
+                ...value.requestedMetrics,
+                [key]: (value.requestedMetrics[key] ?? 0) + 1,
+            },
+            clients: { ...value.clients, [kubeContext]: client },
+        }));
 
         return () => {
             // Unsubscribe.
-            store.unsubscribe(listener);
-
-            // Decrement listener count.
-            store.set((value) => {
-                return {
-                    ...value,
-                    nodeMetricsListenersByContext: {
-                        ...value.nodeMetricsListenersByContext,
-                        [kubeContext]:
-                            value.nodeMetricsListenersByContext[kubeContext] -
-                            1,
-                    },
-                };
-            });
+            store.set((value) => ({
+                ...value,
+                requestedMetrics: {
+                    ...value.requestedMetrics,
+                    [key]: Math.max((value.requestedMetrics[key] ?? 0) - 1, 0),
+                },
+            }));
         };
-    }, [client, kubeContext, nodeName, onUpdate, store]);
+    }, [client]);
+
+    const nodeMetrics = useStoreValue((v) => v.metrics[key] ?? [], [key]);
+    return nodeMetrics.find((m) => m.metadata.name === nodeName) ?? null;
+}
+
+const metricsInterval = 15000;
+
+function registerMonitor(store: Store<SharedMetrics>) {
+    if (store.get().isMonitoring) {
+        return;
+    }
+    store.set((value) => ({ ...value, isMonitoring: true }));
+
+    const subscriptions: Record<string, any> = {};
+
+    store.subscribe((value) => {
+        const { requestedMetrics } = value;
+        const keysToSubscribe = Object.entries(requestedMetrics)
+            .filter(([key, n]) => n > 0 && !subscriptions[key])
+            .map(([key]) => key);
+        const keysToUnsubscribe = Object.keys(subscriptions).filter(
+            (key) => !requestedMetrics[key] || requestedMetrics[key] < 0
+        );
+
+        for (const key of keysToSubscribe) {
+            console.log("Subscribe to metrics", key);
+            const fetch = () => {
+                fetchMetrics(store, key);
+            };
+            setTimeout(fetch, 0);
+            subscriptions[key] = setInterval(fetch, metricsInterval);
+        }
+        for (const key of keysToUnsubscribe) {
+            clearInterval(subscriptions[key]);
+            delete subscriptions[key];
+            console.log("Unsubscribe from metrics", key);
+        }
+    });
+}
+
+async function fetchMetrics(store: Store<SharedMetrics>, key: string) {
+    const [context, type] = JSON.parse(key);
+
+    const { clients, metricsTimestamps } = store.get();
+    const ts = new Date().getTime();
+
+    if (
+        metricsTimestamps[key] &&
+        ts - metricsTimestamps[key] < metricsInterval
+    ) {
+        // Don't fetch again, the cached data is still good.
+        return;
+    }
+
+    if (type === "nodes") {
+        const client = clients[context];
+        const data = await client.list({
+            apiVersion: "metrics.k8s.io/v1beta1",
+            kind: "NodeMetrics",
+        });
+        store.set((value) => ({
+            ...value,
+            metricsTimestamps: {
+                ...value.metricsTimestamps,
+                [key]: ts,
+            },
+            metrics: {
+                ...value.metrics,
+                [key]: data.items,
+            },
+        }));
+    }
 }
