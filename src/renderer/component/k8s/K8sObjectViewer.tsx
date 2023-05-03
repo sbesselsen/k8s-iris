@@ -577,8 +577,8 @@ const K8sObjectCustomDetails: React.FC<K8sObjectCustomDetailsProps> = (
                 return (
                     <Stat
                         key={col.id}
-                        display="inline-block"
                         overflow="hidden"
+                        display="inline-block"
                         border="1px solid"
                         borderColor={borderColor}
                         bg={bg}
@@ -588,8 +588,9 @@ const K8sObjectCustomDetails: React.FC<K8sObjectCustomDetailsProps> = (
                         maxWidth={60 * (col.widthUnits + 1) + "px"}
                         px={3}
                         py={1}
+                        mb={1}
                         me={2}
-                        mb={2}
+                        h="52px"
                     >
                         <StatLabel
                             fontSize="xs"
