@@ -4,7 +4,7 @@ import {
     create,
     createStore,
     ReadableStore,
-    useDerivedReadableStore,
+    usePausableReadableStore,
 } from "../util/state";
 
 const { useStore, useStoreValue, useStoreValueGetter } = create(false);
@@ -58,14 +58,5 @@ export function useHibernatableReadableStore<T>(
     pauseOnHibernate = true
 ): ReadableStore<T> {
     const hibernate = useHibernate();
-    return useDerivedReadableStore<T, T>(
-        store,
-        (value, prevValue, prevTransformedValue) => {
-            if (!hibernate || !pauseOnHibernate) {
-                return value;
-            }
-            return prevTransformedValue ?? value;
-        },
-        [hibernate]
-    );
+    return usePausableReadableStore(store, pauseOnHibernate && hibernate);
 }

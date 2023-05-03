@@ -236,3 +236,19 @@ export function useCombinedReadableStore<T, U>(
     }, [storeA, storeB, subStore]);
     return subStore;
 }
+
+export function usePausableReadableStore<T>(
+    store: ReadableStore<T>,
+    paused = false
+): ReadableStore<T> {
+    return useDerivedReadableStore<T, T>(
+        store,
+        (value, prevValue, prevTransformedValue) => {
+            if (paused) {
+                return prevTransformedValue ?? value;
+            }
+            return value;
+        },
+        [paused]
+    );
+}
