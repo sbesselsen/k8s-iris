@@ -165,6 +165,13 @@ export function parseCpu(cpu: string): number | null {
     );
 }
 
+export function formatCpu(cpu: number): string {
+    if (cpu >= 1.0) {
+        return cpu.toFixed(2);
+    }
+    return (cpu * 1000).toFixed(2) + "m";
+}
+
 export function parseMemory(
     memory: string,
     targetUnit: "Ki" | "Mi" | "Gi" | "Ti"
@@ -185,6 +192,19 @@ export function parseMemory(
         (number * (unitAdjustments[sourceUnit] ?? 1)) /
         (unitAdjustments[targetUnit] ?? 1)
     );
+}
+
+export function formatMemory(memory: number): string {
+    if (memory > 1024 * 1024 * 1024) {
+        return (memory / (1024 * 1024 * 1024)).toFixed(2) + "Ti";
+    }
+    if (memory > 1024 * 1024) {
+        return (memory / (1024 * 1024)).toFixed(2) + "Gi";
+    }
+    if (memory > 1024) {
+        return (memory / 1024).toFixed(2) + "Mi";
+    }
+    return memory.toFixed(2) + "Ki";
 }
 
 export function isSetLike(object: K8sResourceTypeIdentifier) {
@@ -233,4 +253,92 @@ export function uiLabelForObjects(
         (kind) => kind.toLocaleLowerCase() + " " + labelNames(namesByKind[kind])
     );
     return { label: kindLabels.join("; ") };
+}
+
+export type K8sContainerMetrics = {
+    containerName: string;
+    cpu: {
+        limit: string | null;
+        request: string | null;
+        usage: string | null;
+        usageCores: number | null;
+        requestFraction: number | null;
+        limitFraction: number | null;
+    };
+    memory: {
+        limit: string | null;
+        request: string | null;
+        usage: string | null;
+        usageMi: number | null;
+        requestFraction: number | null;
+        limitFraction: number | null;
+    };
+};
+
+export function metricsPerContainer(
+    pod: K8sObject,
+    metrics: K8sObject
+): K8sContainerMetrics[] {
+    const usageByName = Object.fromEntries(
+        ((metrics as any).containers ?? []).map((c: any) => [c.name, c.usage])
+    );
+
+    const containers: any[] = (pod as any).spec?.containers ?? [];
+
+    return containers.map((container) => {
+        const cpuUsageCores = parseCpu(usageByName[container.name]?.cpu ?? "");
+        const cpuLimitCores = parseCpu(container.resources?.limits?.cpu ?? "");
+        const cpuRequestCores = parseCpu(
+            container.resources?.requests?.cpu ?? ""
+        );
+        const cpuLimitFraction =
+            cpuLimitCores !== null && cpuUsageCores !== null
+                ? cpuUsageCores / cpuLimitCores
+                : null;
+        const cpuRequestFraction =
+            cpuRequestCores !== null && cpuUsageCores !== null
+                ? cpuUsageCores / cpuRequestCores
+                : null;
+
+        const memoryUsageMi = parseMemory(
+            usageByName[container.name]?.memory ?? "",
+            "Mi"
+        );
+        const memoryLimitMi = parseMemory(
+            container.resources?.limits?.memory ?? "",
+            "Mi"
+        );
+        const memoryRequestMi = parseMemory(
+            container.resources?.requests?.memory ?? "",
+            "Mi"
+        );
+        const memoryLimitFraction =
+            memoryLimitMi !== null && memoryUsageMi !== null
+                ? memoryUsageMi / memoryLimitMi
+                : null;
+        const memoryRequestFraction =
+            memoryRequestMi !== null && memoryUsageMi !== null
+                ? memoryUsageMi / memoryRequestMi
+                : null;
+
+        return {
+            containerName: container.name,
+            cpu: {
+                limit: container.resources?.limits?.cpu ?? null,
+                request: container.resources?.requests?.cpu ?? null,
+                usage: usageByName[container.name]?.cpu ?? null,
+                usageCores: cpuUsageCores,
+                requestFraction: cpuRequestFraction,
+                limitFraction: cpuLimitFraction,
+            },
+            memory: {
+                limit: container.resources?.limits?.memory ?? null,
+                request: container.resources?.requests?.memory ?? null,
+                usage: usageByName[container.name]?.memory ?? null,
+                usageMi: memoryUsageMi,
+                requestFraction: memoryRequestFraction,
+                limitFraction: memoryLimitFraction,
+            },
+        };
+    });
 }

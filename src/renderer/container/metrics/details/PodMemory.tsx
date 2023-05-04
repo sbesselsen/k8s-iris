@@ -1,58 +1,66 @@
 import { Badge } from "@chakra-ui/react";
-import React from "react";
+import React, { useMemo } from "react";
 import { K8sObject } from "../../../../common/k8s/client";
-import { parseMemory } from "../../../../common/k8s/util";
-import { AppTooltip } from "../../../component/main/AppTooltip";
-import { PercentageBadge } from "../../../component/main/PercentageBadge";
-import { useK8sNodeMetrics, useK8sPodMetrics } from "../../../k8s/metrics";
+import { metricsPerContainer, parseMemory } from "../../../../common/k8s/util";
+import { useK8sPodMetrics } from "../../../k8s/metrics";
 
 export const PodMemory: React.FC<{ pod: K8sObject }> = (props) => {
     const { pod } = props;
 
     const metrics = useK8sPodMetrics(pod);
 
+    const containerMetrics = useMemo(
+        () => (metrics ? metricsPerContainer(pod, metrics) : []),
+        [metrics, pod]
+    );
+
+    const alerts = useMemo(() => {
+        return containerMetrics.flatMap((m) => {
+            if ((m.memory.limitFraction ?? 0) >= 0.8) {
+                return [
+                    {
+                        level: "warning",
+                        text: `${m.containerName} is at ${(
+                            (m.memory.limitFraction ?? 0) * 100
+                        ).toFixed(0)}% of its limits`,
+                    },
+                ];
+            }
+            if ((m.memory.requestFraction ?? 0) > 1) {
+                return [
+                    {
+                        level: "notice",
+                        text: `${m.containerName} is at ${(
+                            (m.memory.requestFraction ?? 0) * 100
+                        ).toFixed(0)}% of its requests`,
+                    },
+                ];
+            }
+            return [];
+        });
+    }, [containerMetrics]);
+
+    const alertsText = alerts.map((a) => a.text).join("; ");
+
+    const hasWarning = alerts.some((a) => a.level === "warning");
+    const hasNotice = alerts.some((a) => a.level === "notice");
+
+    const colorScheme = hasWarning ? "red" : hasNotice ? "yellow" : "gray";
+
     if (!metrics) {
         return null;
     }
 
-    const totalMemory = ((metrics as any).containers ?? [])
-        .map((c: any) => parseMemory(c?.usage?.memory ?? "0Mi", "Mi"))
+    const totalMemory = (((metrics as any).containers ?? []) as any[])
+        .map((c: any) => parseMemory(c?.usage?.memory ?? "0Mi", "Mi") ?? 0)
         .reduce((memory, total) => memory + total, 0);
-    return <>{String(totalMemory.toFixed(1))}Mi</>;
-
-    // const memory = (metrics as any)?.usage?.memory
-    //     ? parseMemory((metrics as any)?.usage?.memory, "Gi")
-    //     : null;
-
-    // const totalMemory = (node as any)?.status?.capacity?.memory
-    //     ? parseMemory((node as any)?.status?.capacity?.memory, "Gi")
-    //     : null;
-
-    // return (
-    //     <>
-    //         {totalMemory !== null && totalMemory > 0 && memory !== null && (
-    //             <AppTooltip
-    //                 w="100%"
-    //                 label={
-    //                     memory.toFixed(1) +
-    //                     " / " +
-    //                     totalMemory.toFixed(1) +
-    //                     " Gi"
-    //                 }
-    //             >
-    //                 <PercentageBadge
-    //                     value={memory / totalMemory}
-    //                     colorScheme={
-    //                         memory / totalMemory > 0.8 ? "red" : "gray"
-    //                     }
-    //                     w="100%"
-    //                     textTransform="none"
-    //                 />
-    //             </AppTooltip>
-    //         )}
-    //         {!totalMemory && memory !== null && (
-    //             <Badge>{memory.toFixed(1)}</Badge>
-    //         )}
-    //     </>
-    // );
+    return (
+        <Badge
+            textTransform="none"
+            title={alertsText}
+            colorScheme={colorScheme}
+        >
+            {String(totalMemory.toFixed(0))}Mi
+        </Badge>
+    );
 };

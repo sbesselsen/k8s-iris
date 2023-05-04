@@ -223,17 +223,17 @@ function generatePodDetails(
             header: "CPU",
             importance: 1,
             style: "column",
-            widthUnits: 2,
+            widthUnits: 1,
             valueFor(pod) {
                 return <PodCPU pod={pod} />;
             },
         });
         output.push({
             id: "pod-memory",
-            header: "Memory",
+            header: "Mem",
             importance: 1,
             style: "column",
-            widthUnits: 2,
+            widthUnits: 1,
             valueFor(pod) {
                 return <PodMemory pod={pod} />;
             },
