@@ -3,6 +3,7 @@ import {
     K8sClient,
     K8sObject,
     K8sObjectIdentifier,
+    K8sObjectListQuery,
 } from "../../common/k8s/client";
 import { toK8sObjectIdentifier } from "../../common/k8s/util";
 import { useOptionalK8sContext } from "../context/k8s-context";
@@ -25,6 +26,8 @@ const defaultSharedMetrics: SharedMetrics = {
     isMonitoring: false,
 };
 
+const metricsInterval = 15000;
+
 const { useStore, useStoreValue } = create(defaultSharedMetrics);
 
 export type K8sNodeMetricsOptions = {
@@ -46,7 +49,7 @@ export function useK8sNodeMetrics(
     const client = useK8sClient(kubeContext);
 
     const store = useStore();
-    const key = JSON.stringify([kubeContext, "nodes"]);
+    const key = JSON.stringify([kubeContext, "nodes", "*"]);
 
     useEffect(() => {
         registerMonitor(store);
@@ -77,7 +80,52 @@ export function useK8sNodeMetrics(
     return nodeMetrics.find((m) => m.metadata.name === nodeName) ?? null;
 }
 
-const metricsInterval = 15000;
+export function useK8sPodMetrics(
+    pod: K8sObject | K8sObjectIdentifier,
+    options?: K8sNodeMetricsOptions
+): K8sObject | null {
+    const sharedContext = useOptionalK8sContext();
+    const { kubeContext = sharedContext } = options ?? {};
+    if (!kubeContext) {
+        throw new Error("Calling useK8sPodMetrics() without kubeContext");
+    }
+
+    const podIdentifier = toK8sObjectIdentifier(pod);
+    const podName = podIdentifier.name;
+
+    const client = useK8sClient(kubeContext);
+
+    const store = useStore();
+    const key = JSON.stringify([kubeContext, "pods", podIdentifier.namespace]);
+
+    useEffect(() => {
+        registerMonitor(store);
+
+        // Subscribe.
+        store.set((value) => ({
+            ...value,
+            requestedMetrics: {
+                ...value.requestedMetrics,
+                [key]: (value.requestedMetrics[key] ?? 0) + 1,
+            },
+            clients: { ...value.clients, [kubeContext]: client },
+        }));
+
+        return () => {
+            // Unsubscribe.
+            store.set((value) => ({
+                ...value,
+                requestedMetrics: {
+                    ...value.requestedMetrics,
+                    [key]: Math.max((value.requestedMetrics[key] ?? 0) - 1, 0),
+                },
+            }));
+        };
+    }, [client]);
+
+    const podMetrics = useStoreValue((v) => v.metrics[key] ?? [], [key]);
+    return podMetrics.find((m) => m.metadata.name === podName) ?? null;
+}
 
 let isFetching: Record<string, boolean> = {};
 
@@ -118,7 +166,7 @@ function registerMonitor(store: Store<SharedMetrics>) {
 }
 
 async function fetchMetrics(store: Store<SharedMetrics>, key: string) {
-    const [context, type] = JSON.parse(key);
+    const [context, type, selector] = JSON.parse(key);
 
     const { clients, metricsTimestamps } = store.get();
     const ts = new Date().getTime();
@@ -140,12 +188,28 @@ async function fetchMetrics(store: Store<SharedMetrics>, key: string) {
     isFetching[key] = true;
 
     try {
-        if (type === "nodes") {
-            const client = clients[context];
-            const data = await client.list({
-                apiVersion: "metrics.k8s.io/v1beta1",
-                kind: "NodeMetrics",
-            });
+        const client = clients[context];
+
+        let query: K8sObjectListQuery | null = null;
+
+        switch (type) {
+            case "nodes":
+                query = {
+                    apiVersion: "metrics.k8s.io/v1beta1",
+                    kind: "NodeMetrics",
+                };
+                break;
+            case "pods":
+                query = {
+                    apiVersion: "metrics.k8s.io/v1beta1",
+                    kind: "PodMetrics",
+                    namespaces: ("" + selector).split(","),
+                };
+                break;
+        }
+
+        if (query) {
+            const data = await client.list(query);
             store.set((value) => ({
                 ...value,
                 metricsTimestamps: {
