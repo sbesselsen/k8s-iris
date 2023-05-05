@@ -351,7 +351,7 @@ function generateNodeDetails(
         });
         output.push({
             id: "node-memory",
-            header: "Memory",
+            header: "Mem",
             importance: 1,
             style: "column",
             widthUnits: 2,

@@ -611,10 +611,8 @@ const WorkloadResourceSection: React.FC<WorkloadResourceSectionProps> =
         }
 
         return (
-            <VStack alignItems="stretch">
-                <Heading fontSize="sm" px={4}>
-                    {title}
-                </Heading>
+            <VStack alignItems="stretch" px={4}>
+                <Heading fontSize="sm">{title}</Heading>
                 <ResourcesTable
                     showNamespace={showNamespace}
                     onChangeSelectedKeys={onChangeSelectedKeys}

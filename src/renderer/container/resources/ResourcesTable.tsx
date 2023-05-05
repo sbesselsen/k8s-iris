@@ -1,6 +1,8 @@
 import {
     Badge,
+    Box,
     Checkbox,
+    Heading,
     HStack,
     Table,
     TableCellProps,
@@ -8,8 +10,16 @@ import {
     Th,
     Thead,
     Tr,
+    VStack,
 } from "@chakra-ui/react";
-import React, { ChangeEvent, useCallback, useMemo, useRef } from "react";
+import React, {
+    ChangeEvent,
+    useCallback,
+    useLayoutEffect,
+    useMemo,
+    useRef,
+    useState,
+} from "react";
 import {
     K8sObject,
     K8sResourceTypeIdentifier,
@@ -22,7 +32,6 @@ import {
 } from "../../../common/util/set";
 import { resourceMatch } from "../../../common/util/search";
 import { k8sSmartCompare } from "../../../common/util/sort";
-import { ScrollBoxHorizontalScroll } from "../../component/main/ScrollBox";
 import { Selectable } from "../../component/main/Selectable";
 import { useAppSearch } from "../../context/search";
 import { useGuaranteedMemo } from "../../hook/guaranteed-memo";
@@ -182,69 +191,109 @@ export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
         return 40 * (col.widthUnits + 1);
     }
 
-    const detailColumns = customDetails.filter(isResourceColumn);
-    const detailColumnsTotalWidth = detailColumns
-        .map(detailColWidth)
-        .reduce((x, y) => x + y, 0);
+    const nameColumnMiniWidthThreshold = 150;
+
+    const selectColumnWidth = 40;
+    const customColumnWidths = customColumns.map((c) => detailColWidth(c));
+    const customColumnTotalWidth = customColumnWidths.reduce(
+        (x, y) => x + y,
+        0
+    );
+    const namespaceColumnWidth = 150;
+    const createdColumnWidth = 120;
+
+    // Calculate the width of the non-name columns.
+    const nonNameColumnWidth =
+        (showSelect ? selectColumnWidth : 0) +
+        customColumnTotalWidth +
+        (showNamespace ? namespaceColumnWidth : 0) +
+        createdColumnWidth;
+
+    const [isMini, setIsMini] = useState(true);
+
+    const tableRef = useRef<HTMLTableElement | null>(null);
+    useLayoutEffect(() => {
+        const elem = tableRef.current;
+        if (!elem) {
+            return;
+        }
+        const resizeObserver = new ResizeObserver((entries) => {
+            const width = entries[0]?.borderBoxSize[0]?.inlineSize;
+            if (width !== undefined) {
+                const nameColumnWidth = width - nonNameColumnWidth;
+                const shouldBeMini =
+                    nameColumnWidth < nameColumnMiniWidthThreshold;
+                if (isMini !== shouldBeMini) {
+                    setIsMini(shouldBeMini);
+                }
+            }
+        });
+        resizeObserver.observe(elem);
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, [
+        isMini,
+        nameColumnMiniWidthThreshold,
+        nonNameColumnWidth,
+        setIsMini,
+        tableRef,
+    ]);
 
     return (
-        <ScrollBoxHorizontalScroll>
-            <Table
-                size="sm"
-                sx={{ tableLayout: "fixed" }}
-                minWidth={
-                    350 +
-                    (showNamespace ? 150 : 0) +
-                    detailColumnsTotalWidth +
-                    "px"
-                }
-            >
-                <Thead>
-                    <Tr>
-                        {showSelect && (
-                            <Th ps={2} width="40px">
-                                <ResourceTableSelectAll
-                                    keys={keys}
-                                    selectedKeysStore={selectedKeysStore}
-                                    onChangeSelectedKeys={
-                                        baseOnChangeSelectedKeys
-                                    }
-                                />
-                            </Th>
-                        )}
-
-                        <Th ps={showSelect ? 0 : 2} whiteSpace="nowrap">
-                            Name
+        <Table ref={tableRef} size="sm" sx={{ tableLayout: "fixed" }}>
+            <Thead>
+                <Tr>
+                    {showSelect && (
+                        <Th ps={2} width={`${selectColumnWidth}px`}>
+                            <ResourceTableSelectAll
+                                keys={keys}
+                                selectedKeysStore={selectedKeysStore}
+                                onChangeSelectedKeys={baseOnChangeSelectedKeys}
+                            />
                         </Th>
-                        {customColumns.map((col) => (
-                            <Th key={col.id} width={detailColWidth(col) + "px"}>
+                    )}
+
+                    <Th ps={showSelect ? 0 : 2} whiteSpace="nowrap">
+                        Name
+                    </Th>
+                    {!isMini &&
+                        customColumns.map((col, index) => (
+                            <Th
+                                key={col.id}
+                                width={`${customColumnWidths[index]}px`}
+                            >
                                 {col.header}
                             </Th>
                         ))}
-                        {showNamespace && <Th width="150px">Namespace</Th>}
-                        <Th width="120px">Created</Th>
-                    </Tr>
-                </Thead>
-                <ViewportLazyTbody
-                    chunkSize={10}
-                    rootMargin="1000px"
-                    defaultHeight="30px"
-                >
-                    {keys.map((key) => (
-                        <ResourcesTableRow
-                            resourcesStore={resourcesStore}
-                            resourceKey={key}
-                            showNamespace={showNamespace}
-                            customDetails={customDetails}
-                            selectedKeysStore={selectedKeysStore}
-                            onChangeSelectedKeys={onChangeSelectedKeys}
-                            showSelect={showSelect}
-                            key={key}
-                        />
-                    ))}
-                </ViewportLazyTbody>
-            </Table>
-        </ScrollBoxHorizontalScroll>
+                    {!isMini && showNamespace && (
+                        <Th width={`${namespaceColumnWidth}px`}>Namespace</Th>
+                    )}
+                    {!isMini && (
+                        <Th width={`${createdColumnWidth}px`}>Created</Th>
+                    )}
+                </Tr>
+            </Thead>
+            <ViewportLazyTbody
+                chunkSize={10}
+                rootMargin="1000px"
+                defaultHeight="30px"
+            >
+                {keys.map((key) => (
+                    <ResourcesTableRow
+                        resourcesStore={resourcesStore}
+                        resourceKey={key}
+                        showNamespace={showNamespace}
+                        customDetails={customDetails}
+                        selectedKeysStore={selectedKeysStore}
+                        onChangeSelectedKeys={onChangeSelectedKeys}
+                        showSelect={showSelect}
+                        isMini={isMini}
+                        key={key}
+                    />
+                ))}
+            </ViewportLazyTbody>
+        </Table>
     );
 };
 
@@ -301,9 +350,20 @@ type ResourcesTableRowProps = {
     showNamespace: boolean;
     showSelect: boolean;
     customDetails: ResourceDetail[];
+    isMini: boolean;
 };
 
 const ResourcesTableRow: React.FC<ResourcesTableRowProps> = React.memo(
+    (props) => {
+        return props.isMini ? (
+            <ResourcesTableMiniRow {...props} />
+        ) : (
+            <ResourcesTableFullRow {...props} />
+        );
+    }
+);
+
+const ResourcesTableFullRow: React.FC<ResourcesTableRowProps> = React.memo(
     (props) => {
         const {
             selectedKeysStore,
@@ -388,31 +448,7 @@ const ResourcesTableRow: React.FC<ResourcesTableRowProps> = React.memo(
                             >
                                 {resource.metadata.name}
                             </ResourceEditorLink>
-                            {badges.map((badge) => {
-                                const {
-                                    id,
-                                    text,
-                                    variant,
-                                    details,
-                                    badgeProps,
-                                } = badge;
-                                const colorScheme = {
-                                    positive: "green",
-                                    negative: "red",
-                                    changing: "orange",
-                                    other: "gray",
-                                }[variant ?? "other"];
-                                return (
-                                    <Badge
-                                        key={id}
-                                        colorScheme={colorScheme}
-                                        title={details ?? text}
-                                        {...badgeProps}
-                                    >
-                                        {text}
-                                    </Badge>
-                                );
-                            })}
+                            <ResourceTableRowBadges badges={badges} />
                         </HStack>
                     </Td>
                     {customColumns.map((col) => (
@@ -458,6 +494,213 @@ const ResourcesTableRow: React.FC<ResourcesTableRowProps> = React.memo(
         );
     }
 );
+
+const ResourcesTableMiniRow: React.FC<ResourcesTableRowProps> = React.memo(
+    (props) => {
+        const {
+            selectedKeysStore,
+            onChangeSelectedKeys,
+            resourcesStore,
+            resourceKey,
+            showNamespace,
+            showSelect,
+            customDetails,
+        } = props;
+
+        const resource = useProvidedStoreValue(
+            resourcesStore,
+            ({ resources }) => resources[resourceKey],
+            [resourceKey]
+        );
+        const isSelected = useProvidedStoreValue(
+            selectedKeysStore,
+            (selected) => selected.has(resourceKey),
+            [resourceKey]
+        );
+
+        const creationDate = new Date(
+            (resource as any).metadata.creationTimestamp
+        );
+        const isDeleting = Boolean(
+            (resource as any).metadata.deletionTimestamp
+        );
+
+        const onChange = useCallback(
+            (e: ChangeEvent<HTMLInputElement>) => {
+                onChangeSelectedKeys({ [resourceKey]: e.target.checked });
+            },
+            [onChangeSelectedKeys, resourceKey]
+        );
+
+        const badges: ResourceBadge[] = useMemo(
+            () => generateBadges(resource),
+            [resource]
+        );
+
+        const customBoxes = useMemo(
+            () =>
+                customDetails
+                    .filter(isResourceBox)
+                    .map((box) => ({ ...box, value: box.valueFor(resource) }))
+                    .filter((v) => !!v.value),
+            [customDetails, resource]
+        );
+        const hasCustomBoxes = customBoxes.length > 0;
+        const commonTdProps: TableCellProps = useMemo(() => {
+            return {
+                ...(hasCustomBoxes ? { borderBottom: "none" } : {}),
+            };
+        }, [hasCustomBoxes]);
+        const customColumns = customDetails.filter(isResourceColumn);
+
+        const stats = useMemo(
+            () => [
+                ...(showNamespace
+                    ? [
+                          {
+                              id: "namespace",
+                              header: "Namespace",
+                              valueFor: () => {
+                                  return resource.metadata.namespace;
+                              },
+                              style: "column",
+                              widthUnits: 1,
+                          },
+                      ]
+                    : []),
+                ...customColumns,
+                {
+                    id: "created",
+                    header: "Created",
+                    valueFor: () => {
+                        return formatDeveloperDateTime(creationDate);
+                    },
+                    style: "column",
+                    widthUnits: 1,
+                },
+            ],
+            [creationDate, customColumns, resource, showNamespace]
+        );
+
+        return (
+            <>
+                <Tr>
+                    {showSelect && (
+                        <Td {...commonTdProps} ps={2} verticalAlign="baseline">
+                            <Checkbox
+                                isChecked={isSelected}
+                                onChange={onChange}
+                            />
+                        </Td>
+                    )}
+
+                    <Td
+                        {...commonTdProps}
+                        ps={showSelect ? 0 : 2}
+                        verticalAlign="baseline"
+                        userSelect="text"
+                    >
+                        <VStack p={0} alignItems="stretch">
+                            <HStack p={0}>
+                                <ResourceEditorLink
+                                    userSelect="text"
+                                    cursor="inherit"
+                                    textColor={isDeleting ? "gray.500" : ""}
+                                    editorResource={resource}
+                                >
+                                    {resource.metadata.name}
+                                </ResourceEditorLink>
+                                <ResourceTableRowBadges badges={badges} />
+                            </HStack>
+                            <VStack spacing={0} alignItems="stretch">
+                                {stats.length > 0 && (
+                                    <Box>
+                                        {stats.map((col) => {
+                                            return (
+                                                <VStack
+                                                    key={col.id}
+                                                    display="inline-flex"
+                                                    alignItems="stretch"
+                                                    spacing={0}
+                                                    me={6}
+                                                    mb={1}
+                                                >
+                                                    <Heading
+                                                        fontSize="xs"
+                                                        textTransform="uppercase"
+                                                        textColor="gray"
+                                                    >
+                                                        {col.header}
+                                                    </Heading>
+                                                    <Box fontSize="xs">
+                                                        <Selectable display="block">
+                                                            {col.valueFor(
+                                                                resource
+                                                            ) ?? "-"}
+                                                        </Selectable>
+                                                    </Box>
+                                                </VStack>
+                                            );
+                                        })}
+                                    </Box>
+                                )}
+                                {customBoxes.map((col) => (
+                                    <VStack
+                                        key={col.id}
+                                        display="inline-flex"
+                                        alignItems="stretch"
+                                        spacing={0}
+                                        mb={2}
+                                    >
+                                        <Heading
+                                            fontSize="xs"
+                                            textTransform="uppercase"
+                                            textColor="gray"
+                                        >
+                                            {col.header}
+                                        </Heading>
+                                        <Box fontSize="xs" isTruncated>
+                                            {col.valueFor(resource) ?? "-"}
+                                        </Box>
+                                    </VStack>
+                                ))}
+                            </VStack>
+                        </VStack>
+                    </Td>
+                </Tr>
+            </>
+        );
+    }
+);
+
+const ResourceTableRowBadges: React.FC<{ badges: ResourceBadge[] }> = (
+    props
+) => {
+    const { badges } = props;
+    return (
+        <>
+            {badges.map((badge) => {
+                const { id, text, variant, details, badgeProps } = badge;
+                const colorScheme = {
+                    positive: "green",
+                    negative: "red",
+                    changing: "orange",
+                    other: "gray",
+                }[variant ?? "other"];
+                return (
+                    <Badge
+                        key={id}
+                        colorScheme={colorScheme}
+                        title={details ?? text}
+                        {...badgeProps}
+                    >
+                        {text}
+                    </Badge>
+                );
+            })}
+        </>
+    );
+};
 
 export function useFilteredResourceTableStore<T>(
     store: ReadableStore<ResourcesTableStoreValue>,
