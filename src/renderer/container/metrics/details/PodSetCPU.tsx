@@ -67,7 +67,7 @@ export const PodSetCPU: React.FC<{ podSet: K8sObject }> = (props) => {
 
     const colorScheme = hasWarning ? "red" : hasNotice ? "yellow" : "gray";
 
-    if (!metrics) {
+    if (metrics.length === 0) {
         return null;
     }
 
