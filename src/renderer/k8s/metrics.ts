@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import {
     K8sClient,
     K8sObject,
@@ -6,8 +6,9 @@ import {
     K8sObjectListQuery,
 } from "../../common/k8s/client";
 import { toK8sObjectIdentifier } from "../../common/k8s/util";
+import { useHibernatableReadableStore } from "../context/hibernate";
 import { useOptionalK8sContext } from "../context/k8s-context";
-import { create, Store } from "../util/state";
+import { create, Store, useProvidedStoreValue } from "../util/state";
 import { useK8sClient } from "./client";
 
 type SharedMetrics = {
@@ -30,13 +31,14 @@ const metricsInterval = 15000;
 
 const { useStore, useStoreValue } = create(defaultSharedMetrics);
 
-export type K8sNodeMetricsOptions = {
+export type K8sMetricsOptions = {
     kubeContext?: string;
+    pauseOnHibernate?: boolean;
 };
 
 export function useK8sNodeMetrics(
     node: K8sObject | K8sObjectIdentifier,
-    options?: K8sNodeMetricsOptions
+    options?: K8sMetricsOptions
 ): K8sObject | null {
     const sharedContext = useOptionalK8sContext();
     const { kubeContext = sharedContext } = options ?? {};
@@ -74,7 +76,7 @@ export function useK8sNodeMetrics(
                 },
             }));
         };
-    }, [client]);
+    }, [client, key]);
 
     const nodeMetrics = useStoreValue((v) => v.metrics[key] ?? [], [key]);
     return nodeMetrics.find((m) => m.metadata.name === nodeName) ?? null;
@@ -82,21 +84,43 @@ export function useK8sNodeMetrics(
 
 export function useK8sPodMetrics(
     pod: K8sObject | K8sObjectIdentifier,
-    options?: K8sNodeMetricsOptions
+    options?: K8sMetricsOptions
 ): K8sObject | null {
+    return useK8sPodListMetrics([pod], options)[0] ?? null;
+}
+
+export function useK8sPodListMetrics(
+    pods: Array<K8sObject | K8sObjectIdentifier>,
+    options?: K8sMetricsOptions
+): K8sObject[] {
+    const podIdentifiers = pods.map(toK8sObjectIdentifier);
+    const podNamesSet = new Set(podIdentifiers.map((i) => i.name));
+    const podNamespaces = [
+        ...new Set(podIdentifiers.map((i) => i.namespace as string)),
+    ];
+
+    const allMetrics = useK8sPodNamespacesMetrics(podNamespaces, options);
+    return useMemo(
+        () => allMetrics.filter((m) => podNamesSet.has(m.metadata.name)),
+        [allMetrics, [...podNamesSet].join(",")]
+    );
+}
+
+export function useK8sPodNamespacesMetrics(
+    namespaces: string[],
+    options?: K8sMetricsOptions
+): K8sObject[] {
     const sharedContext = useOptionalK8sContext();
-    const { kubeContext = sharedContext } = options ?? {};
+    const { kubeContext = sharedContext, pauseOnHibernate = true } =
+        options ?? {};
     if (!kubeContext) {
         throw new Error("Calling useK8sPodMetrics() without kubeContext");
     }
 
-    const podIdentifier = toK8sObjectIdentifier(pod);
-    const podName = podIdentifier.name;
-
     const client = useK8sClient(kubeContext);
 
     const store = useStore();
-    const key = JSON.stringify([kubeContext, "pods", podIdentifier.namespace]);
+    const key = JSON.stringify([kubeContext, "pods", namespaces.join(",")]);
 
     useEffect(() => {
         registerMonitor(store);
@@ -121,10 +145,17 @@ export function useK8sPodMetrics(
                 },
             }));
         };
-    }, [client]);
+    }, [client, key]);
 
-    const podMetrics = useStoreValue((v) => v.metrics[key] ?? [], [key]);
-    return podMetrics.find((m) => m.metadata.name === podName) ?? null;
+    const allPodMetricsStore = useHibernatableReadableStore(
+        store,
+        pauseOnHibernate
+    );
+    return useProvidedStoreValue(
+        allPodMetricsStore,
+        (v) => v.metrics[key] ?? [],
+        [key]
+    );
 }
 
 let isFetching: Record<string, boolean> = {};

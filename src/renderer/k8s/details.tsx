@@ -20,6 +20,8 @@ import { NodeCPU } from "../container/metrics/details/NodeCPU";
 import { NodeMemory } from "../container/metrics/details/NodeMemory";
 import { PodCPU } from "../container/metrics/details/PodCPU";
 import { PodMemory } from "../container/metrics/details/PodMemory";
+import { PodSetCPU } from "../container/metrics/details/PodsetCPU";
+import { PodSetMemory } from "../container/metrics/details/PodSetMemory";
 import { ResourceEditorLink } from "../container/resources/ResourceEditorLink";
 import { useIpcCall } from "../hook/ipc";
 
@@ -53,6 +55,7 @@ export function generateResourceDetails(
     resourceType: K8sResourceTypeIdentifier
 ): ResourceDetail[] {
     return [
+        generateSetDetails,
         generateSetSizeDetails,
         generateIngressDetails,
         generateNodeDetails,
@@ -60,6 +63,35 @@ export function generateResourceDetails(
         generatePvcDetails,
         generatePvDetails,
     ].flatMap((f) => f(resourceType));
+}
+
+function generateSetDetails(
+    resourceType: K8sResourceTypeIdentifier
+): ResourceDetail[] {
+    const output: ResourceDetail[] = [];
+    if (isSetLike(resourceType)) {
+        output.push({
+            id: "resource-cpu",
+            header: "CPU",
+            importance: 1,
+            style: "column",
+            widthUnits: 1,
+            valueFor(resource) {
+                return <PodSetCPU podSet={resource} />;
+            },
+        });
+        output.push({
+            id: "resource-memory",
+            header: "Mem",
+            importance: 1,
+            style: "column",
+            widthUnits: 1,
+            valueFor(resource) {
+                return <PodSetMemory podSet={resource} />;
+            },
+        });
+    }
+    return output;
 }
 
 function generateSetSizeDetails(

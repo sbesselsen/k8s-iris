@@ -145,3 +145,45 @@ export async function fetchAssociatedPods(
         return objects;
     }, [] as K8sObject[]);
 }
+
+export function createAssociatedPodsFilter(
+    object: K8sObject
+): (pod: K8sObject) => boolean {
+    function createSelectorFilter(
+        selector: Record<string, string | string[]> | undefined
+    ): (pod: K8sObject) => boolean {
+        if (!selector) {
+            return () => false;
+        }
+        const selectorEntries = Object.entries(selector).map(
+            ([k, v]) =>
+                [k, new Set(Array.isArray(v) ? v : [v])] as [
+                    string,
+                    Set<string>
+                ]
+        );
+        if (selectorEntries.length === 0) {
+            return () => false;
+        }
+        return (pod) => {
+            const labels = pod?.metadata?.labels;
+            if (!labels) {
+                return false;
+            }
+            return selectorEntries.every(
+                ([label, values]) =>
+                    label in labels && values.has(labels[label])
+            );
+        };
+    }
+
+    if (object.apiVersion === "v1" && object.kind === "Service") {
+        return createSelectorFilter((object as any)?.spec?.selector);
+    }
+    if (isSetLike(object)) {
+        return createSelectorFilter(
+            (object as any)?.spec?.selector?.matchLabels
+        );
+    }
+    return () => false;
+}
