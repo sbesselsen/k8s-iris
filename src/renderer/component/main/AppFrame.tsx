@@ -5,8 +5,6 @@ import React, {
     PointerEventHandler,
     ReactNode,
     useCallback,
-    useContext,
-    useEffect,
     useLayoutEffect,
     useRef,
     useState,
@@ -348,16 +346,3 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
         </SidebarVisibleContext.Provider>
     );
 };
-
-export function useAppContentResizeListener(f: () => void, deps: any[]) {
-    useWindowResizeListener(() => {
-        f();
-    }, deps);
-    const isSidebarVisible = useContext(SidebarVisibleContext);
-    useEffect(() => {
-        f();
-        setTimeout(() => {
-            f();
-        }, 200);
-    }, [isSidebarVisible, ...deps]);
-}

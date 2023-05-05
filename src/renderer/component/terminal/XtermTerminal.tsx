@@ -1,4 +1,9 @@
-import React, { MutableRefObject, useEffect, useRef } from "react";
+import React, {
+    MutableRefObject,
+    useEffect,
+    useLayoutEffect,
+    useRef,
+} from "react";
 import { Box, BoxProps, VStack } from "@chakra-ui/react";
 import { Terminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
@@ -7,9 +12,9 @@ import {
     useHibernateGetter,
     useHibernateListener,
 } from "../../context/hibernate";
-import { useAppContentResizeListener } from "../main/AppFrame";
 import { WebLinksAddon } from "xterm-addon-web-links";
 import { useModifierKeyRef } from "../../hook/keyboard";
+import { debounce } from "../../../common/util/async";
 
 export type XtermTerminalProps = BoxProps & {
     onInitializeTerminal?: (terminal: Terminal) => void;
@@ -75,10 +80,22 @@ export const XtermTerminal: React.FC<XtermTerminalProps> = (props) => {
     );
     const getHibernate = useHibernateGetter();
 
-    useAppContentResizeListener(() => {
-        if (!getHibernate()) {
-            fitAddonRef.current?.fit();
+    useLayoutEffect(() => {
+        const container = containerRef.current;
+        if (!container) {
+            return;
         }
+        const observer = new ResizeObserver(
+            debounce(() => {
+                if (!getHibernate()) {
+                    fitAddonRef.current?.fit();
+                }
+            }, 200)
+        );
+        observer.observe(container);
+        return () => {
+            observer.disconnect();
+        };
     }, [containerRef, fitAddonRef, getHibernate]);
 
     return (
