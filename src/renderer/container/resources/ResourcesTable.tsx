@@ -650,7 +650,7 @@ const ResourcesTableMiniRow: React.FC<ResourcesTableRowProps> = React.memo(
                                         display="inline-flex"
                                         alignItems="stretch"
                                         spacing={0}
-                                        mb={2}
+                                        mb={1}
                                     >
                                         <Heading
                                             fontSize="xs"

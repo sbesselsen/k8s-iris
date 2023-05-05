@@ -237,7 +237,6 @@ export const IngressHostLink: React.FC<{ url: string }> = (props) => {
             isExternal
             onClick={onClick}
             fontSize="xs"
-            textColor="gray"
             onContextMenu={onContextMenu}
         >
             {url}
@@ -435,7 +434,6 @@ function generatePvcDetails(
                 return (
                     <ResourceEditorLink
                         fontSize="xs"
-                        textColor="gray"
                         userSelect="text"
                         isTruncated
                         showMenuAffordance={false}
@@ -495,7 +493,6 @@ function generatePvDetails(
                 return (
                     <ResourceEditorLink
                         fontSize="xs"
-                        textColor="gray"
                         userSelect="text"
                         isTruncated
                         showMenuAffordance={false}
