@@ -536,6 +536,7 @@ const ResourcesTableRowDetails: React.FC<ResourcesTableRowProps> = React.memo(
             () =>
                 sizeClass === "micro"
                     ? [
+                          ...customColumns,
                           ...(showNamespace
                               ? [
                                     {
@@ -549,7 +550,6 @@ const ResourcesTableRowDetails: React.FC<ResourcesTableRowProps> = React.memo(
                                     },
                                 ]
                               : []),
-                          ...customColumns,
                           {
                               id: "created",
                               header: "Created",
