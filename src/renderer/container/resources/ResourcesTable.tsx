@@ -191,7 +191,7 @@ export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
         return 40 * (col.widthUnits + 1);
     }
 
-    const nameColumnMiniWidthThreshold = 150;
+    const nameColumnMinWidth = 150;
 
     const selectColumnWidth = 40;
     const customColumnWidths = customColumns.map((c) => detailColWidth(c));
@@ -203,13 +203,17 @@ export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
     const createdColumnWidth = 120;
 
     // Calculate the width of the non-name columns.
-    const nonNameColumnWidth =
+    const miniAdditionalColumnsWidth =
         (showSelect ? selectColumnWidth : 0) +
-        customColumnTotalWidth +
         (showNamespace ? namespaceColumnWidth : 0) +
         createdColumnWidth;
 
-    const [isMini, setIsMini] = useState(true);
+    // Calculate the width of the non-name columns.
+    const fullAdditionalColumnWidth =
+        miniAdditionalColumnsWidth + customColumnTotalWidth;
+    const [sizeClass, setSizeClass] = useState<"full" | "mini" | "micro">(
+        "full"
+    );
 
     const tableRef = useRef<HTMLTableElement | null>(null);
     useLayoutEffect(() => {
@@ -220,11 +224,19 @@ export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
         const resizeObserver = new ResizeObserver((entries) => {
             const width = entries[0]?.borderBoxSize[0]?.inlineSize;
             if (width !== undefined) {
-                const nameColumnWidth = width - nonNameColumnWidth;
-                const shouldBeMini =
-                    nameColumnWidth < nameColumnMiniWidthThreshold;
-                if (isMini !== shouldBeMini) {
-                    setIsMini(shouldBeMini);
+                let targetSizeClass = sizeClass;
+                if (width - fullAdditionalColumnWidth >= nameColumnMinWidth) {
+                    targetSizeClass = "full";
+                } else if (
+                    width - miniAdditionalColumnsWidth >=
+                    nameColumnMinWidth
+                ) {
+                    targetSizeClass = "mini";
+                } else {
+                    targetSizeClass = "micro";
+                }
+                if (targetSizeClass !== sizeClass) {
+                    setSizeClass(targetSizeClass);
                 }
             }
         });
@@ -233,10 +245,11 @@ export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
             resizeObserver.disconnect();
         };
     }, [
-        isMini,
-        nameColumnMiniWidthThreshold,
-        nonNameColumnWidth,
-        setIsMini,
+        sizeClass,
+        nameColumnMinWidth,
+        miniAdditionalColumnsWidth,
+        fullAdditionalColumnWidth,
+        setSizeClass,
         tableRef,
     ]);
 
@@ -257,7 +270,7 @@ export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
                     <Th ps={showSelect ? 0 : 2} whiteSpace="nowrap">
                         Name
                     </Th>
-                    {!isMini &&
+                    {sizeClass === "full" &&
                         customColumns.map((col, index) => (
                             <Th
                                 key={col.id}
@@ -266,10 +279,10 @@ export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
                                 {col.header}
                             </Th>
                         ))}
-                    {!isMini && showNamespace && (
+                    {sizeClass !== "micro" && showNamespace && (
                         <Th width={`${namespaceColumnWidth}px`}>Namespace</Th>
                     )}
-                    {!isMini && (
+                    {sizeClass !== "micro" && (
                         <Th width={`${createdColumnWidth}px`}>Created</Th>
                     )}
                 </Tr>
@@ -288,7 +301,7 @@ export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
                         selectedKeysStore={selectedKeysStore}
                         onChangeSelectedKeys={onChangeSelectedKeys}
                         showSelect={showSelect}
-                        isMini={isMini}
+                        sizeClass={sizeClass}
                         key={key}
                     />
                 ))}
@@ -350,20 +363,24 @@ type ResourcesTableRowProps = {
     showNamespace: boolean;
     showSelect: boolean;
     customDetails: ResourceDetail[];
-    isMini: boolean;
+    sizeClass: "full" | "mini" | "micro";
 };
 
 const ResourcesTableRow: React.FC<ResourcesTableRowProps> = React.memo(
     (props) => {
-        return props.isMini ? (
-            <ResourcesTableMiniRow {...props} />
-        ) : (
-            <ResourcesTableFullRow {...props} />
+        return (
+            <>
+                <ResourcesTableRowHeader {...props} />
+                {props.sizeClass !== "full" && (
+                    <ResourcesTableRowDetails {...props} />
+                )}
+                <ResourcesTableRowCustomBoxes {...props} />
+            </>
         );
     }
 );
 
-const ResourcesTableFullRow: React.FC<ResourcesTableRowProps> = React.memo(
+const ResourcesTableRowHeader: React.FC<ResourcesTableRowProps> = React.memo(
     (props) => {
         const {
             selectedKeysStore,
@@ -373,6 +390,7 @@ const ResourcesTableFullRow: React.FC<ResourcesTableRowProps> = React.memo(
             showNamespace,
             showSelect,
             customDetails,
+            sizeClass,
         } = props;
 
         const resource = useProvidedStoreValue(
@@ -416,42 +434,41 @@ const ResourcesTableFullRow: React.FC<ResourcesTableRowProps> = React.memo(
         const hasCustomBoxes = customBoxes.length > 0;
         const commonTdProps: TableCellProps = useMemo(() => {
             return {
-                ...(hasCustomBoxes ? { borderBottom: "none" } : {}),
+                ...(hasCustomBoxes || sizeClass !== "full"
+                    ? { borderBottom: "none" }
+                    : {}),
             };
-        }, [hasCustomBoxes]);
+        }, [hasCustomBoxes, sizeClass]);
         const customColumns = customDetails.filter(isResourceColumn);
 
         return (
-            <>
-                <Tr>
-                    {showSelect && (
-                        <Td {...commonTdProps} ps={2} verticalAlign="baseline">
-                            <Checkbox
-                                isChecked={isSelected}
-                                onChange={onChange}
-                            />
-                        </Td>
-                    )}
-
-                    <Td
-                        {...commonTdProps}
-                        ps={showSelect ? 0 : 2}
-                        verticalAlign="baseline"
-                        userSelect="text"
-                    >
-                        <HStack p={0}>
-                            <ResourceEditorLink
-                                userSelect="text"
-                                cursor="inherit"
-                                textColor={isDeleting ? "gray.500" : ""}
-                                editorResource={resource}
-                            >
-                                {resource.metadata.name}
-                            </ResourceEditorLink>
-                            <ResourceTableRowBadges badges={badges} />
-                        </HStack>
+            <Tr>
+                {showSelect && (
+                    <Td {...commonTdProps} ps={2} verticalAlign="baseline">
+                        <Checkbox isChecked={isSelected} onChange={onChange} />
                     </Td>
-                    {customColumns.map((col) => (
+                )}
+
+                <Td
+                    {...commonTdProps}
+                    ps={showSelect ? 0 : 2}
+                    verticalAlign="baseline"
+                    userSelect="text"
+                >
+                    <HStack p={0}>
+                        <ResourceEditorLink
+                            userSelect="text"
+                            cursor="inherit"
+                            textColor={isDeleting ? "gray.500" : ""}
+                            editorResource={resource}
+                        >
+                            {resource.metadata.name}
+                        </ResourceEditorLink>
+                        <ResourceTableRowBadges badges={badges} />
+                    </HStack>
+                </Td>
+                {sizeClass === "full" &&
+                    customColumns.map((col) => (
                         <Td
                             {...commonTdProps}
                             verticalAlign="baseline"
@@ -460,51 +477,34 @@ const ResourcesTableFullRow: React.FC<ResourcesTableRowProps> = React.memo(
                             {col.valueFor(resource)}
                         </Td>
                     ))}
-                    {showNamespace && (
-                        <Td {...commonTdProps} verticalAlign="baseline">
-                            <Selectable display="block" isTruncated>
-                                {resource.metadata.namespace}
-                            </Selectable>
-                        </Td>
-                    )}
+                {sizeClass !== "micro" && showNamespace && (
+                    <Td {...commonTdProps} verticalAlign="baseline">
+                        <Selectable display="block" isTruncated>
+                            {resource.metadata.namespace}
+                        </Selectable>
+                    </Td>
+                )}
+                {sizeClass !== "micro" && (
                     <Td {...commonTdProps} verticalAlign="baseline">
                         <Selectable display="block" isTruncated>
                             {formatDeveloperDateTime(creationDate)}
                         </Selectable>
                     </Td>
-                </Tr>
-
-                {customBoxes.map((box) => (
-                    <Tr key={box.id}>
-                        <Td></Td>
-                        <Td
-                            ps={0}
-                            pt={0}
-                            colSpan={
-                                2 +
-                                (showNamespace ? 1 : 0) +
-                                customColumns.length
-                            }
-                        >
-                            {box.value}
-                        </Td>
-                    </Tr>
-                ))}
-            </>
+                )}
+            </Tr>
         );
     }
 );
 
-const ResourcesTableMiniRow: React.FC<ResourcesTableRowProps> = React.memo(
+const ResourcesTableRowDetails: React.FC<ResourcesTableRowProps> = React.memo(
     (props) => {
         const {
-            selectedKeysStore,
-            onChangeSelectedKeys,
             resourcesStore,
             resourceKey,
             showNamespace,
             showSelect,
             customDetails,
+            sizeClass,
         } = props;
 
         const resource = useProvidedStoreValue(
@@ -512,31 +512,10 @@ const ResourcesTableMiniRow: React.FC<ResourcesTableRowProps> = React.memo(
             ({ resources }) => resources[resourceKey],
             [resourceKey]
         );
-        const isSelected = useProvidedStoreValue(
-            selectedKeysStore,
-            (selected) => selected.has(resourceKey),
-            [resourceKey]
-        );
 
         const creationDate = new Date(
             (resource as any).metadata.creationTimestamp
         );
-        const isDeleting = Boolean(
-            (resource as any).metadata.deletionTimestamp
-        );
-
-        const onChange = useCallback(
-            (e: ChangeEvent<HTMLInputElement>) => {
-                onChangeSelectedKeys({ [resourceKey]: e.target.checked });
-            },
-            [onChangeSelectedKeys, resourceKey]
-        );
-
-        const badges: ResourceBadge[] = useMemo(
-            () => generateBadges(resource),
-            [resource]
-        );
-
         const customBoxes = useMemo(
             () =>
                 customDetails
@@ -554,102 +533,60 @@ const ResourcesTableMiniRow: React.FC<ResourcesTableRowProps> = React.memo(
         const customColumns = customDetails.filter(isResourceColumn);
 
         const stats = useMemo(
-            () => [
-                ...(showNamespace
+            () =>
+                sizeClass === "micro"
                     ? [
+                          ...(showNamespace
+                              ? [
+                                    {
+                                        id: "namespace",
+                                        header: "Namespace",
+                                        valueFor: () => {
+                                            return resource.metadata.namespace;
+                                        },
+                                        style: "column",
+                                        widthUnits: 1,
+                                    },
+                                ]
+                              : []),
+                          ...customColumns,
                           {
-                              id: "namespace",
-                              header: "Namespace",
+                              id: "created",
+                              header: "Created",
                               valueFor: () => {
-                                  return resource.metadata.namespace;
+                                  return formatDeveloperDateTime(creationDate);
                               },
                               style: "column",
                               widthUnits: 1,
                           },
                       ]
-                    : []),
-                ...customColumns,
-                {
-                    id: "created",
-                    header: "Created",
-                    valueFor: () => {
-                        return formatDeveloperDateTime(creationDate);
-                    },
-                    style: "column",
-                    widthUnits: 1,
-                },
-            ],
+                    : customColumns,
             [creationDate, customColumns, resource, showNamespace]
         );
 
-        return (
-            <>
-                <Tr>
-                    {showSelect && (
-                        <Td {...commonTdProps} ps={2} verticalAlign="baseline">
-                            <Checkbox
-                                isChecked={isSelected}
-                                onChange={onChange}
-                            />
-                        </Td>
-                    )}
+        const colSpan = sizeClass === "mini" ? 2 + (showNamespace ? 1 : 0) : 1;
 
-                    <Td
-                        {...commonTdProps}
-                        ps={showSelect ? 0 : 2}
-                        verticalAlign="baseline"
-                        userSelect="text"
-                    >
-                        <VStack p={0} alignItems="stretch">
-                            <HStack p={0}>
-                                <ResourceEditorLink
-                                    userSelect="text"
-                                    cursor="inherit"
-                                    textColor={isDeleting ? "gray.500" : ""}
-                                    editorResource={resource}
-                                >
-                                    {resource.metadata.name}
-                                </ResourceEditorLink>
-                                <ResourceTableRowBadges badges={badges} />
-                            </HStack>
-                            <VStack spacing={0} alignItems="stretch">
-                                {stats.length > 0 && (
-                                    <Box>
-                                        {stats.map((col) => {
-                                            return (
-                                                <VStack
-                                                    key={col.id}
-                                                    display="inline-flex"
-                                                    alignItems="stretch"
-                                                    spacing={0}
-                                                    me={6}
-                                                    mb={1}
-                                                >
-                                                    <Heading
-                                                        fontSize="xs"
-                                                        textTransform="uppercase"
-                                                        textColor="gray"
-                                                    >
-                                                        {col.header}
-                                                    </Heading>
-                                                    <Box fontSize="xs">
-                                                        <Selectable display="block">
-                                                            {col.valueFor(
-                                                                resource
-                                                            ) ?? "-"}
-                                                        </Selectable>
-                                                    </Box>
-                                                </VStack>
-                                            );
-                                        })}
-                                    </Box>
-                                )}
-                                {customBoxes.map((col) => (
+        return (
+            <Tr>
+                {showSelect && <Td {...commonTdProps}></Td>}
+                <Td
+                    {...commonTdProps}
+                    ps={showSelect ? 0 : 2}
+                    pt={0}
+                    verticalAlign="baseline"
+                    userSelect="text"
+                    colSpan={colSpan}
+                >
+                    {stats.length > 0 && (
+                        <Box mb={-1}>
+                            {stats.map((col) => {
+                                return (
                                     <VStack
                                         key={col.id}
                                         display="inline-flex"
                                         alignItems="stretch"
                                         spacing={0}
+                                        me={6}
                                         mb={1}
                                     >
                                         <Heading
@@ -659,19 +596,69 @@ const ResourcesTableMiniRow: React.FC<ResourcesTableRowProps> = React.memo(
                                         >
                                             {col.header}
                                         </Heading>
-                                        <Box fontSize="xs" isTruncated>
-                                            {col.valueFor(resource) ?? "-"}
+                                        <Box fontSize="xs">
+                                            <Selectable display="block">
+                                                {col.valueFor(resource) ?? "-"}
+                                            </Selectable>
                                         </Box>
                                     </VStack>
-                                ))}
-                            </VStack>
-                        </VStack>
-                    </Td>
-                </Tr>
-            </>
+                                );
+                            })}
+                        </Box>
+                    )}
+                </Td>
+            </Tr>
         );
     }
 );
+
+const ResourcesTableRowCustomBoxes: React.FC<ResourcesTableRowProps> =
+    React.memo((props) => {
+        const {
+            resourcesStore,
+            resourceKey,
+            showNamespace,
+            showSelect,
+            customDetails,
+            sizeClass,
+        } = props;
+
+        const resource = useProvidedStoreValue(
+            resourcesStore,
+            ({ resources }) => resources[resourceKey],
+            [resourceKey]
+        );
+
+        const customBoxes = useMemo(
+            () =>
+                customDetails
+                    .filter(isResourceBox)
+                    .map((box) => ({ ...box, value: box.valueFor(resource) }))
+                    .filter((v) => !!v.value),
+            [customDetails, resource]
+        );
+        const customColumns = customDetails.filter(isResourceColumn);
+
+        const colSpan =
+            sizeClass === "full"
+                ? 2 + (showNamespace ? 1 : 0) + customColumns.length
+                : sizeClass === "mini"
+                ? 2 + (showNamespace ? 1 : 0)
+                : 1;
+
+        return (
+            <>
+                {customBoxes.map((box) => (
+                    <Tr key={box.id}>
+                        {showSelect && <Td></Td>}
+                        <Td ps={0} pt={0} colSpan={colSpan}>
+                            {box.value}
+                        </Td>
+                    </Tr>
+                ))}
+            </>
+        );
+    });
 
 const ResourceTableRowBadges: React.FC<{ badges: ResourceBadge[] }> = (
     props
