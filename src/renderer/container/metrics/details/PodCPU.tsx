@@ -55,7 +55,7 @@ export const PodCPU: React.FC<{ pod: K8sObject }> = (props) => {
         .map((c: any) => parseCpu(c?.usage?.cpu ?? "0m") ?? 0)
         .reduce((cpu, total) => cpu + total, 0);
     return (
-        <Badge title={alertsText} colorScheme={colorScheme}>
+        <Badge fontWeight="medium" title={alertsText} colorScheme={colorScheme}>
             {String(totalCpu.toFixed(2))}
         </Badge>
     );

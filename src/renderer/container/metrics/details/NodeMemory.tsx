@@ -42,7 +42,7 @@ export const NodeMemory: React.FC<{ node: K8sObject }> = (props) => {
                 </AppTooltip>
             )}
             {!totalMemory && memory !== null && (
-                <Badge>{memory.toFixed(1)}</Badge>
+                <Badge fontWeight="medium">{memory.toFixed(1)}</Badge>
             )}
         </>
     );

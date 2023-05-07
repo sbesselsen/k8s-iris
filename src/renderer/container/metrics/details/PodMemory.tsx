@@ -56,6 +56,7 @@ export const PodMemory: React.FC<{ pod: K8sObject }> = (props) => {
         .reduce((memory, total) => memory + total, 0);
     return (
         <Badge
+            fontWeight="medium"
             textTransform="none"
             title={alertsText}
             colorScheme={colorScheme}

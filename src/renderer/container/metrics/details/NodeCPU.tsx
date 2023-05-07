@@ -34,7 +34,9 @@ export const NodeCPU: React.FC<{ node: K8sObject }> = (props) => {
                     />
                 </AppTooltip>
             )}
-            {!totalCpu && cpu !== null && <Badge>{cpu.toFixed(1)}</Badge>}
+            {!totalCpu && cpu !== null && (
+                <Badge fontWeight="medium">{cpu.toFixed(1)}</Badge>
+            )}
         </>
     );
 };
