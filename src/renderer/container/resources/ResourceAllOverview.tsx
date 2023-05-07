@@ -149,12 +149,14 @@ const InnerResourceTypeOverview: React.FC<{
                         selectedKeysStore={selectedKeysStore}
                     />
                 }
+                px={0}
             >
                 <ResourcesTable
                     onChangeSelectedKeys={onChangeSelectedKeys}
                     selectedKeysStore={selectedKeysStore}
                     resourcesStore={resourcesStore}
                     showNamespace={showNamespace}
+                    px={2}
                 />
             </ScrollBox>
         </VStack>

@@ -5,11 +5,11 @@ import {
     Heading,
     HStack,
     Table,
-    TableCellProps,
     Td,
     Th,
     Thead,
     Tr,
+    useColorModeValue,
     VStack,
 } from "@chakra-ui/react";
 import React, {
@@ -70,6 +70,7 @@ export type ResourcesTableProps = {
     resourcesStore: ReadableStore<ResourcesTableStoreValue>;
     showNamespace: boolean;
     showSelect?: boolean;
+    px?: string | number | undefined;
 };
 
 export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
@@ -80,6 +81,7 @@ export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
         selectedKeysStore = emptySelectedKeysStore,
         showNamespace,
         showSelect = true,
+        px,
     } = props;
 
     const { query } = useAppSearch();
@@ -257,6 +259,7 @@ export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
         <Table ref={tableRef} size="sm" sx={{ tableLayout: "fixed" }}>
             <Thead>
                 <Tr>
+                    {px && <Td w={px} px={0} borderBottom="none"></Td>}
                     {showSelect && (
                         <Th ps={2} width={`${selectColumnWidth}px`}>
                             <ResourceTableSelectAll
@@ -285,6 +288,7 @@ export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
                     {sizeClass !== "micro" && (
                         <Th width={`${createdColumnWidth}px`}>Created</Th>
                     )}
+                    {px && <Td w={px} px={0} borderBottom="none"></Td>}
                 </Tr>
             </Thead>
             <ViewportLazyTbody
@@ -303,6 +307,7 @@ export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
                         showSelect={showSelect}
                         sizeClass={sizeClass}
                         key={key}
+                        px={px}
                     />
                 ))}
             </ViewportLazyTbody>
@@ -364,7 +369,16 @@ type ResourcesTableRowProps = {
     showSelect: boolean;
     customDetails: ResourceDetail[];
     sizeClass: "full" | "mini" | "micro";
+    px?: string | number | undefined;
 };
+
+function useRowBg(props?: { isSelected?: boolean | undefined }): string {
+    const selectedBg = useColorModeValue(
+        "systemAccent.100",
+        "systemAccent.800"
+    );
+    return props?.isSelected ? selectedBg : "transparent";
+}
 
 const ResourcesTableRow: React.FC<ResourcesTableRowProps> = React.memo(
     (props) => {
@@ -391,11 +405,15 @@ const ResourcesTableRowHeader: React.FC<ResourcesTableRowProps> = React.memo(
             showSelect,
             customDetails,
             sizeClass,
+            px,
         } = props;
 
         const resource = useProvidedStoreValue(
             resourcesStore,
-            ({ resources }) => resources[resourceKey],
+            ({ resources }) => {
+                console.log("res", resources[resourceKey]);
+                return resources[resourceKey];
+            },
             [resourceKey]
         );
         const isSelected = useProvidedStoreValue(
@@ -423,34 +441,23 @@ const ResourcesTableRowHeader: React.FC<ResourcesTableRowProps> = React.memo(
             [resource]
         );
 
-        const customBoxes = useMemo(
-            () =>
-                customDetails
-                    .filter(isResourceBox)
-                    .map((box) => ({ ...box, value: box.valueFor(resource) }))
-                    .filter((v) => !!v.value),
-            [customDetails, resource]
-        );
-        const hasCustomBoxes = customBoxes.length > 0;
-        const commonTdProps: TableCellProps = useMemo(() => {
-            return {
-                ...(hasCustomBoxes || sizeClass !== "full"
-                    ? { borderBottom: "none" }
-                    : {}),
-            };
-        }, [hasCustomBoxes, sizeClass]);
         const customColumns = customDetails.filter(isResourceColumn);
 
+        const rowBg = useRowBg({
+            isSelected,
+        });
+
         return (
-            <Tr>
+            <Tr bg={rowBg}>
+                {px && <Td borderBottom="none" w={px} px={0}></Td>}
                 {showSelect && (
-                    <Td {...commonTdProps} ps={2} verticalAlign="baseline">
+                    <Td borderBottom="none" ps={2} verticalAlign="baseline">
                         <Checkbox isChecked={isSelected} onChange={onChange} />
                     </Td>
                 )}
 
                 <Td
-                    {...commonTdProps}
+                    borderBottom="none"
                     ps={showSelect ? 0 : 2}
                     verticalAlign="baseline"
                     userSelect="text"
@@ -470,7 +477,7 @@ const ResourcesTableRowHeader: React.FC<ResourcesTableRowProps> = React.memo(
                 {sizeClass === "full" &&
                     customColumns.map((col) => (
                         <Td
-                            {...commonTdProps}
+                            borderBottom="none"
                             verticalAlign="baseline"
                             key={col.id}
                         >
@@ -478,19 +485,20 @@ const ResourcesTableRowHeader: React.FC<ResourcesTableRowProps> = React.memo(
                         </Td>
                     ))}
                 {sizeClass !== "micro" && showNamespace && (
-                    <Td {...commonTdProps} verticalAlign="baseline">
+                    <Td borderBottom="none" verticalAlign="baseline">
                         <Selectable display="block" isTruncated>
                             {resource.metadata.namespace}
                         </Selectable>
                     </Td>
                 )}
                 {sizeClass !== "micro" && (
-                    <Td {...commonTdProps} verticalAlign="baseline">
+                    <Td borderBottom="none" verticalAlign="baseline">
                         <Selectable display="block" isTruncated>
                             {formatDeveloperDateTime(creationDate)}
                         </Selectable>
                     </Td>
                 )}
+                {px && <Td borderBottom="none" w={px} px={0}></Td>}
             </Tr>
         );
     }
@@ -501,10 +509,12 @@ const ResourcesTableRowDetails: React.FC<ResourcesTableRowProps> = React.memo(
         const {
             resourcesStore,
             resourceKey,
+            selectedKeysStore,
             showNamespace,
             showSelect,
             customDetails,
             sizeClass,
+            px,
         } = props;
 
         const resource = useProvidedStoreValue(
@@ -513,23 +523,16 @@ const ResourcesTableRowDetails: React.FC<ResourcesTableRowProps> = React.memo(
             [resourceKey]
         );
 
+        const isSelected = useProvidedStoreValue(
+            selectedKeysStore,
+            (selected) => selected.has(resourceKey),
+            [resourceKey]
+        );
+
         const creationDate = new Date(
             (resource as any).metadata.creationTimestamp
         );
-        const customBoxes = useMemo(
-            () =>
-                customDetails
-                    .filter(isResourceBox)
-                    .map((box) => ({ ...box, value: box.valueFor(resource) }))
-                    .filter((v) => !!v.value),
-            [customDetails, resource]
-        );
-        const hasCustomBoxes = customBoxes.length > 0;
-        const commonTdProps: TableCellProps = useMemo(() => {
-            return {
-                ...(hasCustomBoxes ? { borderBottom: "none" } : {}),
-            };
-        }, [hasCustomBoxes]);
+
         const customColumns = customDetails.filter(isResourceColumn);
 
         const stats = useMemo(
@@ -566,11 +569,16 @@ const ResourcesTableRowDetails: React.FC<ResourcesTableRowProps> = React.memo(
 
         const colSpan = sizeClass === "mini" ? 2 + (showNamespace ? 1 : 0) : 1;
 
+        const rowBg = useRowBg({
+            isSelected,
+        });
+
         return (
-            <Tr>
-                {showSelect && <Td {...commonTdProps}></Td>}
+            <Tr bg={rowBg}>
+                {px && <Td borderBottom="none" w={px} px={0}></Td>}
+                {showSelect && <Td borderBottom="none"></Td>}
                 <Td
-                    {...commonTdProps}
+                    borderBottom="none"
                     ps={showSelect ? 0 : 2}
                     pt={0}
                     verticalAlign="baseline"
@@ -607,6 +615,7 @@ const ResourcesTableRowDetails: React.FC<ResourcesTableRowProps> = React.memo(
                         </Box>
                     )}
                 </Td>
+                {px && <Td borderBottom="none" w={px} px={0}></Td>}
             </Tr>
         );
     }
@@ -617,15 +626,23 @@ const ResourcesTableRowCustomBoxes: React.FC<ResourcesTableRowProps> =
         const {
             resourcesStore,
             resourceKey,
+            selectedKeysStore,
             showNamespace,
             showSelect,
             customDetails,
             sizeClass,
+            px,
         } = props;
 
         const resource = useProvidedStoreValue(
             resourcesStore,
             ({ resources }) => resources[resourceKey],
+            [resourceKey]
+        );
+
+        const isSelected = useProvidedStoreValue(
+            selectedKeysStore,
+            (selected) => selected.has(resourceKey),
             [resourceKey]
         );
 
@@ -646,14 +663,20 @@ const ResourcesTableRowCustomBoxes: React.FC<ResourcesTableRowProps> =
                 ? 2 + (showNamespace ? 1 : 0)
                 : 1;
 
+        const rowBg = useRowBg({
+            isSelected,
+        });
+
         return (
             <>
                 {customBoxes.map((box) => (
-                    <Tr key={box.id}>
-                        {showSelect && <Td></Td>}
-                        <Td ps={0} pt={0} colSpan={colSpan}>
+                    <Tr bg={rowBg} key={box.id}>
+                        {px && <Td borderBottom="none" w={px} px={0}></Td>}
+                        {showSelect && <Td borderBottom="none"></Td>}
+                        <Td borderBottom="none" ps={0} pt={0} colSpan={colSpan}>
                             {box.value}
                         </Td>
+                        {px && <Td borderBottom="none" w={px} px={0}></Td>}
                     </Tr>
                 ))}
             </>

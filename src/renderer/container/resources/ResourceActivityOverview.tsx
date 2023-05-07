@@ -161,8 +161,9 @@ export const ResourceActivityOverview: React.FC<{}> = () => {
                             resourcesStore={workloadsStore}
                         />
                     </HStack>
-                    <ScrollBox>
+                    <ScrollBox px={0}>
                         <ResourcesTable
+                            px={2}
                             resourcesStore={filteredWorkloadsStore}
                             showNamespace={showNamespace}
                             selectedKeysStore={selectedKeysStore}
@@ -180,8 +181,9 @@ export const ResourceActivityOverview: React.FC<{}> = () => {
                             resourcesStore={podsStore}
                         />
                     </HStack>
-                    <ScrollBox>
+                    <ScrollBox px={0}>
                         <ResourcesTable
+                            px={2}
                             resourcesStore={filteredPodsStore}
                             showNamespace={showNamespace}
                             selectedKeysStore={selectedKeysStore}
