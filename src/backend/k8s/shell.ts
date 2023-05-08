@@ -28,6 +28,7 @@ export function k8sShellWrapper(clientManager: K8sClientManager): ShellWrapper {
                 encoding: "utf-8",
             }
         );
+        await fs.promises.chmod(tempPath, 0o600);
 
         return {
             env: {
