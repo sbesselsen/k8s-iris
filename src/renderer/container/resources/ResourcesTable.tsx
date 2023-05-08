@@ -411,7 +411,6 @@ const ResourcesTableRowHeader: React.FC<ResourcesTableRowProps> = React.memo(
         const resource = useProvidedStoreValue(
             resourcesStore,
             ({ resources }) => {
-                console.log("res", resources[resourceKey]);
                 return resources[resourceKey];
             },
             [resourceKey]
