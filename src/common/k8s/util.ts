@@ -174,7 +174,7 @@ export function formatCpu(cpu: number): string {
 
 export function parseMemory(
     memory: string,
-    targetUnit: "Ki" | "Mi" | "Gi" | "Ti"
+    targetUnit: "Ki" | "Mi" | "Gi" | "Ti" | "K" | "M" | "G" | "T"
 ): number | null {
     const match = memory.match(/^([0-9.]+)([a-zA-Z]*)$/);
     if (!match) {
@@ -187,6 +187,10 @@ export function parseMemory(
         Mi: 1024,
         Gi: 1024 * 1024,
         Ti: 1024 * 1024 * 1024,
+        K: 1 / 1.024,
+        M: 1000 / 1.024,
+        G: (1000 * 1000) / 1.024,
+        T: (1000 * 1000 * 1000) / 1.024,
     };
     return (
         (number * (unitAdjustments[sourceUnit] ?? 1)) /
