@@ -40,13 +40,17 @@ export function useK8sNodeMetrics(
     node: K8sObject | K8sObjectIdentifier,
     options?: K8sMetricsOptions
 ): K8sObject | null {
+    const nodesMetrics = useK8sNodesMetrics(options);
+    const nodeName = toK8sObjectIdentifier(node).name;
+    return nodesMetrics.find((m) => m.metadata.name === nodeName) ?? null;
+}
+
+export function useK8sNodesMetrics(options?: K8sMetricsOptions): K8sObject[] {
     const sharedContext = useOptionalK8sContext();
     const { kubeContext = sharedContext } = options ?? {};
     if (!kubeContext) {
         throw new Error("Calling useK8sNodeMetrics() without kubeContext");
     }
-
-    const nodeName = toK8sObjectIdentifier(node).name;
 
     const client = useK8sClient(kubeContext);
 
@@ -78,8 +82,7 @@ export function useK8sNodeMetrics(
         };
     }, [client, key]);
 
-    const nodeMetrics = useStoreValue((v) => v.metrics[key] ?? [], [key]);
-    return nodeMetrics.find((m) => m.metadata.name === nodeName) ?? null;
+    return useStoreValue((v) => v.metrics[key] ?? [], [key]);
 }
 
 export function useK8sPodMetrics(

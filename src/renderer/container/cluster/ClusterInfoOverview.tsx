@@ -8,17 +8,22 @@ import { useK8sContext } from "../../context/k8s-context";
 import {
     Heading,
     Table,
+    TableCellProps,
     Tbody,
     Td,
     Text,
     Th,
     Tr,
+    useColorModeValue,
     VStack,
 } from "@chakra-ui/react";
 import { Selectable } from "../../component/main/Selectable";
 import { K8sObject } from "../../../common/k8s/client";
 import { parseCpu, parseMemory } from "../../../common/k8s/util";
 import { useK8sVersion } from "../../k8s/version";
+import { useK8sNodesMetrics } from "../../k8s/metrics";
+import { PercentageBadge } from "../../component/main/PercentageBadge";
+import { AppTooltip } from "../../component/main/AppTooltip";
 
 const cloudProviderNames: Record<string, string> = {
     aws: "AWS",
@@ -62,7 +67,11 @@ export const ClusterInfoOverview: React.FC = () => {
             <VStack alignItems="stretch" spacing={6}>
                 <VStack alignItems="stretch" spacing={1}>
                     <Heading isTruncated>Cluster</Heading>
-                    <Table size="sm" sx={{ tableLayout: "fixed" }}>
+                    <Table
+                        size="sm"
+                        variant="unstyled"
+                        sx={{ tableLayout: "fixed" }}
+                    >
                         <Tbody>
                             <Tr>
                                 <StatTh>Name</StatTh>
@@ -103,14 +112,6 @@ export const ClusterInfoOverview: React.FC = () => {
                                         </StatTd>
                                     </Tr>
                                 )}
-                            <Tr>
-                                <StatTh>Nodes</StatTh>
-                                <StatTd>
-                                    <Selectable>
-                                        {nodes?.items.length ?? ""}
-                                    </Selectable>
-                                </StatTd>
-                            </Tr>
                         </Tbody>
                     </Table>
                 </VStack>
@@ -123,7 +124,11 @@ export const ClusterInfoOverview: React.FC = () => {
                 <VStack alignItems="stretch" spacing={1}>
                     <Heading isTruncated>{cloudProviderTitle}</Heading>
 
-                    <Table size="sm" sx={{ tableLayout: "fixed" }}>
+                    <Table
+                        size="sm"
+                        variant="unstyled"
+                        sx={{ tableLayout: "fixed" }}
+                    >
                         <Tbody>
                             {contextInfo?.cloudInfo?.cloudService && (
                                 <Tr>
@@ -191,6 +196,25 @@ function sum(numbers: number[]): number {
 const CapacityTable: React.FC<{ nodes: K8sObject[] }> = (props) => {
     const { nodes } = props;
 
+    const nodeStats = useK8sNodesMetrics();
+    const cpuUsage = useMemo(
+        () =>
+            (nodeStats as any[])
+                .map((c: any) => parseCpu(c?.usage?.cpu ?? "0m") ?? 0)
+                .reduce((cpu, total) => cpu + total, 0),
+        [nodeStats]
+    );
+    const memoryUsage = useMemo(
+        () =>
+            (nodeStats as any[])
+                .map(
+                    (c: any) =>
+                        parseMemory(c?.usage?.memory ?? "0Gi", "Gi") ?? 0
+                )
+                .reduce((cpu, total) => cpu + total, 0),
+        [nodeStats]
+    );
+
     const cpu = useMemo(
         () =>
             sum(
@@ -217,21 +241,46 @@ const CapacityTable: React.FC<{ nodes: K8sObject[] }> = (props) => {
         [nodes]
     );
 
+    const cpuFraction = cpu > 0 ? cpuUsage / cpu : null;
+    const memoryFraction = memory > 0 ? memoryUsage / memory : null;
+
     if (!nodes) {
         return null;
     }
 
     return (
-        <Table size="sm" sx={{ tableLayout: "fixed" }}>
+        <Table size="sm" variant="unstyled" sx={{ tableLayout: "fixed" }}>
             <Tbody>
                 <Tr>
                     <StatTh>CPU</StatTh>
+                    <Td verticalAlign="baseline" py={2} pe={0} w={16}>
+                        {cpuFraction !== null && (
+                            <AppTooltip label={cpuUsage.toFixed(1) + " cores"}>
+                                <PercentageBadge
+                                    colorScheme="gray"
+                                    w="100%"
+                                    value={cpuFraction}
+                                />
+                            </AppTooltip>
+                        )}
+                    </Td>
                     <StatTd>
                         <Selectable>{cpu === 0 ? "" : cpu}</Selectable>
                     </StatTd>
                 </Tr>
                 <Tr>
                     <StatTh>Memory</StatTh>
+                    <Td verticalAlign="baseline" py={2} pe={0} w={16}>
+                        {memoryFraction !== null && (
+                            <AppTooltip label={memoryUsage.toFixed(1) + "Gi"}>
+                                <PercentageBadge
+                                    colorScheme="gray"
+                                    w="100%"
+                                    value={memoryFraction}
+                                />
+                            </AppTooltip>
+                        )}
+                    </Td>
                     <StatTd>
                         <Selectable>
                             {memory === 0
@@ -243,12 +292,20 @@ const CapacityTable: React.FC<{ nodes: K8sObject[] }> = (props) => {
                         </Selectable>
                     </StatTd>
                 </Tr>
+                <Tr>
+                    <StatTh>Nodes</StatTh>
+                    <StatTd colSpan={2}>
+                        <Selectable>{nodes.length ?? ""}</Selectable>
+                    </StatTd>
+                </Tr>
             </Tbody>
         </Table>
     );
 };
 
 const StatTh: React.FC<{}> = ({ children, ...props }) => {
+    const color = useColorModeValue("gray.600", "gray.400");
+
     return (
         <Th
             width="150px"
@@ -260,11 +317,13 @@ const StatTh: React.FC<{}> = ({ children, ...props }) => {
             minWidth="150px"
             {...props}
         >
-            <Text isTruncated>{children}</Text>
+            <Text textColor={color} isTruncated>
+                {children}
+            </Text>
         </Th>
     );
 };
-const StatTd: React.FC<{}> = ({ children, ...props }) => {
+const StatTd: React.FC<TableCellProps> = ({ children, ...props }) => {
     return (
         <Td verticalAlign="baseline" py={2} {...props}>
             <Text isTruncated>{children}&nbsp;</Text>
