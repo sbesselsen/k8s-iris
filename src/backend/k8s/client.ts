@@ -680,9 +680,58 @@ export function createClient(
                     },
                 });
             });
+
+            let silentDropCheckInterval: any = null;
+            let isPerformingPlannedRestart = false;
+            informer.on("connect", () => {
+                console.log(
+                    "Informer connect",
+                    kubeConfig.getCurrentContext(),
+                    spec.kind
+                );
+
+                if (silentDropCheckInterval) {
+                    clearInterval(silentDropCheckInterval);
+                }
+
+                let prevResourceVersion = (informer as any)?.resourceVersion;
+                silentDropCheckInterval = setInterval(() => {
+                    // If the resource version is unchanged for 1 minute, kick the informer.
+                    if (stopped) {
+                        clearInterval(silentDropCheckInterval);
+                        return;
+                    }
+                    const currentResourceVersion = (informer as any)
+                        ?.resourceVersion;
+                    if (currentResourceVersion === prevResourceVersion) {
+                        // Informer has not had any updates for a minute.
+                        console.log(
+                            "Informer kick due to no updates for 1 minute",
+                            kubeConfig.getCurrentContext(),
+                            spec.kind
+                        );
+                        isPerformingPlannedRestart = true;
+                        informer?.start();
+                    }
+
+                    prevResourceVersion = currentResourceVersion;
+                }, 60000);
+            });
+
             informer.on("error", (err: KubernetesObject) => {
                 if (stopped) {
                     return;
+                }
+                if (isPerformingPlannedRestart) {
+                    // TODO: check if error is "aborted"
+                    isPerformingPlannedRestart = false;
+                    if (
+                        (err as any).code === "ECONNRESET" &&
+                        String(err) === "Error: aborted"
+                    ) {
+                        // Do not trigger error; connection is aborted due to our own restart in the "Informer kick" above.
+                        return;
+                    }
                 }
                 watcher(err);
                 console.error(
