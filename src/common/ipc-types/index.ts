@@ -172,4 +172,16 @@ export type IpcCalls = {
             options?: ContextMenuOptions;
         }): Promise<ContextMenuResult>;
     };
+    prefs: {
+        read(params: { key: string }): Promise<unknown>;
+        write(params: { key: string; value: unknown }): Promise<void>;
+        delete(params: { key: string }): Promise<void>;
+        subscribe(
+            params: { key: string },
+            receive: (
+                error: any,
+                message?: undefined | { newValue: unknown }
+            ) => void
+        ): { stop: () => void };
+    };
 };

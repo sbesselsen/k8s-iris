@@ -41,6 +41,11 @@ const getAccentColor = ipcInvoker("appAppearance:getAccentColor");
 const watchAccentColor = ipcSubscriber("appAppearance:watchAccentColor");
 const contextMenuPopup = ipcInvoker("contextMenu:popup");
 
+const prefsRead = ipcInvoker("prefs:read");
+const prefsWrite = ipcInvoker("prefs:write");
+const prefsDelete = ipcInvoker("prefs:delete");
+const prefsSubscribe = ipcSubscriber("prefs:subscribe");
+
 contextBridge.exposeInMainWorld("charm", {
     app: {
         createWindow,
@@ -86,5 +91,11 @@ contextBridge.exposeInMainWorld("charm", {
     },
     contextMenu: {
         popup: contextMenuPopup,
+    },
+    prefs: {
+        read: prefsRead,
+        write: prefsWrite,
+        delete: prefsDelete,
+        subscribe: prefsSubscribe,
     },
 } as IpcCalls);

@@ -18,6 +18,7 @@ import { createMenuManager } from "./menu";
 import { createOsManager } from "./os";
 import { wireOsIpc } from "./os/ipc";
 import { createPrefsManager } from "./prefs";
+import { wirePrefsManagerIpc } from "./prefs/ipc";
 import { createShellManager } from "./shell";
 import { wireShellIpc } from "./shell/ipc";
 import { shellOptions } from "./util/shell";
@@ -75,6 +76,7 @@ import { createWindowManager, WindowParameters } from "./window";
     menuManager.initialize();
 
     // Hook up IPC calls.
+    wirePrefsManagerIpc(prefsManager);
     wireCloudIpc(cloudManager);
     wireK8sClientIpc(k8sClientManager);
     wireShellIpc(shellManager);
