@@ -47,11 +47,7 @@ export const PodMemory: React.FC<{ pod: K8sObject }> = (props) => {
 
     const colorScheme = hasWarning ? "red" : hasNotice ? "yellow" : "gray";
 
-    if (!metrics) {
-        return null;
-    }
-
-    const totalMemory = (((metrics as any).containers ?? []) as any[])
+    const totalMemory = (((metrics as any)?.containers ?? []) as any[])
         .map((c: any) => parseMemory(c?.usage?.memory ?? "0Mi", "Mi") ?? 0)
         .reduce((memory, total) => memory + total, 0);
     return (
@@ -61,7 +57,7 @@ export const PodMemory: React.FC<{ pod: K8sObject }> = (props) => {
             title={alertsText}
             colorScheme={colorScheme}
         >
-            {String(totalMemory.toFixed(0))}Mi
+            {metrics ? String(totalMemory.toFixed(0)) + "Mi" : "-"}
         </Badge>
     );
 };

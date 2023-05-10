@@ -67,17 +67,13 @@ export const PodSetCPU: React.FC<{ podSet: K8sObject }> = (props) => {
 
     const colorScheme = hasWarning ? "red" : hasNotice ? "yellow" : "gray";
 
-    if (metrics.length === 0) {
-        return null;
-    }
-
     const totalCpu = metrics
-        .flatMap((metrics) => ((metrics as any).containers ?? []) as any[])
+        .flatMap((metrics) => ((metrics as any)?.containers ?? []) as any[])
         .map((c: any) => parseCpu(c?.usage?.cpu ?? "0m") ?? 0)
         .reduce((cpu, total) => cpu + total, 0);
     return (
         <Badge fontWeight="medium" title={alertsText} colorScheme={colorScheme}>
-            {String(totalCpu.toFixed(2))}
+            {metrics.length > 0 ? String(totalCpu.toFixed(2)) : "-"}
         </Badge>
     );
 };

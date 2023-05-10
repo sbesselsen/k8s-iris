@@ -794,6 +794,10 @@ const AssociatedPodsInner: React.FC<{
         store,
         (v) => v.hasAssociatedPods
     );
+    const associatedPodsAvailable = useProvidedStoreValue(
+        store,
+        (v) => v.identifiers.size > 0
+    );
     if (!hasAssociatedPods) {
         return null;
     }
@@ -801,11 +805,18 @@ const AssociatedPodsInner: React.FC<{
         <>
             <Heading size="sm">Pods</Heading>
             <Box mx={-4}>
-                <ResourcesTable
-                    showNamespace={false}
-                    showSelect={false}
-                    resourcesStore={store}
-                />
+                {associatedPodsAvailable && (
+                    <ResourcesTable
+                        showNamespace={false}
+                        showSelect={false}
+                        resourcesStore={store}
+                    />
+                )}
+                {!associatedPodsAvailable && (
+                    <Text textColor="gray" textSize="sm">
+                        (none)
+                    </Text>
+                )}
             </Box>
         </>
     );
