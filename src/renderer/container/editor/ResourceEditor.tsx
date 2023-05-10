@@ -813,7 +813,7 @@ const AssociatedPodsInner: React.FC<{
                     />
                 )}
                 {!associatedPodsAvailable && (
-                    <Text textColor="gray" textSize="sm">
+                    <Text textColor="gray" fontSize="sm">
                         (none)
                     </Text>
                 )}
