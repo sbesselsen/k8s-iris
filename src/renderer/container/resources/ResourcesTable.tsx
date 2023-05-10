@@ -259,7 +259,9 @@ export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
         <Table ref={tableRef} size="sm" sx={{ tableLayout: "fixed" }}>
             <Thead>
                 <Tr>
-                    {px && <Td w={px} px={0} borderBottom="none"></Td>}
+                    {px !== undefined && (
+                        <Td w={px} px={0} borderBottom="none"></Td>
+                    )}
                     {showSelect && (
                         <Th ps={2} width={`${selectColumnWidth}px`}>
                             <ResourceTableSelectAll
@@ -270,7 +272,7 @@ export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
                         </Th>
                     )}
 
-                    <Th ps={showSelect ? 0 : 2} whiteSpace="nowrap">
+                    <Th ps={0} whiteSpace="nowrap">
                         Name
                     </Th>
                     {sizeClass === "full" &&
@@ -288,7 +290,9 @@ export const ResourcesTable: React.FC<ResourcesTableProps> = (props) => {
                     {sizeClass !== "micro" && (
                         <Th width={`${createdColumnWidth}px`}>Created</Th>
                     )}
-                    {px && <Td w={px} px={0} borderBottom="none"></Td>}
+                    {px !== undefined && (
+                        <Td w={px} px={0} borderBottom="none"></Td>
+                    )}
                 </Tr>
             </Thead>
             <ViewportLazyTbody
@@ -448,7 +452,9 @@ const ResourcesTableRowHeader: React.FC<ResourcesTableRowProps> = React.memo(
 
         return (
             <Tr bg={rowBg}>
-                {px && <Td borderBottom="none" w={px} px={0}></Td>}
+                {px !== undefined && (
+                    <Td borderBottom="none" w={px} px={0}></Td>
+                )}
                 {showSelect && (
                     <Td borderBottom="none" ps={2} verticalAlign="baseline">
                         <Checkbox isChecked={isSelected} onChange={onChange} />
@@ -457,7 +463,7 @@ const ResourcesTableRowHeader: React.FC<ResourcesTableRowProps> = React.memo(
 
                 <Td
                     borderBottom="none"
-                    ps={showSelect ? 0 : 2}
+                    ps={0}
                     verticalAlign="baseline"
                     userSelect="text"
                 >
@@ -497,7 +503,9 @@ const ResourcesTableRowHeader: React.FC<ResourcesTableRowProps> = React.memo(
                         </Selectable>
                     </Td>
                 )}
-                {px && <Td borderBottom="none" w={px} px={0}></Td>}
+                {px !== undefined && (
+                    <Td borderBottom="none" w={px} px={0}></Td>
+                )}
             </Tr>
         );
     }
@@ -574,11 +582,13 @@ const ResourcesTableRowDetails: React.FC<ResourcesTableRowProps> = React.memo(
 
         return (
             <Tr bg={rowBg}>
-                {px && <Td borderBottom="none" w={px} px={0}></Td>}
+                {px !== undefined && (
+                    <Td borderBottom="none" w={px} px={0}></Td>
+                )}
                 {showSelect && <Td borderBottom="none"></Td>}
                 <Td
                     borderBottom="none"
-                    ps={showSelect ? 0 : 2}
+                    ps={0}
                     pt={0}
                     verticalAlign="baseline"
                     userSelect="text"
@@ -614,7 +624,9 @@ const ResourcesTableRowDetails: React.FC<ResourcesTableRowProps> = React.memo(
                         </Box>
                     )}
                 </Td>
-                {px && <Td borderBottom="none" w={px} px={0}></Td>}
+                {px !== undefined && (
+                    <Td borderBottom="none" w={px} px={0}></Td>
+                )}
             </Tr>
         );
     }
@@ -670,12 +682,16 @@ const ResourcesTableRowCustomBoxes: React.FC<ResourcesTableRowProps> =
             <>
                 {customBoxes.map((box) => (
                     <Tr bg={rowBg} key={box.id}>
-                        {px && <Td borderBottom="none" w={px} px={0}></Td>}
+                        {px !== undefined && (
+                            <Td borderBottom="none" w={px} px={0}></Td>
+                        )}
                         {showSelect && <Td borderBottom="none"></Td>}
                         <Td borderBottom="none" ps={0} pt={0} colSpan={colSpan}>
                             {box.value}
                         </Td>
-                        {px && <Td borderBottom="none" w={px} px={0}></Td>}
+                        {px !== undefined && (
+                            <Td borderBottom="none" w={px} px={0}></Td>
+                        )}
                     </Tr>
                 ))}
             </>
