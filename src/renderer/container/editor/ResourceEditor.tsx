@@ -1146,7 +1146,9 @@ const PortForwardingRow: React.FC<PortForwardingRowProps> = (props) => {
     const stats = portForward ? allStats?.[portForward.id] : null;
     const periodStats = usePeriodStats(stats);
 
-    const [localPortString, setLocalPortString] = useState("");
+    const [localPortString, setLocalPortString] = useState(
+        String((podPort <= 1024 ? 10000 : 0) + podPort)
+    );
     const [modeString, setModeString] = useState("localOnly");
 
     const openInBrowser = useIpcCall((ipc) => ipc.app.openUrlInBrowser);
@@ -1267,7 +1269,7 @@ const PortForwardingRow: React.FC<PortForwardingRowProps> = (props) => {
     return (
         <>
             <Tr onContextMenu={onContextMenu}>
-                <Td ps={0} whiteSpace="nowrap">
+                <Td ps={0} borderBottom="none" whiteSpace="nowrap">
                     <HStack>
                         {portForward && (
                             <Box
@@ -1285,7 +1287,7 @@ const PortForwardingRow: React.FC<PortForwardingRowProps> = (props) => {
                         </Text>
                     </HStack>
                 </Td>
-                <Td whiteSpace="nowrap">
+                <Td borderBottom="none" whiteSpace="nowrap">
                     {portForward && (
                         <Link
                             size="xs"
@@ -1301,13 +1303,15 @@ const PortForwardingRow: React.FC<PortForwardingRowProps> = (props) => {
                             placeholder="auto"
                             size="sm"
                             type="number"
+                            max="65535"
+                            min="1025"
                             value={localPortString}
                             onKeyDown={onInputKeyPress}
                             onChange={onChangeLocalPort}
                         />
                     )}
                 </Td>
-                <Td whiteSpace="nowrap">
+                <Td borderBottom="none" whiteSpace="nowrap">
                     <Select
                         size="sm"
                         isDisabled={!!portForward}
@@ -1318,7 +1322,7 @@ const PortForwardingRow: React.FC<PortForwardingRowProps> = (props) => {
                         <option value="shared">Shared</option>
                     </Select>
                 </Td>
-                <Td px={0} whiteSpace="nowrap">
+                <Td px={0} borderBottom="none" whiteSpace="nowrap">
                     {!portForward && isForwardable && (
                         <IconButton
                             size="xs"
@@ -1338,7 +1342,7 @@ const PortForwardingRow: React.FC<PortForwardingRowProps> = (props) => {
                         />
                     )}
                 </Td>
-                <Td>
+                <Td borderBottom="none">
                     {showStats && periodStats && (
                         <PortForwardStats stats={periodStats} />
                     )}
