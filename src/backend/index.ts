@@ -4,6 +4,8 @@ import { emptyAppRoute } from "../common/route/app-route";
 import { DialogOptions, DialogResult } from "../common/ui/dialog";
 import { createAppearanceManager } from "./appearance";
 import { wireAppearanceIpc } from "./appearance/ipc";
+import { createCacheManager } from "./cache";
+import { wireCacheManagerIpc } from "./cache/ipc";
 import { createCloudManager } from "./cloud";
 import { wireCloudIpc } from "./cloud/ipc";
 import { cloudShellWrapper } from "./cloud/shell";
@@ -35,6 +37,7 @@ import { createWindowManager, WindowParameters } from "./window";
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const prefsManager = createPrefsManager();
+    const cacheManager = createCacheManager();
     const k8sClientManager = createClientManager({
         ...(process.env.WRITABLE_CONTEXTS
             ? { writableContexts: process.env.WRITABLE_CONTEXTS.split(/,/) }
@@ -77,6 +80,7 @@ import { createWindowManager, WindowParameters } from "./window";
 
     // Hook up IPC calls.
     wirePrefsManagerIpc(prefsManager);
+    wireCacheManagerIpc(cacheManager);
     wireCloudIpc(cloudManager);
     wireK8sClientIpc(k8sClientManager);
     wireShellIpc(shellManager);

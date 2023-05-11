@@ -46,6 +46,9 @@ const prefsWrite = ipcInvoker("prefs:write");
 const prefsDelete = ipcInvoker("prefs:delete");
 const prefsSubscribe = ipcSubscriber("prefs:subscribe");
 
+const cacheRead = ipcInvoker("cache:read");
+const cacheWrite = ipcInvoker("cache:write");
+
 contextBridge.exposeInMainWorld("charm", {
     app: {
         createWindow,
@@ -97,5 +100,9 @@ contextBridge.exposeInMainWorld("charm", {
         write: prefsWrite,
         delete: prefsDelete,
         subscribe: prefsSubscribe,
+    },
+    cache: {
+        read: cacheRead,
+        write: cacheWrite,
     },
 } as IpcCalls);

@@ -184,4 +184,12 @@ export type IpcCalls = {
             ) => void
         ): { stop: () => void };
     };
+    cache: {
+        read(params: { key: string | string[] }): Promise<string | null>;
+        write(params: {
+            key: string | string[];
+            value: string | null;
+            ttl: number | null;
+        }): Promise<void>;
+    };
 };
