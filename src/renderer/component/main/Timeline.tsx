@@ -55,7 +55,7 @@ export const Timeline: React.FC<TimelineProps> = (props) => {
             >
                 <Thead>
                     <Tr>
-                        <Th whiteSpace="nowrap" width="100px">
+                        <Th ps={2} whiteSpace="nowrap" width="100px">
                             Time
                         </Th>
                         <Th whiteSpace="nowrap">Event</Th>
@@ -68,12 +68,18 @@ export const Timeline: React.FC<TimelineProps> = (props) => {
                 >
                     {sortedEvents.map((event) => (
                         <Tr key={event.id}>
-                            <Td verticalAlign="baseline">
+                            <Td
+                                ps={2}
+                                borderBottom="none"
+                                verticalAlign="baseline"
+                            >
                                 <Selectable>
                                     {formatEventDateTime(event.when)}
                                 </Selectable>
                             </Td>
-                            <Td verticalAlign="baseline">{event.content}</Td>
+                            <Td borderBottom="none" verticalAlign="baseline">
+                                {event.content}
+                            </Td>
                         </Tr>
                     ))}
                 </ViewportLazyTbody>

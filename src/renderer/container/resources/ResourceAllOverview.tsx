@@ -156,7 +156,7 @@ const InnerResourceTypeOverview: React.FC<{
                     selectedKeysStore={selectedKeysStore}
                     resourcesStore={resourcesStore}
                     showNamespace={showNamespace}
-                    px={2}
+                    px={4}
                 />
             </ScrollBox>
         </VStack>

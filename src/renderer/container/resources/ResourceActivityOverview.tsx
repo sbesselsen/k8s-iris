@@ -139,6 +139,7 @@ export const ResourceActivityOverview: React.FC<{}> = () => {
             />
             <VStack
                 pt={4}
+                spacing={0}
                 flexBasis="20%"
                 minHeight="200px"
                 alignItems="stretch"
@@ -146,7 +147,7 @@ export const ResourceActivityOverview: React.FC<{}> = () => {
                 <Heading px={4} size="sm">
                     Events
                 </Heading>
-                <ClusterEventsOverview />
+                <ClusterEventsOverview px={2} />
             </VStack>
             <HStack flex="1 0 0" alignItems="stretch" spacing={0}>
                 <VStack pt={4} w="50%" alignItems="stretch">

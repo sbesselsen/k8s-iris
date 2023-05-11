@@ -1,6 +1,6 @@
 import React, { MutableRefObject, useMemo, useRef } from "react";
 
-import { ScrollBox } from "../../component/main/ScrollBox";
+import { ScrollBox, ScrollBoxProps } from "../../component/main/ScrollBox";
 
 import { useK8sListWatch } from "../../k8s/list-watch";
 import { Badge, Box, Spinner } from "@chakra-ui/react";
@@ -11,7 +11,11 @@ import { useAppSearch } from "../../context/search";
 import { Timeline } from "../../component/main/Timeline";
 import { ResourceEditorLink } from "../resources/ResourceEditorLink";
 
-export const ClusterEventsOverview: React.FC = () => {
+export type ClusterEventsOverviewProps = ScrollBoxProps;
+
+export const ClusterEventsOverview: React.FC<ClusterEventsOverviewProps> = (
+    props
+) => {
     const namespaces = useK8sNamespaces();
 
     const scrollBoxRef = useRef<HTMLDivElement>();
@@ -76,6 +80,7 @@ export const ClusterEventsOverview: React.FC = () => {
             pb={10}
             w="100%"
             ref={scrollBoxRef as MutableRefObject<HTMLDivElement>}
+            {...props}
         >
             {isLoadingEvents && <Spinner />}
             {!isLoadingEvents && timelineEvents.length === 0 && (
