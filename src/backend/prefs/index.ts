@@ -58,7 +58,7 @@ export function createPrefsManager(
 
     function commit() {
         // Commit prefs synchronously to prevent race conditions.
-        fs.writeFileSync(prefsFilePath, JSON.stringify(prefs));
+        fs.writeFileSync(prefsFilePath, JSON.stringify(prefs, undefined, "  "));
     }
 
     return {
