@@ -11,49 +11,30 @@ import { useEditorOpener } from "../hook/editor-link";
 import { fetchAssociatedPods } from "../k8s/associated-pods";
 import { useK8sClient } from "../k8s/client";
 
+function isPod(resource: K8sObject | K8sObjectIdentifier) {
+    return resource.apiVersion === "v1" && resource.kind === "Pod";
+}
+
 export const InspectActions: React.FC<{}> = () => {
     const { checkContextLock } = useContextLockHelpers();
     const openEditor = useEditorOpener();
 
     const client = useK8sClient();
 
-    const isSinglePod = useCallback(
+    const isShellVisible = useCallback(
         (resources: Array<K8sObject | K8sObjectIdentifier>) => {
-            if (resources.length !== 1) {
-                return false;
-            }
-            const resource = resources[0];
-            if (!isK8sObject(resource)) {
-                return false;
-            }
-            if (resource.apiVersion !== "v1" || resource.kind !== "Pod") {
-                return false;
-            }
-            return true;
+            return resources.every((r) => isSetLike(r) || isPod(r));
         },
         []
     );
 
-    const isSingleSetLike = useCallback(
-        (resources: Array<K8sObject | K8sObjectIdentifier>) => {
-            if (resources.length !== 1) {
-                return false;
-            }
-            const resource = resources[0];
-            return isSetLike(resource);
-        },
-        [isSetLike]
-    );
-
-    const isShellVisible = useCallback(
-        (resources: Array<K8sObject | K8sObjectIdentifier>) => {
-            return isSinglePod(resources) || isSingleSetLike(resources);
-        },
-        [isSinglePod, isSingleSetLike]
-    );
-
     const containerOptions = useCallback(
         (resources: Array<K8sObject | K8sObjectIdentifier>) => {
+            if (resources.length > 1) {
+                // Choosing containers becomes a huge mess if we have more than one resource selected.
+                // We will let the onClick pick the first container.
+                return undefined;
+            }
             const resource = resources[0];
             const containers =
                 (resource as any).spec?.template?.spec?.containers ??
@@ -73,70 +54,83 @@ export const InspectActions: React.FC<{}> = () => {
 
     const onClickShell = useCallback(
         async (result: ActionClickResult) => {
-            let resource = result.resources[0];
-            if (resource && !isSinglePod([resource]) && isK8sObject(resource)) {
-                const pods = await fetchAssociatedPods(client, resource);
-                if (pods.length === 0) {
-                    return;
+            const allObjects: K8sObject[] = [];
+            for (const resource of result.resources) {
+                if (!isK8sObject(resource)) {
+                    continue;
                 }
-                resource = pods[0];
+                if (isPod(resource)) {
+                    allObjects.push(resource);
+                } else {
+                    allObjects.push(
+                        ...(await fetchAssociatedPods(client, resource))
+                    );
+                }
             }
-            if (!resource || !isK8sObject(resource)) {
-                return;
-            }
-            const containers =
-                (resource as any).spec?.template?.spec.containers ??
-                (resource as any).spec?.containers;
-            const containerName = result.subOptionId ?? containers?.[0]?.name;
-            if (!containerName) {
+            if (allObjects.length === 0) {
                 return;
             }
             if (!(await checkContextLock())) {
                 return;
             }
-            const editor = shellEditor(resource, containerName);
-            openEditor(editor, {
-                requestNewWindow: result.metaKey,
-                requestBackground: result.altKey,
-            });
+            for (const object of allObjects) {
+                const containers =
+                    (object as any).spec?.template?.spec.containers ??
+                    (object as any).spec?.containers;
+                const containerName =
+                    result.subOptionId ?? containers?.[0]?.name;
+                if (!containerName) {
+                    return;
+                }
+                const editor = shellEditor(object, containerName);
+                openEditor(editor, {
+                    requestNewWindow: result.metaKey,
+                    requestBackground: result.altKey || allObjects.length > 1,
+                });
+            }
         },
-        [checkContextLock, isSinglePod, openEditor]
+        [client, checkContextLock, openEditor]
     );
 
     const isLogsVisible = useCallback(
         (resources: Array<K8sObject | K8sObjectIdentifier>) => {
-            return isSinglePod(resources) || isSingleSetLike(resources);
+            return resources.every((r) => isSetLike(r) || isPod(r));
         },
-        [isSinglePod, isSingleSetLike]
+        []
     );
 
     const onClickLogs = useCallback(
         async (result: ActionClickResult) => {
-            let resource = result.resources[0];
-            if (resource && !isSinglePod([resource]) && isK8sObject(resource)) {
-                const pods = await fetchAssociatedPods(client, resource);
-                if (pods.length === 0) {
+            const allObjects: K8sObject[] = [];
+            for (const resource of result.resources) {
+                if (!isK8sObject(resource)) {
+                    continue;
+                }
+                if (isPod(resource)) {
+                    allObjects.push(resource);
+                } else {
+                    allObjects.push(
+                        ...(await fetchAssociatedPods(client, resource))
+                    );
+                }
+            }
+            for (const object of allObjects) {
+                const containers =
+                    (object as any).spec?.template?.spec.containers ??
+                    (object as any).spec?.containers;
+                const containerName =
+                    result.subOptionId ?? containers?.[0]?.name;
+                if (!containerName) {
                     return;
                 }
-                resource = pods[0];
+                const editor = logsEditor(object, containerName);
+                openEditor(editor, {
+                    requestNewWindow: result.metaKey,
+                    requestBackground: result.altKey || allObjects.length > 1,
+                });
             }
-            if (!resource || !isK8sObject(resource)) {
-                return;
-            }
-            const containers =
-                (resource as any).spec?.template?.spec.containers ??
-                (resource as any).spec?.containers;
-            const containerName = result.subOptionId ?? containers?.[0]?.name;
-            if (!containerName) {
-                return;
-            }
-            const editor = logsEditor(resource, containerName);
-            openEditor(editor, {
-                requestNewWindow: result.metaKey,
-                requestBackground: result.altKey,
-            });
         },
-        [client, isSinglePod, openEditor]
+        [client, openEditor]
     );
 
     return (
