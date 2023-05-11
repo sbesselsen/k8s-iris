@@ -3,7 +3,7 @@ import * as fs from "fs";
 import * as path from "path";
 
 export type PrefsManagerOptions = {
-    storageDirectory?: string;
+    prefsFilePath?: string;
 };
 
 export type PrefsManager = {
@@ -17,44 +17,48 @@ export type PrefsManager = {
 };
 
 export function createPrefsManager(
-    opts: PrefsManagerOptions = {}
+    options: PrefsManagerOptions = {}
 ): PrefsManager {
-    const storageDirectory = opts.storageDirectory ?? app.getPath("userData");
-    if (!fs.existsSync(storageDirectory)) {
-        console.log("Creating storage dir", storageDirectory);
-        fs.mkdirSync(storageDirectory, {
+    const defaultPrefsFilePath = path.join(
+        app.getPath("userData"),
+        "preferences.json"
+    );
+
+    const { prefsFilePath = defaultPrefsFilePath } = options;
+
+    const dir = path.dirname(defaultPrefsFilePath);
+    if (!fs.existsSync(dir)) {
+        console.log("Creating storage dir", dir);
+        fs.mkdirSync(dir, {
             recursive: true,
         });
     }
-
-    const storageFilePath = path.join(storageDirectory, "preferences.json");
 
     let prefs: Record<string, unknown> = {};
     const subscribers: Record<string, Array<(newValue: unknown) => void>> = {};
 
     // Load preferences.
-    if (fs.existsSync(storageFilePath)) {
-        // Create an empty preferences file.
+    if (fs.existsSync(prefsFilePath)) {
         let data = "{}";
         try {
-            data = fs.readFileSync(storageFilePath, "utf8");
+            data = fs.readFileSync(prefsFilePath, "utf8");
         } catch (e) {
             console.error(
-                `Error reading preferences file at ${storageFilePath}: ${e}`
+                `Error reading preferences file at ${prefsFilePath}: ${e}`
             );
         }
         try {
             prefs = JSON.parse(data);
         } catch (e) {
             console.error(
-                `Error parsing preferences file at ${storageFilePath}: ${e}`
+                `Error parsing preferences file at ${prefsFilePath}: ${e}`
             );
         }
     }
 
     function commit() {
         // Commit prefs synchronously to prevent race conditions.
-        fs.writeFileSync(storageFilePath, JSON.stringify(prefs));
+        fs.writeFileSync(prefsFilePath, JSON.stringify(prefs));
     }
 
     return {
