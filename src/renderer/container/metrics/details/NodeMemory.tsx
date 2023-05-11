@@ -36,6 +36,7 @@ export const NodeMemory: React.FC<{ node: K8sObject }> = (props) => {
                         colorScheme={
                             memory / totalMemory > 0.8 ? "red" : "gray"
                         }
+                        minWidth="50px"
                         w="100%"
                         textTransform="none"
                     />

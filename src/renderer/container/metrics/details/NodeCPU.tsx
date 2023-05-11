@@ -30,6 +30,7 @@ export const NodeCPU: React.FC<{ node: K8sObject }> = (props) => {
                     <PercentageBadge
                         value={cpu / totalCpu}
                         colorScheme={cpu / totalCpu > 0.8 ? "red" : "gray"}
+                        minWidth="50px"
                         w="100%"
                     />
                 </AppTooltip>
