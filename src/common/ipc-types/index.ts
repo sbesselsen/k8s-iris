@@ -72,6 +72,10 @@ export type IpcCalls = {
     };
     k8s: {
         listContexts(): Promise<K8sContext[]>;
+        watchContexts(
+            params: {},
+            receive: (error: any, message?: undefined | K8sContext[]) => void
+        ): { stop: () => void };
         read(params: {
             context: string;
             spec: K8sObject;

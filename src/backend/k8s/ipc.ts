@@ -6,6 +6,7 @@ import {
 } from "../../common/ipc/main";
 import {
     K8sApplyOptions,
+    K8sContext,
     K8sExecCommandOptions,
     K8sExecCommandSpec,
     K8sExecOptions,
@@ -23,6 +24,11 @@ import { K8sPartialObjectListWatcher } from "../../common/ipc-types";
 
 export const wireK8sClientIpc = (clientManager: K8sClientManager): void => {
     ipcHandle("k8s:listContexts", () => clientManager.listContexts());
+    ipcProvideSubscription(
+        "k8s:watchContexts",
+        (_, send: (error: any, message?: undefined | K8sContext[]) => void) =>
+            clientManager.watchContexts(send)
+    );
     ipcHandle(
         "k8s:client:read",
         async ({ context, spec }: { context: string; spec: K8sObject }) =>

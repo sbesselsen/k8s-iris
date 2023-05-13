@@ -10,49 +10,64 @@ export type K8sContextsInfo = Array<
 
 const { useStore: useContextsStore, useStoreValue: useContexts } = create<{
     loading: boolean;
-    initialized: boolean;
     info: K8sContextsInfo;
+    numWatchers: number;
+    stopWatching?: undefined | (() => void);
 }>({
     loading: false,
-    initialized: false,
+    numWatchers: 0,
     info: [],
 });
 
-export function useK8sContextsInfo(): [boolean, K8sContextsInfo, () => void] {
-    const { loading, initialized, info } = useContexts();
+export function useK8sContextsInfo(): [boolean, K8sContextsInfo] {
+    const { loading, info } = useContexts();
     const store = useContextsStore();
 
-    const listContexts = useIpcCall((ipc) => ipc.k8s.listContexts);
+    const watchContexts = useIpcCall((ipc) => ipc.k8s.watchContexts);
+
     const augmentK8sContexts = useIpcCall(
         (ipc) => ipc.cloud.augmentK8sContexts
     );
 
-    const updateInfo = useCallback(() => {
-        store.set((state) => ({
-            ...state,
-            loading: !initialized,
-            initialized: true,
-        }));
-        (async () => {
-            const contexts = await listContexts();
-            const cloudInfos = await augmentK8sContexts(contexts);
-
-            store.set((state) => ({
-                ...state,
-                loading: false,
-                info: contexts.map((ctx) => ({
-                    ...ctx,
-                    cloudInfo: cloudInfos[ctx.name],
-                })),
-            }));
-        })();
-    }, [store, initialized, listContexts, augmentK8sContexts]);
-
     useEffect(() => {
-        if (!initialized) {
-            updateInfo();
-        }
-    }, [updateInfo, initialized]);
+        store.set((v) => {
+            const newValue = { ...v };
+            newValue.numWatchers++;
+            if (v.numWatchers === 1) {
+                // We are the first watcher.
+                const { stop } = watchContexts({}, async (err, contexts) => {
+                    if (!contexts) {
+                        return;
+                    }
+                    console.log("contexts", contexts);
+                    const cloudInfos = await augmentK8sContexts(contexts);
 
-    return [loading, info, updateInfo];
+                    store.set((state) => ({
+                        ...state,
+                        loading: false,
+                        info: contexts.map((ctx) => ({
+                            ...ctx,
+                            cloudInfo: cloudInfos[ctx.name],
+                        })),
+                    }));
+                });
+                newValue.stopWatching = stop;
+            }
+            return newValue;
+        });
+        return () => {
+            store.set((v) => {
+                const newValue = { ...v };
+                newValue.numWatchers--;
+                if (newValue.numWatchers === 0 && v.stopWatching) {
+                    // Stop watching for contexts.
+                    v.stopWatching();
+                    delete newValue.stopWatching;
+                }
+                return newValue;
+            });
+        };
+    }, [store, watchContexts]);
+
+    return [loading, info];
 }

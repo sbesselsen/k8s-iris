@@ -68,17 +68,12 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
             onClose: onDisclosureClose,
         } = useDisclosure();
 
-        const [isLoading, contextsInfo, updateContextsInfo] =
-            useK8sContextsInfo();
+        const [isLoading, contextsInfo] = useK8sContextsInfo();
         const isLoadingWithDelay = useWithDelay(isLoading, 1000);
 
         const onOpen = useCallback(() => {
             onDisclosureOpen();
-            // Update contexts after opening the popup to keep it up-to-date, but not produce stutter in the animation.
-            setTimeout(() => {
-                updateContextsInfo();
-            }, 500);
-        }, [onDisclosureOpen, updateContextsInfo]);
+        }, [onDisclosureOpen]);
 
         const onClose = useCallback(() => {
             setSearchValue("");

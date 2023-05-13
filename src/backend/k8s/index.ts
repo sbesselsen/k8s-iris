@@ -11,6 +11,9 @@ export type K8sClientManagerOptions = {
 
 export type K8sClientManager = {
     listContexts(): K8sContext[];
+    watchContexts(
+        watcher: (error: any, message?: undefined | K8sContext[]) => void
+    ): { stop: () => void };
     clientForContext(context: string): K8sClient;
     defaultContext(): string | undefined;
     defaultNamespaces(): string[] | undefined;
@@ -33,6 +36,21 @@ export function createClientManager(
     const clients: Record<string, K8sBackendClient> = {};
 
     const listContexts = () => kc.getContexts();
+    const watchContexts = (
+        watcher: (error: any, message?: undefined | K8sContext[]) => void
+    ) => {
+        watcher(undefined, listContexts());
+        const interval = setInterval(() => {
+            // TODO: no! no!!!
+            watcher(undefined, listContexts());
+        }, 10000);
+        return {
+            stop() {
+                // TODO
+                clearInterval(interval);
+            },
+        };
+    };
     const defaultContext = () => kc.getCurrentContext();
     const defaultNamespaces = () => {
         const context = defaultContext();
@@ -66,6 +84,7 @@ export function createClientManager(
         clientForContext(context).getKubeConfig();
     return {
         listContexts,
+        watchContexts,
         clientForContext,
         defaultContext,
         defaultNamespaces,

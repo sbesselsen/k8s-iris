@@ -13,6 +13,7 @@ const openUrlInBrowser = ipcInvoker("app:openUrlInBrowser");
 const augmentK8sContexts = ipcInvoker("cloud:augmentK8sContexts");
 const loginForContext = ipcInvoker("cloud:loginForContext");
 const listContexts = ipcInvoker("k8s:listContexts");
+const watchContexts = ipcSubscriber("k8s:watchContexts");
 const read = ipcInvoker("k8s:client:read");
 const apply = ipcInvoker("k8s:client:apply");
 const patch = ipcInvoker("k8s:client:patch");
@@ -63,6 +64,7 @@ contextBridge.exposeInMainWorld("charm", {
     },
     k8s: {
         listContexts,
+        watchContexts,
         read,
         apply,
         patch,
