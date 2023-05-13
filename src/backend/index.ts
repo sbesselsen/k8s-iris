@@ -99,16 +99,42 @@ import { createWindowManager, WindowParameters } from "./window";
         }
     );
 
-    // Set default params for new windows.
-    windowManager.setDefaultWindowParameters({
-        route: {
-            ...emptyAppRoute,
-            context: k8sClientManager.defaultContext() ?? null,
-            namespaces: {
-                mode: "all",
-                selected: k8sClientManager.defaultNamespaces() ?? [],
+    const currentContext = await prefsManager.read("currentContext");
+    function setDefaultWindowParametersForContext(
+        prefsCurrentContext: string | null
+    ) {
+        let defaultContext = k8sClientManager.defaultContext() ?? null;
+        if (
+            typeof prefsCurrentContext === "string" &&
+            k8sClientManager
+                .listContexts()
+                .find((c) => c.name === prefsCurrentContext)
+        ) {
+            // Use the currentContext from prefs, but only if it exists.
+            defaultContext = prefsCurrentContext;
+        }
+        k8sClientManager.listContexts();
+        // Set default params for new windows.
+        windowManager.setDefaultWindowParameters({
+            route: {
+                ...emptyAppRoute,
+                context: defaultContext,
+                namespaces: {
+                    mode: "all",
+                    selected: [],
+                },
             },
-        },
+        });
+    }
+
+    // Use the current context from prefs when opening new windows without a defined context.
+    setDefaultWindowParametersForContext(
+        typeof currentContext === "string" ? currentContext : null
+    );
+    prefsManager.subscribe("currentContext", (context) => {
+        if (typeof context === "string") {
+            setDefaultWindowParametersForContext(context);
+        }
     });
 
     // Open our main window.
