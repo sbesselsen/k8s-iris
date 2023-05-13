@@ -5,7 +5,7 @@ import {
     ipcSubscriber,
     ipcSocketOpener,
 } from "../common/ipc/renderer";
-import { IpcCalls } from "../common/ipc-types";
+import { IpcCalls, IpcKvStore } from "../common/ipc-types";
 
 const createWindow = ipcInvoker("app:createWindow");
 const showDialog = ipcInvoker("app:showDialog");
@@ -41,10 +41,14 @@ const getAccentColor = ipcInvoker("appAppearance:getAccentColor");
 const watchAccentColor = ipcSubscriber("appAppearance:watchAccentColor");
 const contextMenuPopup = ipcInvoker("contextMenu:popup");
 
-const prefsRead = ipcInvoker("prefs:read");
-const prefsWrite = ipcInvoker("prefs:write");
-const prefsDelete = ipcInvoker("prefs:delete");
-const prefsSubscribe = ipcSubscriber("prefs:subscribe");
+export function kvStoreIpc(prefix: string): IpcKvStore {
+    return {
+        read: ipcInvoker(`${prefix}:read`),
+        write: ipcInvoker(`${prefix}:write`),
+        delete: ipcInvoker(`${prefix}:delete`),
+        subscribe: ipcSubscriber(`${prefix}:subscribe`),
+    };
+}
 
 contextBridge.exposeInMainWorld("charm", {
     app: {
@@ -92,10 +96,6 @@ contextBridge.exposeInMainWorld("charm", {
     contextMenu: {
         popup: contextMenuPopup,
     },
-    prefs: {
-        read: prefsRead,
-        write: prefsWrite,
-        delete: prefsDelete,
-        subscribe: prefsSubscribe,
-    },
+    prefs: kvStoreIpc("prefs"),
+    tempData: kvStoreIpc("tempData"),
 } as IpcCalls);

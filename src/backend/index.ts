@@ -21,6 +21,8 @@ import { createPrefsManager } from "./prefs";
 import { wirePrefsManagerIpc } from "./prefs/ipc";
 import { createShellManager } from "./shell";
 import { wireShellIpc } from "./shell/ipc";
+import { createTempDataManager } from "./temp-data";
+import { wireTempDataManagerIpc } from "./temp-data/ipc";
 import { shellOptions } from "./util/shell";
 import { createWindowManager, WindowParameters } from "./window";
 
@@ -33,8 +35,8 @@ import { createWindowManager, WindowParameters } from "./window";
         console.log("Shell options: ", opts);
     })();
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const prefsManager = createPrefsManager();
+    const tempDataManager = createTempDataManager();
     const k8sClientManager = createClientManager({
         ...(process.env.WRITABLE_CONTEXTS
             ? { writableContexts: process.env.WRITABLE_CONTEXTS.split(/,/) }
@@ -77,6 +79,7 @@ import { createWindowManager, WindowParameters } from "./window";
 
     // Hook up IPC calls.
     wirePrefsManagerIpc(prefsManager);
+    wireTempDataManagerIpc(tempDataManager);
     wireCloudIpc(cloudManager);
     wireK8sClientIpc(k8sClientManager);
     wireShellIpc(shellManager);

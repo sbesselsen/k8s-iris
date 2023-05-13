@@ -1,7 +1,7 @@
 import { useIpcKv } from "./ipc-kv";
 
-export function usePref<T = unknown>(
+export function useTempData<T = unknown>(
     key: string
 ): [boolean, T | undefined, (newValue: T | undefined) => void] {
-    return useIpcKv("prefs", key);
+    return useIpcKv("tempData", key);
 }

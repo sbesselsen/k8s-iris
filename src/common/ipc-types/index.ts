@@ -45,6 +45,16 @@ export type K8sPartialObjectListWatcher<T extends K8sObject = K8sObject> = (
     message?: K8sPartialObjectListWatcherMessage<T> | undefined
 ) => void;
 
+export type IpcKvStore<K = string, V = unknown> = {
+    read(params: { key: K }): Promise<V>;
+    write(params: { key: K; value: V }): Promise<void>;
+    delete(params: { key: K }): Promise<V>;
+    subscribe(
+        params: { key: K },
+        receive: (error: any, message?: undefined | { newValue: V }) => void
+    ): { stop: () => void };
+};
+
 export type IpcCalls = {
     app: {
         createWindow(parameters?: { route?: AppRoute }): Promise<void>;
@@ -172,16 +182,6 @@ export type IpcCalls = {
             options?: ContextMenuOptions;
         }): Promise<ContextMenuResult>;
     };
-    prefs: {
-        read(params: { key: string }): Promise<unknown>;
-        write(params: { key: string; value: unknown }): Promise<void>;
-        delete(params: { key: string }): Promise<void>;
-        subscribe(
-            params: { key: string },
-            receive: (
-                error: any,
-                message?: undefined | { newValue: unknown }
-            ) => void
-        ): { stop: () => void };
-    };
+    prefs: IpcKvStore;
+    tempData: IpcKvStore;
 };
