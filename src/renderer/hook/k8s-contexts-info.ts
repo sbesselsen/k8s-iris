@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useEffect } from "react";
 import { CloudK8sContextInfo } from "../../common/cloud/k8s";
 import { K8sContext } from "../../common/k8s/client";
 import { create } from "../util/state";
@@ -36,10 +36,13 @@ export function useK8sContextsInfo(): [boolean, K8sContextsInfo] {
             if (v.numWatchers === 1) {
                 // We are the first watcher.
                 const { stop } = watchContexts({}, async (err, contexts) => {
+                    if (err) {
+                        console.error("Error from watchContexts", err);
+                    }
                     if (!contexts) {
                         return;
                     }
-                    console.log("contexts", contexts);
+
                     const cloudInfos = await augmentK8sContexts(contexts);
 
                     store.set((state) => ({

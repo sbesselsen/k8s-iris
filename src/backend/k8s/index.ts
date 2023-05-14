@@ -1,4 +1,6 @@
 import * as k8s from "@kubernetes/client-node";
+import * as fs from "fs";
+import * as path from "path";
 import { app } from "electron";
 import { K8sClient, K8sContext } from "../../common/k8s/client";
 
@@ -28,26 +30,81 @@ function getKubeConfigFromDefault(): k8s.KubeConfig {
     return kc;
 }
 
+function getKubeConfigPaths(): string[] {
+    if (process.env.KUBECONFIG && process.env.KUBECONFIG.length > 0) {
+        return process.env.KUBECONFIG.split(path.delimiter).filter(
+            (filename: string) => filename
+        );
+    }
+
+    function findHomeDir(): string | null {
+        if (process.env.HOME) {
+            try {
+                fs.accessSync(process.env.HOME);
+                return process.env.HOME;
+            } catch (ignore) {
+                // Ignore.
+            }
+        }
+        return null;
+    }
+
+    const home = findHomeDir();
+    if (home) {
+        const config = path.join(home, ".kube", "config");
+        if (fs.existsSync(config)) {
+            return [config];
+        }
+    }
+
+    return [];
+}
+
 export function createClientManager(
     opts: K8sClientManagerOptions = {}
 ): K8sClientManager {
-    const kc = opts.kubeConfig ?? getKubeConfigFromDefault();
+    let kc = opts.kubeConfig ?? getKubeConfigFromDefault();
 
     const clients: Record<string, K8sBackendClient> = {};
+
+    let kubeConfigListeners: Array<() => void> = [];
+
+    if (!opts.kubeConfig) {
+        // Using the system-default kubeConfig.
+        // Listen to changes to our kubeConfig and propagate them immediately.
+        for (const kubeConfigPath of getKubeConfigPaths()) {
+            console.log("Monitoring kube config at: ", kubeConfigPath);
+            fs.watch(kubeConfigPath, null, (eventType) => {
+                if (eventType === "change") {
+                    console.log(
+                        "Reloading kube config due to change: ",
+                        kubeConfigPath
+                    );
+
+                    // Reload kubeConfig.
+                    kc = getKubeConfigFromDefault();
+
+                    // Notify listeners.
+                    kubeConfigListeners.forEach((l) => l());
+                }
+            });
+        }
+    }
 
     const listContexts = () => kc.getContexts();
     const watchContexts = (
         watcher: (error: any, message?: undefined | K8sContext[]) => void
     ) => {
         watcher(undefined, listContexts());
-        const interval = setInterval(() => {
-            // TODO: no! no!!!
+        const listener = () => {
             watcher(undefined, listContexts());
-        }, 10000);
+        };
+        kubeConfigListeners.push(listener);
         return {
             stop() {
-                // TODO
-                clearInterval(interval);
+                kubeConfigListeners = kubeConfigListeners.filter(
+                    (l) => l !== listener
+                );
             },
         };
     };
