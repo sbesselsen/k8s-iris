@@ -9,7 +9,11 @@ export function createPrefsManager(
     options: PrefsManagerOptions = {}
 ): PrefsManager {
     return createKvDiskStore({
-        storageFilePath: path.join(app.getPath("userData"), "preferences.json"),
+        storageFilePath: path.join(
+            app.getPath("userData"),
+            "backend",
+            "preferences.json"
+        ),
         writeMaxDelayMs: 0,
         ...options,
     });

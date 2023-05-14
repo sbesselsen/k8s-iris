@@ -37,7 +37,7 @@ import { emptyAppRoute } from "../../../common/route/app-route";
 import { useAppEditorsStore } from "../../context/editors";
 import { useDialog } from "../../hook/dialog";
 import { useWindowFocus } from "../../hook/window-focus";
-import { usePref } from "../../hook/prefs";
+import { usePersistentState } from "../../hook/persistent-state";
 
 type ContextOption = K8sContext &
     Partial<CloudK8sContextInfo> & {
@@ -80,7 +80,7 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
             onDisclosureClose();
         }, [onDisclosureClose, setSearchValue]);
 
-        const [, , setAppCurrentContext] = usePref("currentContext");
+        const [, , setAppCurrentContext] = usePersistentState("currentContext");
 
         const onSelectContext = useCallback(
             async (context: string) => {

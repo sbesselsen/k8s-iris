@@ -187,5 +187,6 @@ export type IpcCalls = {
         }): Promise<ContextMenuResult>;
     };
     prefs: IpcKvStore;
+    persistentState: IpcKvStore;
     tempData: IpcKvStore;
 };

@@ -99,5 +99,6 @@ contextBridge.exposeInMainWorld("charm", {
         popup: contextMenuPopup,
     },
     prefs: kvStoreIpc("prefs"),
+    persistentState: kvStoreIpc("persistentState"),
     tempData: kvStoreIpc("tempData"),
 } as IpcCalls);

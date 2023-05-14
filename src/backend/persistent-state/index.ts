@@ -2,19 +2,19 @@ import { app } from "electron";
 import * as path from "path";
 import { createKvDiskStore, KvDiskStore, KvDiskStoreOptions } from "../kv";
 
-export type TempDataManagerOptions = Partial<KvDiskStoreOptions>;
+export type PersistentStateManagerOptions = Partial<KvDiskStoreOptions>;
 
-export type TempDataManager = KvDiskStore;
-export function createTempDataManager(
-    options: TempDataManagerOptions = {}
-): TempDataManager {
+export type PersistentStateManager = KvDiskStore;
+export function createPersistentStateManager(
+    options: PersistentStateManagerOptions = {}
+): PersistentStateManager {
     return createKvDiskStore({
         storageFilePath: path.join(
             app.getPath("userData"),
             "backend",
-            "temp.json"
+            "state.json"
         ),
-        writeMaxDelayMs: 10000,
+        writeMaxDelayMs: 1000,
         ...options,
     });
 }

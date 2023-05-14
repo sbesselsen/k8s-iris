@@ -17,6 +17,8 @@ import { k8sShellWrapper } from "./k8s/shell";
 import { createMenuManager } from "./menu";
 import { createOsManager } from "./os";
 import { wireOsIpc } from "./os/ipc";
+import { createPersistentStateManager } from "./persistent-state";
+import { wirePersistentStateManagerIpc } from "./persistent-state/ipc";
 import { createPrefsManager } from "./prefs";
 import { wirePrefsManagerIpc } from "./prefs/ipc";
 import { createShellManager } from "./shell";
@@ -36,6 +38,7 @@ import { createWindowManager, WindowParameters } from "./window";
     })();
 
     const prefsManager = createPrefsManager();
+    const persistentStateManager = createPersistentStateManager();
     const tempDataManager = createTempDataManager();
     const k8sClientManager = createClientManager({
         ...(process.env.WRITABLE_CONTEXTS
@@ -79,6 +82,7 @@ import { createWindowManager, WindowParameters } from "./window";
 
     // Hook up IPC calls.
     wirePrefsManagerIpc(prefsManager);
+    wirePersistentStateManagerIpc(persistentStateManager);
     wireTempDataManagerIpc(tempDataManager);
     wireCloudIpc(cloudManager);
     wireK8sClientIpc(k8sClientManager);
@@ -99,19 +103,19 @@ import { createWindowManager, WindowParameters } from "./window";
         }
     );
 
-    const currentContext = await prefsManager.read("currentContext");
+    const currentContext = await persistentStateManager.read("currentContext");
     function setDefaultWindowParametersForContext(
-        prefsCurrentContext: string | null
+        persistentStateCurrentContext: string | null
     ) {
         let defaultContext = k8sClientManager.defaultContext() ?? null;
         if (
-            typeof prefsCurrentContext === "string" &&
+            typeof persistentStateCurrentContext === "string" &&
             k8sClientManager
                 .listContexts()
-                .find((c) => c.name === prefsCurrentContext)
+                .find((c) => c.name === persistentStateCurrentContext)
         ) {
             // Use the currentContext from prefs, but only if it exists.
-            defaultContext = prefsCurrentContext;
+            defaultContext = persistentStateCurrentContext;
         }
         k8sClientManager.listContexts();
         // Set default params for new windows.
@@ -131,7 +135,7 @@ import { createWindowManager, WindowParameters } from "./window";
     setDefaultWindowParametersForContext(
         typeof currentContext === "string" ? currentContext : null
     );
-    prefsManager.subscribe("currentContext", (context) => {
+    persistentStateManager.subscribe("currentContext", (context) => {
         if (typeof context === "string") {
             setDefaultWindowParametersForContext(context);
         }
