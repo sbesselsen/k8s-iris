@@ -1,4 +1,5 @@
 import { ipcMain } from "electron";
+import { debugCounters } from "../util/debug";
 import {
     prefixHandlerChannel,
     prefixSocketChannel,
@@ -21,6 +22,8 @@ export function ipcHandle<T, U>(
 
 let subscriptionChannelId = 0;
 
+const counters = debugCounters("ipcProvideSubscription handlers");
+
 export function ipcProvideSubscription<T, U>(
     name: string,
     handler: (
@@ -42,6 +45,7 @@ export function ipcProvideSubscription<T, U>(
             const webContents = e.sender;
 
             try {
+                counters.up(name);
                 const handlerResult = handler(data, (error, message) => {
                     if (webContentsDidChange) {
                         console.log(
@@ -54,6 +58,7 @@ export function ipcProvideSubscription<T, U>(
                     if (message === undefined && error === undefined) {
                         // This is the last message. Send a termination message down the chute.
                         webContents.send(subscriptionChannel, null);
+                        counters.down(name);
                         return;
                     }
                     const err = error ? wrapError(error) : undefined;
@@ -71,11 +76,13 @@ export function ipcProvideSubscription<T, U>(
 
             const webContentsDestroyListener = () => {
                 webContentsDidChange = true;
+                counters.down(name);
                 stop();
             };
 
             const webContentsDidNavigateListener = () => {
                 webContentsDidChange = true;
+                counters.down(name);
                 stop();
             };
 
@@ -85,6 +92,7 @@ export function ipcProvideSubscription<T, U>(
                 // The subscriber says they want to stop.
                 webContents.off("destroyed", webContentsDestroyListener);
                 webContents.off("did-navigate", webContentsDidNavigateListener);
+                counters.down(name);
                 stop();
             });
         });

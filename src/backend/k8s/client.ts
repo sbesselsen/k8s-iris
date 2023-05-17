@@ -72,6 +72,7 @@ import { bufferToArrayBuffer } from "../util/buffer";
 import { streamSplitter } from "../../common/util/stream-splitter";
 import { streamStats } from "../util/stream-stats";
 import getPort from "get-port";
+import { debugCounters } from "../../common/util/debug";
 
 const defaultRemoveOptions: K8sRemoveOptions = {
     waitForCompletion: true,
@@ -103,6 +104,8 @@ const defaultClientOptions = {
     getTempDirPath: () => "/tmp",
 };
 
+let clientIndex = 0;
+
 // Patch KubeConfig class with an ExecAuth class that works asynchronously.
 (
     k8s.KubeConfig as unknown as { authenticators: Array<unknown> }
@@ -116,6 +119,8 @@ export function createClient(
         ...defaultClientOptions,
         ...options,
     };
+
+    clientIndex++;
 
     if (opts.readonly) {
         console.log(
@@ -837,6 +842,10 @@ export function createClient(
     >;
     const reusableListWatchHandles: ReusableListWatchHandles = {};
 
+    const listWatchCounters = debugCounters(
+        `listWatch:${kubeConfig.getCurrentContext()}:${clientIndex}`
+    );
+
     const listWatch = <T extends K8sObject = K8sObject>(
         spec: K8sObjectListQuery,
         watcher: K8sObjectListWatcher<T>
@@ -864,6 +873,7 @@ export function createClient(
                         listWatch?.stop();
                     },
                 };
+                listWatchCounters.up(key);
                 listWatch = baseListWatch(spec, (error, message) => {
                     handle.lastMessage = { error, message: message };
                     handle.watchers.forEach((h) => h(error, message));
@@ -900,6 +910,7 @@ export function createClient(
                             reusableHandle.watchers.length === 0
                         ) {
                             // Stop watching and remove the reusable handle.
+                            listWatchCounters.down(key);
                             reusableHandle.stop();
                             reusableListWatchHandles[key] =
                                 reusableListWatchHandles[key].filter(
