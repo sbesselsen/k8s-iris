@@ -6,12 +6,7 @@ import {
 } from "../../common/k8s/client";
 import { isSetLike } from "../../common/k8s/util";
 import { reuseShallowEqualObject } from "../../common/util/deep-equal";
-import { k8sSmartCompare } from "../../common/util/sort";
-import {
-    ReadableStore,
-    useDerivedReadableStore,
-    useProvidedStoreValue,
-} from "../util/state";
+import { ReadableStore, useDerivedReadableStore } from "../util/state";
 import {
     K8sListWatchHookOptions,
     K8sListWatchStoreValue,
@@ -28,23 +23,6 @@ export type K8sAssociatedPodsResult = {
 export type K8sAssociatedPodsStoreValue = K8sListWatchStoreValue & {
     hasAssociatedPods: boolean;
 };
-
-export function useK8sAssociatedPods(
-    object: K8sObject | null | undefined,
-    options?: K8sListWatchHookOptions,
-    deps?: any[]
-): K8sAssociatedPodsResult {
-    const store = useK8sAssociatedPodsStore(object, options, deps);
-    return useProvidedStoreValue(store, (v) => ({
-        hasAssociatedPods: v.hasAssociatedPods,
-        isLoadingAssociatedPods: v.isLoading,
-        associatedPods: [...v.identifiers]
-            .map((key) => v.resources[key])
-            .sort((r1, r2) =>
-                k8sSmartCompare(r1.metadata.name, r2.metadata.name)
-            ),
-    }));
-}
 
 export function useK8sAssociatedPodsStore(
     object: K8sObject | null | undefined,
