@@ -39,7 +39,6 @@ export function debugCounters(prefix: string): DebugCounters {
             if (counts[key] === 0) {
                 delete counts[key];
             }
-            log();
         },
         stop() {
             clearInterval(interval);

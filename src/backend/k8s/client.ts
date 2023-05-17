@@ -990,30 +990,83 @@ export function createClient(
         watcher: K8sObjectListWatcher<T>
     ) => K8sObjectListWatch {
         return (spec, watcher) => {
-            let items: T[] = [];
+            let cachedObjects: Record<string, T> | undefined;
+            let lastMessageWasError = false;
 
             return baseListWatch(spec, (err, message) => {
                 if (message) {
-                    // Check if the message really needs to go through.
-                    if (
-                        message.update ||
-                        !message.list.items.every(
-                            (obj, index) =>
-                                items[index] &&
-                                objSameVersion(obj, items[index])
-                        )
-                    ) {
-                        watcher(undefined, message);
-                    } else {
-                        // There is no update and the list is exactly the same as the list we already have. Do not pass on this message.
-                        console.log(
-                            "cachedObjectsListWatch: suppressing message because all items are equal",
-                            spec.apiVersion,
-                            spec.kind
+                    if (!cachedObjects || message.update) {
+                        // Pass the message through normally.
+                        cachedObjects = Object.fromEntries(
+                            message.list.items.map((obj) => [
+                                toK8sObjectIdentifierString(obj),
+                                obj,
+                            ])
                         );
+                        watcher(err, message);
+                        lastMessageWasError = false;
+                        return;
                     }
-                    items = message.list.items;
+
+                    let didSendUpdates = false;
+
+                    // This is a new initial list message.
+                    // Check what is different to the list of items and pass the changes as individual messages.
+                    const newObjects: Record<string, T> = {};
+                    for (const obj of message.list.items) {
+                        const key = toK8sObjectIdentifierString(obj);
+                        newObjects[key] = obj;
+
+                        if (!cachedObjects[key]) {
+                            cachedObjects[key] = obj;
+                            didSendUpdates = true;
+                            watcher(undefined, {
+                                list: message.list,
+                                update: {
+                                    type: "add",
+                                    object: obj,
+                                },
+                            });
+                        } else if (!objSameVersion(obj, cachedObjects[key])) {
+                            cachedObjects[key] = obj;
+                            didSendUpdates = true;
+                            watcher(undefined, {
+                                list: message.list,
+                                update: {
+                                    type: "update",
+                                    object: obj,
+                                },
+                            });
+                        }
+                    }
+                    for (const key of Object.keys(cachedObjects)) {
+                        if (!newObjects[key]) {
+                            const cachedObj = cachedObjects[key];
+                            delete cachedObjects[key];
+                            didSendUpdates = true;
+                            watcher(undefined, {
+                                list: message.list,
+                                update: {
+                                    type: "remove",
+                                    object: cachedObj,
+                                },
+                            });
+                        }
+                    }
+
+                    if (!didSendUpdates) {
+                        // Send the full update anyway, to make sure the client knows that the error state is over.
+                        if (lastMessageWasError) {
+                            watcher(undefined, message);
+                        } else {
+                            console.log(
+                                "cachedObjectsListWatch: suppressed full update"
+                            );
+                        }
+                    }
+                    lastMessageWasError = false;
                 } else {
+                    lastMessageWasError = true;
                     watcher(err);
                 }
             });
@@ -1117,14 +1170,69 @@ export function createClient(
         };
     }
 
-    const listWatch = reusableListWatch(
-        cachedObjectsListWatch(
-            rebumpingListWatch(
-                restartingListWatch(syncListWatch(singleShotListWatch), 2000),
-                60000
-            )
-        )
-    );
+    // function devErrorPeriodsListWatch<T extends K8sObject = K8sObject>(
+    //     baseListWatch: (
+    //         spec: K8sObjectListQuery,
+    //         watcher: K8sObjectListWatcher<T>
+    //     ) => K8sObjectListWatch,
+    //     periodDurationMs: number
+    // ): (
+    //     spec: K8sObjectListQuery,
+    //     watcher: K8sObjectListWatcher<T>
+    // ) => K8sObjectListWatch {
+    //     return (spec, watcher) => {
+    //         let isInFakeErrorState = false;
+    //         let lastMessage: K8sObjectListWatcherMessage<T> | undefined;
+
+    //         const interval = setInterval(() => {
+    //             isInFakeErrorState = !isInFakeErrorState;
+    //             if (isInFakeErrorState) {
+    //                 console.log(
+    //                     "devErrorPeriodsListWatch: entering fake error state",
+    //                     spec.apiVersion,
+    //                     spec.kind
+    //                 );
+    //                 watcher(new Error("Fake error"));
+    //             } else {
+    //                 console.log(
+    //                     "devErrorPeriodsListWatch: leaving fake error state",
+    //                     spec.apiVersion,
+    //                     spec.kind
+    //                 );
+    //                 if (lastMessage) {
+    //                     watcher(undefined, { list: lastMessage.list });
+    //                 }
+    //             }
+    //         }, periodDurationMs);
+    //         const listWatch = baseListWatch(spec, (err, message) => {
+    //             lastMessage = message;
+    //             if (!isInFakeErrorState) {
+    //                 watcher(err, message);
+    //             }
+    //         });
+    //         return {
+    //             stop() {
+    //                 clearInterval(interval);
+    //                 listWatch.stop();
+    //             },
+    //         };
+    //     };
+    // }
+
+    // Create the core listwatch without any error handling.
+    let listWatch = syncListWatch(singleShotListWatch);
+
+    // Restart the listwatch after 2 seconds if it fails.
+    listWatch = restartingListWatch(listWatch, 2000);
+
+    // Rebump the listwatch after 60 seconds if nothing new happens.
+    listWatch = rebumpingListWatch(listWatch, 60000);
+
+    // Don't pass the entire list again after restarts or rebumps, only the updates.
+    listWatch = cachedObjectsListWatch(listWatch);
+
+    // Reuse the same listwatch where possible.
+    listWatch = reusableListWatch(listWatch);
 
     const listApiResourceTypes = async () => {
         const apis = await fetchApiList(kubeConfig);
