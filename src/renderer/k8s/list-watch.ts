@@ -8,6 +8,7 @@ import {
 } from "../../common/k8s/client";
 import { toK8sObjectIdentifierString } from "../../common/k8s/util";
 import { coalesceValues } from "../../common/util/async";
+import { k8sSmartCompare } from "../../common/util/sort";
 import { useHibernatableReadableStore } from "../context/hibernate";
 import { useK8sContext } from "../context/k8s-context";
 import { useGuaranteedMemo } from "../hook/guaranteed-memo";
@@ -58,17 +59,7 @@ export function useK8sListWatch<T extends K8sObject = K8sObject>(
             }
 
             const items = [...v.identifiers].map((id) => v.resources[id]);
-            items.sort((a, b) => {
-                return a.metadata.name.localeCompare(
-                    b.metadata.name,
-                    undefined,
-                    {
-                        sensitivity: "base",
-                        numeric: true,
-                        ignorePunctuation: true,
-                    }
-                );
-            });
+            items.sort(k8sSmartCompare);
             const list: K8sObjectList<T> = {
                 apiVersion: spec.apiVersion,
                 kind: spec.kind,
