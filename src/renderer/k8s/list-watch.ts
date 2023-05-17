@@ -1,19 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
     K8sObject,
     K8sObjectList,
     K8sObjectListQuery,
     K8sObjectListUpdate,
-    K8sObjectListWatch,
     K8sObjectListWatcherMessage,
 } from "../../common/k8s/client";
 import { toK8sObjectIdentifierString } from "../../common/k8s/util";
 import { coalesceValues } from "../../common/util/async";
-import {
-    useHibernatableReadableStore,
-    useHibernateGetter,
-    useHibernateListener,
-} from "../context/hibernate";
+import { useHibernatableReadableStore } from "../context/hibernate";
 import { useK8sContext } from "../context/k8s-context";
 import { useGuaranteedMemo } from "../hook/guaranteed-memo";
 import { createStore, ReadableStore } from "../util/state";
@@ -53,17 +48,6 @@ export function useK8sListWatch<T extends K8sObject = K8sObject>(
             loadingValue
         );
 
-    useEffect(() => {
-        setValue(loadingValue);
-    }, [kubeContext, setValue]);
-
-    const onUpdate = useCallback(
-        (message: K8sCoalescedObjectListWatcherMessage<K8sObject>) => {
-            setValue([false, message.list as any, undefined]);
-        },
-        [setValue]
-    );
-
     const onWatchError = useCallback(
         (error: any) => {
             setValue([false, undefined, error]);
@@ -71,194 +55,50 @@ export function useK8sListWatch<T extends K8sObject = K8sObject>(
         [setValue]
     );
 
-    useK8sListWatchListener(
+    const store = useK8sListWatchStore<T>(
         spec,
         {
             ...opts,
-            onUpdate,
             onWatchError,
         },
-        deps
+        [onWatchError, ...deps]
     );
+
+    useEffect(() => {
+        setValue(loadingValue);
+
+        const listener = (v: K8sListWatchStoreValue<T>) => {
+            const items = [...v.identifiers].map((id) => v.resources[id]);
+            items.sort((a, b) => {
+                return a.metadata.name.localeCompare(
+                    b.metadata.name,
+                    undefined,
+                    {
+                        sensitivity: "base",
+                        numeric: true,
+                        ignorePunctuation: true,
+                    }
+                );
+            });
+            const list: K8sObjectList<T> = {
+                apiVersion: spec.apiVersion,
+                kind: spec.kind,
+                items,
+            };
+            setValue(v.isLoading ? loadingValue : [false, list, undefined]);
+        };
+
+        store.subscribe(listener);
+
+        return () => {
+            store.unsubscribe(listener);
+        };
+    }, [kubeContext, setValue, store, ...deps]);
 
     return value;
 }
 
-export type K8sListWatchListenerOptions<T extends K8sObject = K8sObject> =
-    K8sListWatchOptions & {
-        onUpdate: (message: K8sCoalescedObjectListWatcherMessage<T>) => void;
-        onWatchError: (error: any) => void;
-        updateCoalesceInterval?: number;
-    };
-
 const minUpdateCoalesceInterval = 10;
-
-export function useK8sListWatchListener<T extends K8sObject = K8sObject>(
-    spec: K8sObjectListQuery,
-    options: K8sListWatchListenerOptions,
-    deps: any[] = []
-): void {
-    const client = useK8sClient(options.kubeContext);
-    const listWatchRef = useRef<K8sObjectListWatch | undefined>();
-
-    const {
-        onUpdate,
-        onWatchError,
-        updateCoalesceInterval = 0,
-        pauseOnHibernate = true,
-    } = options;
-
-    const getHibernate = useHibernateGetter();
-    const getIsPaused = useCallback(() => {
-        return pauseOnHibernate && getHibernate();
-    }, [pauseOnHibernate]);
-
-    const pausedUpdateRef = useRef<K8sCoalescedObjectListWatcherMessage<T>>();
-    const pausableOnUpdate = useCallback(
-        (message: K8sCoalescedObjectListWatcherMessage<T>) => {
-            if (!getIsPaused()) {
-                onUpdate(message);
-            } else {
-                if (pausedUpdateRef.current) {
-                    pausedUpdateRef.current.list = message.list;
-                    pausedUpdateRef.current.updates.push(...message.updates);
-                } else {
-                    pausedUpdateRef.current = {
-                        list: message.list,
-                        updates: [...message.updates],
-                    };
-                }
-            }
-        },
-        [onUpdate, pausedUpdateRef, getIsPaused]
-    );
-
-    useHibernateListener(
-        (isHibernating) => {
-            if (!isHibernating && pausedUpdateRef.current) {
-                // Updates came in while we were paused.
-                const message = pausedUpdateRef.current;
-                pausedUpdateRef.current = undefined;
-                onUpdate(message);
-            }
-        },
-        [onUpdate, pausedUpdateRef]
-    );
-
-    const lastUpdateTimestampRef = useRef(0);
-    const coalescedUpdateRef =
-        useRef<K8sCoalescedObjectListWatcherMessage<T>>();
-    const updateTimeoutRef = useRef<any>();
-    const coalescedOnUpdate = useCallback(
-        (message: K8sObjectListWatcherMessage<T>) => {
-            const boundedUpdateCoalesceInterval = Math.max(
-                minUpdateCoalesceInterval,
-                updateCoalesceInterval
-            );
-            const ts = new Date().getTime();
-            if (
-                lastUpdateTimestampRef.current + boundedUpdateCoalesceInterval >
-                ts
-            ) {
-                if (!coalescedUpdateRef.current) {
-                    coalescedUpdateRef.current = {
-                        list: message.list,
-                        updates: [],
-                    };
-                }
-                coalescedUpdateRef.current.list = message.list;
-                if (message.update) {
-                    coalescedUpdateRef.current.updates.push(message.update);
-                }
-
-                // Update is coming in too soon. Need to schedule it.
-                if (!updateTimeoutRef.current) {
-                    updateTimeoutRef.current = setTimeout(() => {
-                        if (coalescedUpdateRef.current) {
-                            pausableOnUpdate(coalescedUpdateRef.current);
-                        }
-                        lastUpdateTimestampRef.current = ts;
-                        updateTimeoutRef.current = undefined;
-                        coalescedUpdateRef.current = undefined;
-                    }, lastUpdateTimestampRef.current + boundedUpdateCoalesceInterval - ts);
-                }
-                return;
-            }
-
-            // We can do the update immediately. Cancel any scheduled updates and go.
-            if (updateTimeoutRef.current) {
-                clearTimeout(updateTimeoutRef.current);
-                updateTimeoutRef.current = undefined;
-            }
-            coalescedUpdateRef.current = undefined;
-
-            const coalescedMessage: K8sCoalescedObjectListWatcherMessage<T> = {
-                list: message.list,
-                updates: [],
-            };
-            if (message.update) {
-                coalescedMessage.updates.push(message.update);
-            }
-            pausableOnUpdate(coalescedMessage);
-            lastUpdateTimestampRef.current = ts;
-        },
-        [
-            coalescedUpdateRef,
-            lastUpdateTimestampRef,
-            pausableOnUpdate,
-            updateCoalesceInterval,
-            updateTimeoutRef,
-        ]
-    );
-
-    useEffect(() => {
-        try {
-            lastUpdateTimestampRef.current = 0;
-            if (updateTimeoutRef.current) {
-                clearTimeout(updateTimeoutRef.current);
-                updateTimeoutRef.current = undefined;
-            }
-            coalescedUpdateRef.current = undefined;
-
-            const listWatch = client.listWatch<T>(spec, (error, message) => {
-                if (error) {
-                    onWatchError(error);
-                    return;
-                }
-                if (!message) {
-                    onWatchError(
-                        new Error(
-                            "Unknown listWatch error: no message and no error"
-                        )
-                    );
-                    return;
-                }
-                coalescedOnUpdate(message);
-            });
-            listWatchRef.current = listWatch;
-        } catch (e) {
-            onWatchError(e);
-        }
-        return () => {
-            listWatchRef.current?.stop();
-            if (updateTimeoutRef.current) {
-                clearTimeout(updateTimeoutRef.current);
-            }
-            coalescedUpdateRef.current = undefined;
-            lastUpdateTimestampRef.current = 0;
-            listWatchRef.current = undefined;
-            updateTimeoutRef.current = undefined;
-        };
-    }, [
-        client,
-        coalescedUpdateRef,
-        lastUpdateTimestampRef,
-        listWatchRef,
-        coalescedOnUpdate,
-        onWatchError,
-        ...deps,
-    ]);
-}
 
 export type K8sListWatchStoreValue<T extends K8sObject = K8sObject> = {
     isLoading: boolean;
