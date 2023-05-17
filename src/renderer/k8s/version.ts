@@ -2,6 +2,8 @@ import { K8sVersion } from "../../common/k8s/client";
 import { useHibernateGetter } from "../context/hibernate";
 import { useK8sContext } from "../context/k8s-context";
 import { useSubscribedState } from "../hook/subscribed-state";
+import { useTempData } from "../hook/temp-data";
+import { formatDeveloperDate } from "../util/date";
 import { useK8sClient } from "./client";
 
 const emptyState: {
@@ -25,6 +27,13 @@ export function useK8sVersion(opts?: {
     const kubeContext = opts?.kubeContext ?? currentContext;
     const client = useK8sClient(kubeContext);
 
+    const [, , setKnownVersion] = useTempData(
+        `k8s:lastKnownVersion:${kubeContext}`
+    );
+    const [, , setKnownVersionDate] = useTempData(
+        `k8s:lastKnownVersionDate:${kubeContext}`
+    );
+
     const getHibernate = useHibernateGetter();
 
     const { isLoading, version, error } = useSubscribedState(
@@ -42,6 +51,10 @@ export function useK8sVersion(opts?: {
                     },
                     rerender
                 );
+                setKnownVersion(
+                    `${version.major}.${version.minor} (${version.platform})`
+                );
+                setKnownVersionDate(formatDeveloperDate(new Date()));
             }
 
             set(emptyState, rerender);
@@ -57,7 +70,14 @@ export function useK8sVersion(opts?: {
                 clearInterval(interval);
             };
         },
-        [client, getHibernate, pauseOnHibernate, pollInterval]
+        [
+            client,
+            getHibernate,
+            pauseOnHibernate,
+            pollInterval,
+            setKnownVersion,
+            setKnownVersionDate,
+        ]
     );
 
     return [isLoading, version, error];
