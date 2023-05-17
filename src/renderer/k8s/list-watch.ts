@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
     K8sObject,
     K8sObjectList,
@@ -48,26 +48,15 @@ export function useK8sListWatch<T extends K8sObject = K8sObject>(
             loadingValue
         );
 
-    const onWatchError = useCallback(
-        (error: any) => {
-            setValue([false, undefined, error]);
-        },
-        [setValue]
-    );
-
-    const store = useK8sListWatchStore<T>(
-        spec,
-        {
-            ...opts,
-            onWatchError,
-        },
-        [onWatchError, ...deps]
-    );
+    const store = useK8sListWatchStore<T>(spec, opts, deps);
 
     useEffect(() => {
-        setValue(loadingValue);
-
         const listener = (v: K8sListWatchStoreValue<T>) => {
+            if (v.error) {
+                setValue([false, undefined, v.error]);
+                return;
+            }
+
             const items = [...v.identifiers].map((id) => v.resources[id]);
             items.sort((a, b) => {
                 return a.metadata.name.localeCompare(
@@ -88,6 +77,8 @@ export function useK8sListWatch<T extends K8sObject = K8sObject>(
             setValue(v.isLoading ? loadingValue : [false, list, undefined]);
         };
 
+        listener(store.get());
+
         store.subscribe(listener);
 
         return () => {
@@ -104,6 +95,7 @@ export type K8sListWatchStoreValue<T extends K8sObject = K8sObject> = {
     isLoading: boolean;
     identifiers: Set<string>;
     resources: Record<string, T>;
+    error?: any | undefined;
 };
 
 export type K8sListWatchStoreHookOptions = K8sListWatchHookOptions & {
@@ -144,13 +136,16 @@ export function useK8sListWatchStore<T extends K8sObject = K8sObject>(
         const isLoading: boolean[] = specsArray.map(() => true);
 
         const updateStore = coalesceValues(
-            (messages: Array<K8sObjectListWatcherMessage<T>>) => {
+            (
+                messages: Array<K8sObjectListWatcherMessage<T> | { error: any }>
+            ) => {
                 if (messages.length === 0) {
                     return;
                 }
                 store.set((oldValue) => {
                     let newIdentifiers = oldValue.identifiers;
                     let newResources = oldValue.resources;
+                    let newError = oldValue.error;
                     const newIsLoading = isLoading.some((l) => l);
 
                     function updateIdentifiers(f: (set: Set<string>) => void) {
@@ -170,6 +165,12 @@ export function useK8sListWatchStore<T extends K8sObject = K8sObject>(
                     }
 
                     for (const message of messages) {
+                        if ("error" in message) {
+                            newError = message.error;
+                            continue;
+                        } else {
+                            newError = undefined;
+                        }
                         const { update, list } = message;
                         if (update) {
                             const identifier = toK8sObjectIdentifierString(
@@ -222,12 +223,14 @@ export function useK8sListWatchStore<T extends K8sObject = K8sObject>(
                     if (
                         newIdentifiers !== oldValue.identifiers ||
                         newResources !== oldValue.resources ||
-                        newIsLoading !== oldValue.isLoading
+                        newIsLoading !== oldValue.isLoading ||
+                        newError !== oldValue.error
                     ) {
                         return {
                             identifiers: newIdentifiers,
                             resources: newResources,
                             isLoading: newIsLoading,
+                            ...(newError ? { error: newError } : {}),
                         };
                     }
                     return oldValue;
@@ -241,14 +244,17 @@ export function useK8sListWatchStore<T extends K8sObject = K8sObject>(
                 if (error) {
                     console.error("Errors loading listWatch", error);
                     onWatchError?.(error);
+                    updateStore({
+                        error,
+                    });
                     return;
                 }
                 if (!message) {
-                    onWatchError?.(
-                        new Error(
-                            "Unknown listWatch error: no message and no error"
-                        )
+                    const error = new Error(
+                        "Unknown listWatch error: no message and no error"
                     );
+                    onWatchError?.(error);
+                    updateStore({ error });
                     return;
                 }
                 lists[listWatchIndex] = message.list.items;
