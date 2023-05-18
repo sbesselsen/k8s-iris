@@ -78,6 +78,10 @@ const ClusterOverview = React.lazy(async () => ({
 const ResourcesOverview = React.lazy(async () => ({
     default: (await import("../resources/ResourcesOverview")).ResourcesOverview,
 }));
+const ContextsOverview = React.lazy(async () => ({
+    default: (await import("../k8s-context/ContextSelectMenu"))
+        .ContextsOverview,
+}));
 const ResourceEditor = React.lazy(async () => ({
     default: (await import("../editor/ResourceEditor")).ResourceEditor,
 }));
@@ -604,6 +608,7 @@ const AppNamespaces: React.FC<{
 const appComponents: Record<string, ReactNode> = {
     resources: <ResourcesOverview />,
     cluster: <ClusterOverview />,
+    contexts: <ContextsOverview />,
 };
 
 const AppContent: React.FC<{}> = () => {

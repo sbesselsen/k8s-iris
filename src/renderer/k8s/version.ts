@@ -1,3 +1,4 @@
+import { useCallback, useMemo } from "react";
 import { K8sVersion } from "../../common/k8s/client";
 import { useHibernateGetter } from "../context/hibernate";
 import { useK8sContext } from "../context/k8s-context";
@@ -16,13 +17,11 @@ const emptyState: {
     error: undefined,
 };
 
-export function useK8sVersion(opts?: {
+export function useK8sVersionGetter(opts?: {
     kubeContext?: string;
     pollInterval?: number;
     pauseOnHibernate?: boolean;
-}): [boolean, K8sVersion | undefined, any | undefined] {
-    const { pollInterval, pauseOnHibernate = true } = opts ?? {};
-
+}): () => Promise<K8sVersion> {
     const currentContext = useK8sContext();
     const kubeContext = opts?.kubeContext ?? currentContext;
     const client = useK8sClient(kubeContext);
@@ -34,6 +33,27 @@ export function useK8sVersion(opts?: {
         `k8s:lastKnownVersionDate:${kubeContext}`
     );
 
+    return useCallback(async () => {
+        const version = await client.getVersion();
+
+        setKnownVersion(
+            `${version.major}.${version.minor} (${version.platform})`
+        );
+        setKnownVersionDate(formatDeveloperDate(new Date()));
+
+        return version;
+    }, [client, kubeContext, setKnownVersion, setKnownVersionDate]);
+}
+
+export function useK8sVersion(opts?: {
+    kubeContext?: string;
+    pollInterval?: number;
+    pauseOnHibernate?: boolean;
+}): [boolean, K8sVersion | undefined, any | undefined] {
+    const { pollInterval, pauseOnHibernate = true } = opts ?? {};
+
+    const getVersion = useK8sVersionGetter(opts);
+
     const getHibernate = useHibernateGetter();
 
     const { isLoading, version, error } = useSubscribedState(
@@ -42,19 +62,22 @@ export function useK8sVersion(opts?: {
             const rerender = !pauseOnHibernate || !getHibernate();
 
             async function update() {
-                const version = await client.getVersion();
+                let version: K8sVersion | undefined;
+                let error: any | undefined;
+                try {
+                    version = await getVersion();
+                } catch (e) {
+                    error = e;
+                }
+
                 set(
                     {
                         isLoading: false,
                         version,
-                        error: undefined,
+                        error,
                     },
                     rerender
                 );
-                setKnownVersion(
-                    `${version.major}.${version.minor} (${version.platform})`
-                );
-                setKnownVersionDate(formatDeveloperDate(new Date()));
             }
 
             set(emptyState, rerender);
@@ -70,15 +93,51 @@ export function useK8sVersion(opts?: {
                 clearInterval(interval);
             };
         },
-        [
-            client,
-            getHibernate,
-            pauseOnHibernate,
-            pollInterval,
-            setKnownVersion,
-            setKnownVersionDate,
-        ]
+        [getVersion, getHibernate, pauseOnHibernate, pollInterval]
     );
 
     return [isLoading, version, error];
+}
+
+export type K8sCachedVersionEntry = {
+    version: string;
+    date: string;
+};
+
+export function useLastKnownK8sVersion(opts?: {
+    kubeContext?: string;
+}): [boolean, K8sCachedVersionEntry | undefined] {
+    const currentContext = useK8sContext();
+    const kubeContext = opts?.kubeContext ?? currentContext;
+
+    const [isLoadingVersion, knownVersion] = useTempData(
+        `k8s:lastKnownVersion:${kubeContext}`
+    );
+    const [isLoadingVersionData, knownVersionDate] = useTempData(
+        `k8s:lastKnownVersionDate:${kubeContext}`
+    );
+
+    return useMemo(() => {
+        if (isLoadingVersion || isLoadingVersionData) {
+            return [true, undefined];
+        }
+        if (
+            typeof knownVersion !== "string" ||
+            typeof knownVersionDate !== "string"
+        ) {
+            return [false, undefined];
+        }
+        return [
+            false,
+            {
+                version: knownVersion,
+                date: knownVersionDate,
+            },
+        ];
+    }, [
+        isLoadingVersion,
+        isLoadingVersionData,
+        knownVersion,
+        knownVersionDate,
+    ]);
 }

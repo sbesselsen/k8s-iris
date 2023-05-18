@@ -24,6 +24,7 @@ export const ResourceEditorLink: React.FC<ResourceEditorLinkProps> = (
                 fontSize={linkProps.fontSize ?? "inherit"}
                 alignItems="center"
                 overflow="hidden"
+                cursor="pointer"
                 spacing={0}
             >
                 <Link onClick={openEditor} isTruncated {...linkProps} />
