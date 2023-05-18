@@ -81,11 +81,18 @@ export function createClientManager(
                         kubeConfigPath
                     );
 
-                    // Reload kubeConfig.
-                    kc = getKubeConfigFromDefault();
+                    setTimeout(() => {
+                        try {
+                            // Reload kubeConfig.
+                            kc = getKubeConfigFromDefault();
 
-                    // Notify listeners.
-                    kubeConfigListeners.forEach((l) => l());
+                            // Notify listeners.
+                            kubeConfigListeners.forEach((l) => l());
+                        } catch (e) {
+                            console.error("Error reloading kube config:");
+                            console.error(e);
+                        }
+                    }, 100);
                 }
             });
         }
