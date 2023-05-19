@@ -1223,6 +1223,36 @@ export function createClient(
     //     };
     // }
 
+    // function countingListWatch<T extends K8sObject = K8sObject>(
+    //     baseListWatch: (
+    //         spec: K8sObjectListQuery,
+    //         watcher: K8sObjectListWatcher<T>
+    //     ) => K8sObjectListWatch,
+    //     prefix: string
+    // ): (
+    //     spec: K8sObjectListQuery,
+    //     watcher: K8sObjectListWatcher<T>
+    // ) => K8sObjectListWatch {
+    //     return (spec, watcher) => {
+    //         listWatchCounters.up(
+    //             `${prefix}:${spec.apiVersion}:${spec.kind}:${(
+    //                 spec.namespaces ?? []
+    //             ).join(",")}`
+    //         );
+    //         const listWatch = baseListWatch(spec, watcher);
+    //         return {
+    //             stop() {
+    //                 listWatch.stop();
+    //                 listWatchCounters.down(
+    //                     `${prefix}:${spec.apiVersion}:${spec.kind}:${(
+    //                         spec.namespaces ?? []
+    //                     ).join(",")}`
+    //                 );
+    //             },
+    //         };
+    //     };
+    // }
+
     // Create the core listwatch without any error handling.
     let listWatch = syncListWatch(singleShotListWatch);
 
