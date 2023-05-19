@@ -181,7 +181,7 @@ export function createClient(
 
     const read = async (spec: K8sObject): Promise<K8sObject | null> => {
         try {
-            const { body } = await objectApi.read(spec);
+            const { body } = await objectApi.read(spec as any);
             return onlyFullObject(body);
         } catch (e) {
             // Return null on error.
@@ -254,6 +254,10 @@ export function createClient(
                     );
                     const specClone = JSON.parse(JSON.stringify(spec));
                     delete specClone.metadata.managedFields;
+                    if (!process.stdin) {
+                        reject(new Error("kubectl apply: no stdin"));
+                        return;
+                    }
                     process.stdin.write(toYaml(specClone));
                     process.stdin.end();
                 })
@@ -365,7 +369,7 @@ export function createClient(
                             }
                         }
                     );
-                    process.stdin.end();
+                    process.stdin?.end();
                 })
         );
     };
@@ -1767,7 +1771,9 @@ export function createClient(
                 () => {
                     const address = server.address();
                     entry.localAddress =
-                        typeof address === "string" ? address : address.address;
+                        typeof address === "string"
+                            ? address
+                            : address?.address;
                     entry.localPort = localPort;
                     portForwards.push(entry as K8sPortForwardEntry);
                     portForwardStats[id] = {
