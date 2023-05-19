@@ -1,5 +1,5 @@
 import { Box, Input, InputProps, useMenuItem } from "@chakra-ui/react";
-import React, { useCallback } from "react";
+import React, { KeyboardEvent, useCallback } from "react";
 
 const navigationKeys = ["ArrowUp", "ArrowDown", "Escape"];
 
@@ -12,7 +12,7 @@ export const MenuInput: React.FC<InputProps & { onPressEnter?: () => void }> = (
     const { onPressEnter } = props;
 
     const onKeyDown = useCallback(
-        (e) => {
+        (e: KeyboardEvent) => {
             if (!navigationKeys.includes(e.key)) {
                 e.stopPropagation();
             }
@@ -25,7 +25,7 @@ export const MenuInput: React.FC<InputProps & { onPressEnter?: () => void }> = (
 
     return (
         <Box px="3" role={role}>
-            <Input {...rest} onKeyDown={onKeyDown} />
+            <Input {...(rest as any)} onKeyDown={onKeyDown} />
         </Box>
     );
 };

@@ -9,6 +9,7 @@ import {
     BoxProps,
     Checkbox,
     Heading,
+    HeadingProps,
     HStack,
     List,
     ListItem,
@@ -20,7 +21,14 @@ import {
     useControllableState,
     VStack,
 } from "@chakra-ui/react";
-import React, { createContext, useCallback, useContext, useMemo } from "react";
+import React, {
+    createContext,
+    PropsWithChildren,
+    ReactNode,
+    useCallback,
+    useContext,
+    useMemo,
+} from "react";
 import { K8sObject } from "../../../common/k8s/client";
 import { ResourceBadge } from "../../k8s/badges";
 import {
@@ -233,7 +241,7 @@ export const K8sInnerObjectViewer: React.FC<K8sInnerObjectViewerProps> = (
                                 {key}
                             </Text>
                             {displayRule.keyValueSeparator ?? ": "}
-                            {value}
+                            {value as ReactNode}
                         </Selectable>
                     </ListItem>
                 ))}
@@ -631,7 +639,10 @@ function isSimpleArray(obj: any[]): obj is SimpleValue[] {
     return obj.length > 0 && obj.every(isSimpleValue);
 }
 
-const PropHeading: React.FC<{}> = ({ children, ...props }) => {
+const PropHeading: React.FC<PropsWithChildren<HeadingProps>> = ({
+    children,
+    ...props
+}) => {
     const textColor = useColorModeValue("gray.600", "gray.400");
     return (
         <Heading

@@ -10,6 +10,7 @@ import {
 import React, {
     Fragment,
     MutableRefObject,
+    PropsWithChildren,
     ReactNode,
     Suspense,
     useCallback,
@@ -681,7 +682,9 @@ const AppContentError: React.FC<{ error: any }> = (props) => {
     );
 };
 
-const AppContentContainer: React.FC<{ isVisible: boolean }> = (props) => {
+const AppContentContainer: React.FC<
+    PropsWithChildren<{ isVisible: boolean }>
+> = (props) => {
     const { isVisible, children } = props;
     const renderError = useCallback((error: any) => {
         return <AppContentError error={error} />;

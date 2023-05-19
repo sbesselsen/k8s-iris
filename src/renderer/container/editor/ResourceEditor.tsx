@@ -50,6 +50,7 @@ import {
 import React, {
     ChangeEvent,
     KeyboardEvent,
+    PropsWithChildren,
     useCallback,
     useEffect,
     useMemo,
@@ -371,9 +372,12 @@ const ScaleButton: React.FC<{
         onClose();
     }, [object.apiVersion, object.kind, object.metadata.name, onClose]);
 
+    const PopoverTriggerWithChildren =
+        PopoverTrigger as React.FC<PropsWithChildren>;
+
     return (
         <Popover isOpen={isOpen} onOpen={onOpen} onClose={onClose} isLazy>
-            <PopoverTrigger>
+            <PopoverTriggerWithChildren>
                 <IconButton
                     icon={<ArrowUpDownIcon />}
                     aria-label="Scale"
@@ -381,7 +385,7 @@ const ScaleButton: React.FC<{
                     fontWeight="normal"
                     isDisabled={isDisabled}
                 />
-            </PopoverTrigger>
+            </PopoverTriggerWithChildren>
             <Portal>
                 <PopoverContent>
                     <ScalePopoverContent object={object} onClose={onClose} />
@@ -443,7 +447,7 @@ const ScalePopoverContent: React.FC<{
     }, [object.apiVersion, object.kind, object.metadata.name, setTargetScale]);
 
     const onChangeTargetScale = useCallback(
-        (_, value) => {
+        (_: string, value: number) => {
             setTargetScale(value);
         },
         [setTargetScale]

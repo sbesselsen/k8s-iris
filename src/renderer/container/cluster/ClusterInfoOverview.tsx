@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { PropsWithChildren, useMemo } from "react";
 
 import { ScrollBox } from "../../component/main/ScrollBox";
 
@@ -303,7 +303,7 @@ const CapacityTable: React.FC<{ nodes: K8sObject[] }> = (props) => {
     );
 };
 
-const StatTh: React.FC<{}> = ({ children, ...props }) => {
+const StatTh: React.FC<PropsWithChildren> = ({ children, ...props }) => {
     const color = useColorModeValue("gray.600", "gray.400");
 
     return (

@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { PropsWithChildren, useEffect, useState } from "react";
 
-export const Defer: React.FC<{ initialize: boolean }> = (props) => {
+export const Defer: React.FC<PropsWithChildren<{ initialize: boolean }>> = (
+    props
+) => {
     const { initialize, children } = props;
 
     const [shouldRender, setShouldRender] = useState(false);

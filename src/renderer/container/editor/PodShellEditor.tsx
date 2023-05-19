@@ -19,7 +19,7 @@ export const PodShellEditor: React.FC<PodShellEditorProps> = (props) => {
 
     const openInBrowser = useIpcCall((ipc) => ipc.app.openUrlInBrowser);
     const onClickLink = useCallback(
-        (url) => {
+        (url: string) => {
             openInBrowser({ url });
         },
         [openInBrowser]

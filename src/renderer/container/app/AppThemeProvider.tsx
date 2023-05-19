@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { PropsWithChildren, useEffect, useMemo, useState } from "react";
 import { ChakraProvider } from "@chakra-ui/react";
 import Color from "color";
 
@@ -9,7 +9,7 @@ import { useIpcCall } from "../../hook/ipc";
 const whiteColor = Color("#ffffff");
 const blackColor = Color("#000000");
 
-export const AppThemeProvider: React.FC = (props) => {
+export const AppThemeProvider: React.FC<PropsWithChildren> = (props) => {
     const { children } = props;
 
     const getAccentColor = useIpcCall((ipc) => ipc.appearance.getAccentColor);

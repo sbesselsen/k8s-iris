@@ -1,6 +1,8 @@
-import React, { useRef } from "react";
+import React, { PropsWithChildren, useRef } from "react";
 
-export const LazyComponent: React.FC<{ isActive: boolean }> = (props) => {
+export const LazyComponent: React.FC<
+    PropsWithChildren<{ isActive: boolean }>
+> = (props) => {
     const { isActive, children } = props;
 
     const isActiveRef = useRef(isActive);

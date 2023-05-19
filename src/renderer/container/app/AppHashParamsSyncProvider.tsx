@@ -1,10 +1,12 @@
-import React, { useEffect } from "react";
+import React, { PropsWithChildren, useEffect } from "react";
 import { AppRoute, emptyAppRoute } from "../../../common/route/app-route";
 import { useAppRouteHistoryStore } from "../../context/route";
 import { getHashParams, setHashParams } from "../../util/location";
 import { HistoryOf } from "../../util/state-history";
 
-export const AppHashParamsSyncProvider: React.FC = ({ children }) => {
+export const AppHashParamsSyncProvider: React.FC<PropsWithChildren> = ({
+    children,
+}) => {
     const store = useAppRouteHistoryStore();
 
     useEffect(() => {

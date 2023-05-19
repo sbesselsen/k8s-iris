@@ -1,7 +1,7 @@
 import { ButtonGroup, HStack, useColorModeValue } from "@chakra-ui/react";
-import React from "react";
+import React, { PropsWithChildren } from "react";
 
-export const Toolbar: React.FC<{}> = (props) => {
+export const Toolbar: React.FC<PropsWithChildren> = (props) => {
     const { children } = props;
 
     const bgColor = useColorModeValue("gray.50", "gray.800");

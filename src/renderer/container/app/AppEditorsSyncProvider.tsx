@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from "react";
+import React, { PropsWithChildren, useCallback, useEffect } from "react";
 import { AppEditor } from "../../../common/route/app-route";
 import { useAppEditorsStore } from "../../context/editors";
 import {
@@ -7,7 +7,7 @@ import {
     useAppRouteSetter,
 } from "../../context/route";
 
-export const AppEditorsSyncProvider: React.FC<{}> = (props) => {
+export const AppEditorsSyncProvider: React.FC<PropsWithChildren> = (props) => {
     const { children } = props;
 
     const appEditorsStore = useAppEditorsStore();

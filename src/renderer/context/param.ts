@@ -1,5 +1,6 @@
 import React, {
     createContext,
+    PropsWithChildren,
     useCallback,
     useContext,
     useMemo,
@@ -18,7 +19,9 @@ export type AppRouteParamSetter<T> = ((
 
 const NamespaceContext = createContext<string | null>(null);
 
-export const ParamNamespace: React.FC<{ name: string }> = (props) => {
+export const ParamNamespace: React.FC<PropsWithChildren<{ name: string }>> = (
+    props
+) => {
     const { name, children } = props;
     const parentNamespace = useContext(NamespaceContext);
     const fullNamespace = parentNamespace ? `${parentNamespace}/${name}` : name;

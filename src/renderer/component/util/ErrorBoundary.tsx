@@ -1,8 +1,8 @@
-import React, { ReactNode } from "react";
+import React, { PropsWithChildren, ReactNode } from "react";
 import { useIsDev } from "../../hook/dev";
 
 export class CoreErrorBoundary extends React.Component<
-    { renderError: (error: any) => ReactNode },
+    PropsWithChildren<{ renderError: (error: any) => ReactNode }>,
     { hasError: boolean; error: any }
 > {
     constructor(props: any) {
@@ -29,10 +29,10 @@ export class CoreErrorBoundary extends React.Component<
     }
 }
 
-export type ErrorBoundaryProps = {
+export type ErrorBoundaryProps = PropsWithChildren<{
     renderError: (error: any) => ReactNode;
     isDisabledOnDev?: boolean;
-};
+}>;
 export const ErrorBoundary: React.FC<ErrorBoundaryProps> = (props) => {
     const { children, isDisabledOnDev = true, renderError } = props;
     const devMode = useIsDev();

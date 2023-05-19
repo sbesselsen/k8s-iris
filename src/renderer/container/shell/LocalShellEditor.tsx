@@ -11,7 +11,7 @@ export const LocalShellEditor: React.FC<{}> = () => {
 
     const openInBrowser = useIpcCall((ipc) => ipc.app.openUrlInBrowser);
     const onClickLink = useCallback(
-        (url) => {
+        (url: string) => {
             openInBrowser({ url });
         },
         [openInBrowser]
