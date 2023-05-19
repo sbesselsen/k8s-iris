@@ -275,6 +275,8 @@ export const RootAppUI: React.FunctionComponent = () => {
         }
     }, [colorThemeStore, contextualColorTheme]);
 
+    const isContextsList = useAppRoute((r) => r.menuItem === "contexts");
+
     const isReady = contextualColorTheme !== null;
 
     useEffect(() => {
@@ -329,7 +331,7 @@ export const RootAppUI: React.FunctionComponent = () => {
                 }
                 content={
                     kubeContext ? (
-                        namespacesError ? (
+                        namespacesError && !isContextsList ? (
                             <Box
                                 w="100%"
                                 height="100%"

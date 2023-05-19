@@ -20,7 +20,7 @@ export const TextActions: React.FC<{}> = () => {
             <ActionGroup>
                 <Action
                     id="copy-name"
-                    label="Copy Name"
+                    label="Copy"
                     onClick={onClickCopyName}
                     buttonIcon={<CopyIcon />}
                 />

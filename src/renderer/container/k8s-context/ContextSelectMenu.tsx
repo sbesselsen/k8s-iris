@@ -51,6 +51,7 @@ import { usePersistentState } from "../../hook/persistent-state";
 import { useAppSearch } from "../../context/search";
 import { ScrollBox } from "../../component/main/ScrollBox";
 import { useK8sVersionGetter, useLastKnownK8sVersion } from "../../k8s/version";
+import { Selectable } from "../../component/main/Selectable";
 
 type ContextOption = K8sContext &
     Partial<CloudK8sContextInfo> & {
@@ -60,7 +61,10 @@ type ContextOption = K8sContext &
         label: string;
     };
 
-function useOpenContext(): (context: string) => void {
+function useOpenContext(): (
+    context: string,
+    requestNewWindow?: boolean
+) => void {
     const getAppRoute = useAppRouteGetter();
     const setAppRoute = useAppRouteSetter();
     const editorsStore = useAppEditorsStore();
@@ -69,12 +73,10 @@ function useOpenContext(): (context: string) => void {
 
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
 
-    const metaKeyPressedRef = useModifierKeyRef("Meta");
-
     const [, , setAppCurrentContext] = usePersistentState("currentContext");
 
     return useCallback(
-        async (context: string) => {
+        async (context: string, requestNewWindow = false) => {
             function openInNewWindow() {
                 setAppCurrentContext(context);
 
@@ -92,7 +94,7 @@ function useOpenContext(): (context: string) => void {
                 setAppRoute(() => ({ ...emptyAppRoute, context }));
             }
 
-            if (metaKeyPressedRef.current) {
+            if (requestNewWindow) {
                 openInNewWindow();
                 return;
             }
@@ -132,7 +134,6 @@ function useOpenContext(): (context: string) => void {
             createWindow,
             editorsStore,
             getAppRoute,
-            metaKeyPressedRef,
             setAppRoute,
             setAppCurrentContext,
             showDialog,
@@ -174,10 +175,10 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
 
         const onSelectContext = useCallback(
             (context: string) => {
-                openContext(context);
+                openContext(context, metaKeyPressedRef.current);
                 onClose();
             },
-            [openContext, onClose]
+            [metaKeyPressedRef, openContext, onClose]
         );
 
         const onClickList = useCallback(() => {
@@ -340,14 +341,16 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
                         autoComplete="off"
                         spellCheck="false"
                     />
-                    <MenuItem
-                        onClick={onClickList}
-                        fontSize="sm"
-                        px={4}
-                        icon={<InfoOutlineIcon />}
-                    >
-                        List all contexts
-                    </MenuItem>
+                    {!searchValue && (
+                        <MenuItem
+                            onClick={onClickList}
+                            fontSize="sm"
+                            px={4}
+                            icon={<InfoOutlineIcon />}
+                        >
+                            List all contexts
+                        </MenuItem>
+                    )}
                     {isLoadingWithDelay && (
                         <Box p={4}>
                             <Spinner />
@@ -482,33 +485,31 @@ export const ContextsOverview: React.FC<{}> = () => {
     );
 
     return (
-        <ScrollBox flex="1 0 0">
-            <Table size="sm" mb="100px">
+        <ScrollBox flex="1 0 0" px={0}>
+            <Table size="sm" mb="100px" sx={{ tableLayout: "fixed" }}>
                 <Thead>
                     <Tr>
-                        <Th ps={2} whiteSpace="nowrap">
+                        <Th w={4} px={0} borderBottom="none"></Th>
+                        <Th w="11px" whiteSpace="nowrap"></Th>
+                        <Th ps={0} whiteSpace="nowrap">
                             Context
                         </Th>
-                        <Th ps={2} w="300px" whiteSpace="nowrap">
+                        <Th ps={2} w="200px" whiteSpace="nowrap">
                             Group
                         </Th>
                         <Th w="200px" whiteSpace="nowrap">
                             Version
                         </Th>
+                        <Th w={4} px={0} borderBottom="none"></Th>
                     </Tr>
                 </Thead>
                 {groupedContextOptions.map(({ label, options }, groupIndex) => (
                     <Tbody key={groupIndex}>
-                        {options.map((option, index) => (
+                        {options.map((option) => (
                             <ContextsOverviewRow
                                 key={option.name}
                                 groupLabel={label}
                                 option={option}
-                                showBottomSeparator={
-                                    index === options.length - 1 &&
-                                    groupIndex <
-                                        groupedContextOptions.length - 1
-                                }
                             />
                         ))}
                     </Tbody>
@@ -521,9 +522,8 @@ export const ContextsOverview: React.FC<{}> = () => {
 export const ContextsOverviewRow: React.FC<{
     option: ContextOption;
     groupLabel: string;
-    showBottomSeparator: boolean;
 }> = (props) => {
-    const { option, groupLabel, showBottomSeparator } = props;
+    const { option, groupLabel } = props;
     const kubeContext = option.name;
 
     const { colorScheme } = k8sAccountIdColor(option.bestAccountId ?? null);
@@ -533,25 +533,70 @@ export const ContextsOverviewRow: React.FC<{
         parts = option.name.split(option.localClusterName);
     }
 
+    const metaKeyPressedRef = useModifierKeyRef("Meta");
+
     const mutedColor = useColorModeValue("gray.600", "gray.400");
     const brightColor = useColorModeValue(
         "rgba(56, 56, 56, 1)",
         "rgba(255, 255, 255, 0.92)"
     );
 
+    const selectedBg = useColorModeValue(
+        "systemAccent.100",
+        "systemAccent.800"
+    );
+
     const openContext = useOpenContext();
     const onClickLink = useCallback(() => {
-        openContext(kubeContext);
-    }, [openContext, kubeContext]);
+        openContext(kubeContext, metaKeyPressedRef.current);
+    }, [openContext, kubeContext, metaKeyPressedRef]);
+
+    const getVersion = useK8sVersionGetter({ kubeContext });
+    const [versionLoadError, setVersionLoadError] = useState<any | null>(null);
+
+    const popup = useIpcCall((ipc) => ipc.contextMenu.popup);
+    const onRightClick = useCallback(async () => {
+        const result = await popup({
+            menuTemplate: [
+                { label: "Open", actionId: "open" },
+                { label: "Copy", actionId: "copy" },
+                { label: "Reload version", actionId: "reload-version" },
+            ],
+        });
+        const actionId = result.actionId;
+        if (!actionId) {
+            return;
+        }
+        switch (actionId) {
+            case "open":
+                openContext(kubeContext, result.metaKey ?? false);
+                break;
+            case "copy":
+                navigator.clipboard.writeText(kubeContext);
+                break;
+            case "reload-version":
+                try {
+                    await getVersion();
+                    setVersionLoadError(null);
+                } catch (e: any) {
+                    setVersionLoadError(e?.message ? e.message : String(e));
+                }
+                break;
+        }
+    }, [getVersion, kubeContext, popup, setVersionLoadError]);
 
     const commonProps: TableCellProps = useMemo(
-        () => (showBottomSeparator ? {} : { borderBottom: "none" }),
-        [showBottomSeparator]
+        () => ({
+            verticalAlign: "baseline",
+            borderBottom: "none",
+        }),
+        []
     );
 
     return (
-        <Tr>
-            <Td ps={2} verticalAlign="baseline" {...commonProps}>
+        <Tr onAuxClick={onRightClick} sx={{ _hover: { bg: selectedBg } }}>
+            <Td {...commonProps} w={4} px={0}></Td>
+            <Td {...commonProps} px={2} verticalAlign="middle">
                 <Box
                     w="11px"
                     h="11px"
@@ -560,6 +605,8 @@ export const ContextsOverviewRow: React.FC<{
                     display="inline-block"
                     me={2}
                 ></Box>
+            </Td>
+            <Td ps={0} {...commonProps}>
                 <Link cursor="pointer" onClick={onClickLink} color={mutedColor}>
                     {parts.map((part, index) => {
                         if (index > 0) {
@@ -585,42 +632,29 @@ export const ContextsOverviewRow: React.FC<{
                     })}
                 </Link>
             </Td>
-            <Td ps={2} verticalAlign="baseline" {...commonProps}>
+            <Td ps={2} {...commonProps}>
                 {groupLabel}
             </Td>
-            <Td verticalAlign="baseline" {...commonProps}>
-                <ContextsOverviewVersion kubeContext={option.name} />
+            <Td {...commonProps}>
+                <ContextsOverviewVersion
+                    kubeContext={option.name}
+                    error={versionLoadError}
+                />
             </Td>
+            <Td {...commonProps} w={4} px={0}></Td>
         </Tr>
     );
 };
 
-export const ContextsOverviewVersion: React.FC<{ kubeContext: string }> = (
-    props
-) => {
-    const { kubeContext } = props;
-
-    const [error, setError] = useState<any | null>(null);
-    const getVersion = useK8sVersionGetter({ kubeContext });
+export const ContextsOverviewVersion: React.FC<{
+    kubeContext: string;
+    error?: any | null | undefined;
+}> = (props) => {
+    const { kubeContext, error } = props;
 
     const [isLoading, version] = useLastKnownK8sVersion({
         kubeContext,
     });
-
-    const popup = useIpcCall((ipc) => ipc.contextMenu.popup);
-    const onRightClick = useCallback(async () => {
-        const result = await popup({
-            menuTemplate: [{ label: "Check again", actionId: "update" }],
-        });
-        if (result.actionId === "update") {
-            try {
-                await getVersion();
-                setError(null);
-            } catch (e: any) {
-                setError(e?.message ? e.message : String(e));
-            }
-        }
-    }, [getVersion, popup, setError]);
 
     if (isLoading) {
         return null;
@@ -628,12 +662,7 @@ export const ContextsOverviewVersion: React.FC<{ kubeContext: string }> = (
 
     if (error) {
         return (
-            <Badge
-                onAuxClick={onRightClick}
-                colorScheme="red"
-                fontWeight="normal"
-                title={String(error)}
-            >
+            <Badge colorScheme="red" fontWeight="normal" title={String(error)}>
                 error
             </Badge>
         );
@@ -641,24 +670,16 @@ export const ContextsOverviewVersion: React.FC<{ kubeContext: string }> = (
 
     if (!version) {
         return (
-            <Badge
-                onAuxClick={onRightClick}
-                colorScheme="gray"
-                fontWeight="normal"
-            >
+            <Badge colorScheme="gray" fontWeight="normal">
                 unknown
             </Badge>
         );
     }
 
     return (
-        <Text
-            onAuxClick={onRightClick}
-            as="span"
-            title={`Last seen: ${version.date}`}
-        >
+        <Selectable as="span" title={`Last seen: ${version.date}`}>
             {version.version}
-        </Text>
+        </Selectable>
     );
 };
 
