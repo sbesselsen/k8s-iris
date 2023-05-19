@@ -662,7 +662,12 @@ export const ContextsOverviewVersion: React.FC<{
 
     if (error) {
         return (
-            <Badge colorScheme="red" fontWeight="normal" title={String(error)}>
+            <Badge
+                position="absolute"
+                colorScheme="red"
+                fontWeight="normal"
+                title={String(error)}
+            >
                 error
             </Badge>
         );
@@ -670,7 +675,7 @@ export const ContextsOverviewVersion: React.FC<{
 
     if (!version) {
         return (
-            <Badge colorScheme="gray" fontWeight="normal">
+            <Badge position="absolute" colorScheme="gray" fontWeight="normal">
                 unknown
             </Badge>
         );
