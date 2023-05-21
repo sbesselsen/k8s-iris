@@ -9,6 +9,7 @@ import {
 import React, {
     ChangeEvent,
     KeyboardEvent,
+    MouseEvent,
     PropsWithChildren,
     ReactNode,
     useCallback,
@@ -30,6 +31,7 @@ export type AppCommandSourceFunction = (
 export type AppCommand = {
     id: string;
     text: string;
+    detailText?: string;
     perform: () => void;
     parentId?: string;
     parentText?: string;
@@ -271,6 +273,11 @@ const AppCommandBar: React.FC = () => {
     );
 
     const buttonTextColor = useColorModeValue("black", "white");
+    const mutedColor = useColorModeValue("gray.600", "gray.400");
+
+    const onClickBar = useCallback((e: MouseEvent) => {
+        e.stopPropagation();
+    }, []);
 
     return (
         <VStack
@@ -294,6 +301,7 @@ const AppCommandBar: React.FC = () => {
                 w="400px"
                 maxWidth="100%"
                 maxHeight="calc(100vh - 40px)"
+                onClick={onClickBar}
             >
                 <Box p={2}>
                     <Input
@@ -321,7 +329,7 @@ const AppCommandBar: React.FC = () => {
                         {availableCommands.map((c) => (
                             <Button
                                 size="sm"
-                                flex="0 0 auto"
+                                flex="0 0 40px"
                                 key={c.id}
                                 isActive={selectedId === c.id}
                                 justifyContent="start"
@@ -330,8 +338,25 @@ const AppCommandBar: React.FC = () => {
                                 textColor={buttonTextColor}
                                 borderRadius={0}
                                 onClick={onClick[c.id]}
+                                sx={{ _hover: {} }}
                             >
-                                {c.text}
+                                <VStack
+                                    w="100%"
+                                    h="auto"
+                                    alignItems="stretch"
+                                    textAlign="start"
+                                    spacing={0}
+                                >
+                                    <Box>{c.text}</Box>
+                                    {c.detailText && (
+                                        <Box
+                                            textColor={mutedColor}
+                                            fontSize="xs"
+                                        >
+                                            {c.detailText}
+                                        </Box>
+                                    )}
+                                </VStack>
                             </Button>
                         ))}
                     </VStack>
@@ -382,39 +407,52 @@ async function findCommands(data: AppCommandBarData): Promise<AppCommand[]> {
 export function createCommandMatcher(
     search: string
 ): (command: AppCommand) => number {
-    const characters = [...search.replace(/\s+/, "")];
-    if (characters.length === 0) {
+    const terms = search.split(/\s+/).filter((x) => x);
+    if (terms.length === 0) {
         return () => 0;
     }
-    const regexStr = characters.map(escapeStringRegexp).join(".*?");
-    const regex = new RegExp(regexStr, "ig");
+
+    const regexes = terms.map((term) => {
+        const characters = [...term];
+        const regexStr = characters
+            .map(escapeStringRegexp)
+            .join("[\\s\\S]{0,5}?");
+        return new RegExp(regexStr, "ig");
+    });
 
     return (command) => {
         const searchText = [
             command.parentText ?? "",
             command.text,
-            // Add text twice to support cases where the user types things the wrong way around, like [cluster] prod instead of prod [cluster]
-            command.text,
+            command.detailText ?? "",
             command.searchText ?? "",
         ]
             .filter((x) => x)
             .join(" ");
-        const matches = [...searchText.matchAll(regex)];
-        if (matches.length === 0) {
+
+        const scores = regexes.map((regex) => {
+            const matches = [...searchText.matchAll(regex)];
+            if (matches.length === 0) {
+                return 0;
+            }
+            const score = Math.max(
+                ...matches.map((match) => {
+                    let score = 1;
+                    const totalMatchLength = match[0].length;
+                    const extraneousMatchLength =
+                        totalMatchLength - search.length;
+                    if (extraneousMatchLength > 0) {
+                        score /= Math.sqrt(extraneousMatchLength + 1);
+                    }
+                    return score;
+                })
+            );
+            return score;
+        });
+        if (Math.min(...scores) === 0) {
             return 0;
         }
-        const score = Math.max(
-            ...matches.map((match) => {
-                let score = 1;
-                const totalMatchLength = (match.index ?? 0) + match[0].length;
-                const extraneousMatchLength = totalMatchLength - search.length;
-                if (extraneousMatchLength > 0) {
-                    score /= Math.sqrt(extraneousMatchLength + 1);
-                }
-                return score;
-            })
-        );
-        return score;
+        return scores.reduce((x, y) => x + y, 0);
     };
 }
 
