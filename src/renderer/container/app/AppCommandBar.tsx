@@ -69,14 +69,11 @@ export function useAppCommandBar(): AppCommandBarController {
     );
 }
 
-export function useAppCommands(commands: AppCommandSource, deps: any[]) {
-    useOptionalAppCommands(commands, deps);
+export function useAppCommands(commands: AppCommandSource) {
+    useOptionalAppCommands(commands);
 }
 
-function useOptionalAppCommands(
-    commands: AppCommandSource | null | undefined,
-    deps: any[]
-) {
+function useOptionalAppCommands(commands: AppCommandSource | null | undefined) {
     const store = useStore();
 
     useEffect(() => {
@@ -99,7 +96,7 @@ function useOptionalAppCommands(
                 }));
             }
         };
-    }, [store, ...deps]);
+    }, [commands, store]);
 }
 
 export const AppCommandBarProvider: React.FC<
@@ -107,7 +104,7 @@ export const AppCommandBarProvider: React.FC<
 > = (props) => {
     const { children, commands } = props;
 
-    useOptionalAppCommands(commands, [commands]);
+    useOptionalAppCommands(commands);
 
     return (
         <>
@@ -146,6 +143,12 @@ const AppCommandBarContainer: React.FC<PropsWithChildren> = ({ children }) => {
                     key === "k" &&
                     !store.get().isVisible
                 ) {
+                    if (store.get().sources.length === 0) {
+                        console.warn(
+                            "No command sources provided for AppCommandBar"
+                        );
+                        return;
+                    }
                     store.set((v) => ({ ...v, isVisible: true }));
                 }
             },
@@ -172,6 +175,20 @@ const AppCommandBar: React.FC = () => {
     const [selectedId, setSelectedId] = useState<string | null>(null);
 
     // TODO: accessibility through aria- attributes.
+
+    const onClick = useMemo(() => {
+        return Object.fromEntries(
+            availableCommands.map((c) => [
+                c.id,
+                () => {
+                    store.set((v) => ({ ...v, search: "", isVisible: false }));
+                    setTimeout(() => {
+                        c.perform();
+                    }, 0);
+                },
+            ])
+        );
+    }, [availableCommands, store]);
 
     const onKeyDown = useCallback(
         (e: KeyboardEvent) => {
@@ -202,8 +219,15 @@ const AppCommandBar: React.FC = () => {
                 setSelectedId(newId);
                 e.preventDefault();
             }
+            if (e.key === "Enter") {
+                if (selectedId) {
+                    onClick[selectedId]?.();
+                } else if (availableCommands.length === 1) {
+                    onClick[availableCommands[0].id]();
+                }
+            }
         },
-        [availableCommands, selectedId, setSelectedId]
+        [availableCommands, onClick, selectedId, setSelectedId]
     );
 
     useEffect(() => {
@@ -265,6 +289,7 @@ const AppCommandBar: React.FC = () => {
                 overflow="hidden"
                 boxShadow="dark-lg"
                 alignItems="stretch"
+                spacing={0}
                 bg={bg}
                 w="400px"
                 maxWidth="100%"
@@ -273,6 +298,10 @@ const AppCommandBar: React.FC = () => {
                 <Box p={2}>
                     <Input
                         bg={inputBg}
+                        autoComplete="off"
+                        autoCorrect="off"
+                        autoCapitalize="off"
+                        spellCheck="false"
                         autoFocus
                         size="lg"
                         flex="0 0 auto"
@@ -291,6 +320,8 @@ const AppCommandBar: React.FC = () => {
                     >
                         {availableCommands.map((c) => (
                             <Button
+                                size="sm"
+                                flex="0 0 auto"
                                 key={c.id}
                                 isActive={selectedId === c.id}
                                 justifyContent="start"
@@ -298,6 +329,7 @@ const AppCommandBar: React.FC = () => {
                                 fontWeight="normal"
                                 textColor={buttonTextColor}
                                 borderRadius={0}
+                                onClick={onClick[c.id]}
                             >
                                 {c.text}
                             </Button>
@@ -354,8 +386,8 @@ export function createCommandMatcher(
     if (characters.length === 0) {
         return () => 0;
     }
-    const regexStr = characters.map(escapeStringRegexp).join(".*");
-    const regex = new RegExp(regexStr, "i");
+    const regexStr = characters.map(escapeStringRegexp).join(".*?");
+    const regex = new RegExp(regexStr, "ig");
 
     return (command) => {
         const searchText = [
@@ -367,16 +399,21 @@ export function createCommandMatcher(
         ]
             .filter((x) => x)
             .join(" ");
-        const match = searchText.match(regex);
-        if (!match) {
+        const matches = [...searchText.matchAll(regex)];
+        if (matches.length === 0) {
             return 0;
         }
-        let score = 1;
-        const totalMatchLength = (match.index ?? 0) + match[0].length;
-        const extraneousMatchLength = totalMatchLength - search.length;
-        if (extraneousMatchLength > 0) {
-            score /= Math.sqrt(extraneousMatchLength + 1);
-        }
+        const score = Math.max(
+            ...matches.map((match) => {
+                let score = 1;
+                const totalMatchLength = (match.index ?? 0) + match[0].length;
+                const extraneousMatchLength = totalMatchLength - search.length;
+                if (extraneousMatchLength > 0) {
+                    score /= Math.sqrt(extraneousMatchLength + 1);
+                }
+                return score;
+            })
+        );
         return score;
     };
 }
