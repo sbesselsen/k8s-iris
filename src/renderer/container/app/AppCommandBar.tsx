@@ -21,12 +21,13 @@ import escapeStringRegexp from "escape-string-regexp";
 import { useKeyListener, useModifierKeyRef } from "../../hook/keyboard";
 import { create } from "../../util/state";
 
-export type AppCommandSource = AppCommand[] | AppCommandSourceFunction;
-
-export type AppCommandSourceFunction = (
-    search: string,
-    parentId: string | null
-) => Promise<AppCommand[]>;
+export type AppCommandSource = {
+    fetchCommand(id: string): Promise<AppCommand | null>;
+    searchCommands(
+        search: string,
+        parentCommandId: string | null
+    ): Promise<AppCommand[]>;
+};
 
 export type AppCommand = {
     id: string;
@@ -34,13 +35,17 @@ export type AppCommand = {
     detailText?: string;
     perform: () => void;
     parentId?: string;
-    parentText?: string;
     icon?: ReactNode;
     searchText?: string;
 };
 
+type AugmentedAppCommand = AppCommand & {
+    isParent: boolean;
+    parent?: AppCommand;
+};
+
 type AppCommandBarData = {
-    sources: AppCommandSourceFunction[];
+    sources: AppCommandSource[];
     isVisible: boolean;
     search: string;
     parentCommandId?: string;
@@ -71,17 +76,17 @@ export function useAppCommandBar(): AppCommandBarController {
     );
 }
 
-export function useAppCommands(commands: AppCommandSource) {
+export function useAppCommands(commands: AppCommandSource | AppCommand[]) {
     useOptionalAppCommands(commands);
 }
 
-function useOptionalAppCommands(commands: AppCommandSource | null | undefined) {
+function useOptionalAppCommands(
+    commands: AppCommandSource | AppCommand[] | null | undefined
+) {
     const store = useStore();
 
     useEffect(() => {
-        const normalizedSource = commands
-            ? commandSourceFunction(commands)
-            : null;
+        const normalizedSource = commands ? commandSource(commands) : null;
         if (normalizedSource) {
             // Add command source.
             store.set((v) => ({
@@ -137,6 +142,11 @@ const AppCommandBarContainer: React.FC<PropsWithChildren> = ({ children }) => {
                         if (v.search) {
                             return { ...v, search: "" };
                         }
+                        if (v.parentCommandId) {
+                            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                            const { parentCommandId, ...vWithoutParent } = v;
+                            return vWithoutParent;
+                        }
                         return { ...v, isVisible: false };
                     });
                 } else if (
@@ -170,10 +180,11 @@ const AppCommandBar: React.FC = () => {
     const bg = useColorModeValue("white", "gray.700");
     const inputBg = useColorModeValue("gray.50", "gray.800");
 
-    const [availableCommands, setAvailableCommands] = useState<AppCommand[]>(
-        []
-    );
-
+    const [availableCommands, setAvailableCommands] = useState<
+        AugmentedAppCommand[]
+    >([]);
+    const [[isLoadingParentCommand, parentCommand], setParentCommand] =
+        useState<[boolean, AppCommand | undefined]>([true, undefined]);
     const [selectedId, setSelectedId] = useState<string | null>(null);
 
     // TODO: accessibility through aria- attributes.
@@ -183,10 +194,23 @@ const AppCommandBar: React.FC = () => {
             availableCommands.map((c) => [
                 c.id,
                 () => {
-                    store.set((v) => ({ ...v, search: "", isVisible: false }));
-                    setTimeout(() => {
-                        c.perform();
-                    }, 0);
+                    if (c.isParent) {
+                        store.set((v) => ({
+                            ...v,
+                            search: "",
+                            parentCommandId: c.id,
+                        }));
+                    } else {
+                        store.set((v) => ({
+                            ...v,
+                            parentCommandId: undefined,
+                            search: "",
+                            isVisible: false,
+                        }));
+                        setTimeout(() => {
+                            c.perform();
+                        }, 0);
+                    }
                 },
             ])
         );
@@ -233,24 +257,36 @@ const AppCommandBar: React.FC = () => {
     );
 
     useEffect(() => {
-        let prevSearch = "";
-        let prevSources: AppCommandSourceFunction[] = [];
+        let prevSearch: string | undefined = undefined;
+        let prevSources: AppCommandSource[] = [];
+        let prevParentCommandId: string | undefined = undefined;
         const listener = async (v: AppCommandBarData) => {
-            const { search, sources } = v;
-            if (search === prevSearch && sources === prevSources) {
+            const { parentCommandId, search, sources } = v;
+            if (
+                parentCommandId === prevParentCommandId &&
+                search === prevSearch &&
+                sources === prevSources
+            ) {
                 // Nothing new to search.
                 return;
             }
+            prevParentCommandId = parentCommandId;
             prevSearch = search;
             prevSources = sources;
 
             const foundCommands = await findCommands(v);
             const {
+                parentCommandId: newParentCommandId,
                 search: newSearch,
                 sources: newSources,
                 isVisible,
             } = store.get();
-            if (newSearch !== search || newSources !== sources || !isVisible) {
+            if (
+                newParentCommandId !== parentCommandId ||
+                newSearch !== search ||
+                newSources !== sources ||
+                !isVisible
+            ) {
                 // Cancel these results because they are outdated.
                 return;
             }
@@ -263,6 +299,34 @@ const AppCommandBar: React.FC = () => {
             store.unsubscribe(listener);
         };
     }, [setAvailableCommands, setSelectedId, store]);
+
+    const parentCommandId = useStoreValue((v) => v.parentCommandId);
+    useEffect(() => {
+        let isStopped = false;
+
+        if (!parentCommandId) {
+            setParentCommand([false, undefined]);
+            return;
+        }
+
+        // Load parent command.
+        setParentCommand([true, undefined]);
+        (async () => {
+            const commands = (
+                await Promise.all(
+                    store
+                        .get()
+                        .sources.map((s) => s.fetchCommand(parentCommandId))
+                )
+            ).filter((c) => c) as AppCommand[];
+            if (!isStopped) {
+                setParentCommand([false, commands[0] ?? undefined]);
+            }
+        })();
+        return () => {
+            isStopped = true;
+        };
+    }, [parentCommandId, store, setParentCommand]);
 
     const search = useStoreValue((v) => v.search);
     const onChangeSearch = useCallback(
@@ -303,6 +367,11 @@ const AppCommandBar: React.FC = () => {
                 maxHeight="calc(100vh - 40px)"
                 onClick={onClickBar}
             >
+                {parentCommandId && (
+                    <Box px={6} pt={4} pb={2} fontWeight="bold" fontSize="sm">
+                        {parentCommand?.text ?? parentCommandId}:
+                    </Box>
+                )}
                 <Box p={2}>
                     <Input
                         bg={inputBg}
@@ -347,7 +416,13 @@ const AppCommandBar: React.FC = () => {
                                     textAlign="start"
                                     spacing={0}
                                 >
-                                    <Box>{c.text}</Box>
+                                    <Box>
+                                        {!parentCommand && c.parent
+                                            ? `${c.parent.text} `
+                                            : ""}
+                                        {c.text}
+                                        {c.isParent && "..."}
+                                    </Box>
                                     {c.detailText && (
                                         <Box
                                             textColor={mutedColor}
@@ -366,42 +441,85 @@ const AppCommandBar: React.FC = () => {
     );
 };
 
-function commandSourceFunction(
-    commands: AppCommandSource
-): AppCommandSourceFunction {
-    return typeof commands === "function" ? commands : async () => commands;
+function commandSource(
+    commands: AppCommandSource | AppCommand[]
+): AppCommandSource {
+    if (!Array.isArray(commands)) {
+        return commands;
+    }
+    const commandsById = Object.fromEntries(commands.map((c) => [c.id, c]));
+    return {
+        async fetchCommand(id) {
+            return commandsById[id] ?? null;
+        },
+        async searchCommands() {
+            return commands;
+        },
+    };
 }
 
-async function findCommands(data: AppCommandBarData): Promise<AppCommand[]> {
-    const promises = data.sources.map((f) =>
-        f(data.search, data.parentCommandId ?? null)
+async function findCommands(
+    data: AppCommandBarData
+): Promise<AugmentedAppCommand[]> {
+    const promises = data.sources.map((s) =>
+        s.searchCommands(data.search, data.parentCommandId ?? null)
     );
     const commands = (await Promise.all(promises)).flatMap((c) => c);
 
+    const commandsById = Object.fromEntries(commands.map((c) => [c.id, c]));
+
+    // Add parent text to all commands.
+    const commandsWithParents = commands.map((c) => ({
+        ...c,
+        parent: c.parentId ? commandsById[c.parentId] : undefined,
+    }));
+
     // Get only commands under the current parent if a parent has been selected.
     const commandsUnderParent = data.parentCommandId
-        ? commands.filter((c) => c.parentId === data.parentCommandId)
-        : commands;
+        ? commandsWithParents.filter((c) => c.parentId === data.parentCommandId)
+        : commandsWithParents;
 
     const commandMatcher = createCommandMatcher(data.search);
 
     // Now post-filter and sort the commands.
     const commandsWithScores = commandsUnderParent.map((command) => ({
         command,
-        score: commandMatcher(command),
+        score: data.search ? commandMatcher(command) : 1,
     }));
 
-    // Filter only commands with non-zero score.
+    // Filter commands with non-zero score.
     const filteredCommandsWithScores = commandsWithScores.filter(
         ({ score }) => score > 0
     );
 
+    const filteredIds = new Set<string>([
+        ...(filteredCommandsWithScores
+            .map(({ command }) => command.id)
+            .filter((c) => c) as string[]),
+    ]);
+
+    const filteredParentIds = new Set<string>([
+        ...(filteredCommandsWithScores
+            .map(({ command }) => command.parentId)
+            .filter((c) => c) as string[]),
+    ]);
+
+    // Remove all items whose parent was also found (because in that case we are simply looking for the parent).
+    const combineToParentsCommandsWithScores =
+        filteredCommandsWithScores.filter(
+            ({ command }) =>
+                !command.parentId || !filteredIds.has(command.parentId)
+        );
+
     // Sort commands by score (descending).
-    const sortedCommandsWithScores = filteredCommandsWithScores.sort(
+    const sortedCommandsWithScores = combineToParentsCommandsWithScores.sort(
         (a, b) => b.score - a.score
     );
 
-    return sortedCommandsWithScores.map(({ command }) => command);
+    return sortedCommandsWithScores.map(({ command }) => ({
+        ...command,
+        isParent: filteredParentIds.has(command.id),
+    }));
 }
 
 export function createCommandMatcher(
@@ -422,7 +540,7 @@ export function createCommandMatcher(
 
     return (command) => {
         const searchText = [
-            command.parentText ?? "",
+            (command as AugmentedAppCommand).parent?.text ?? "",
             command.text,
             command.detailText ?? "",
             command.searchText ?? "",

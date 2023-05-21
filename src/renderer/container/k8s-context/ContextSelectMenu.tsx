@@ -92,7 +92,11 @@ function useOpenContext(): (
             function open() {
                 setAppCurrentContext(context);
 
-                setAppRoute(() => ({ ...emptyAppRoute, context }));
+                setAppRoute((r) => ({
+                    ...emptyAppRoute,
+                    isSidebarVisible: r.isSidebarVisible,
+                    context,
+                }));
             }
 
             if (requestNewWindow) {
@@ -259,16 +263,25 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
         );
 
         const commands: AppCommand[] = useMemo(() => {
-            return groupedContextOptions.flatMap(({ label, options }) =>
-                options.map((option) => ({
-                    id: `switch-context:${option.name}`,
-                    text: `Switch context to: ${option.label}`,
-                    detailText: label || undefined,
-                    perform() {
-                        openContext(option.name);
-                    },
-                }))
-            );
+            console.log("update commands");
+            return [
+                {
+                    id: "switch-context",
+                    text: "Switch context to",
+                    perform() {},
+                },
+                ...groupedContextOptions.flatMap(({ label, options }) =>
+                    options.map((option) => ({
+                        id: `switch-context:${option.name}`,
+                        text: option.label,
+                        detailText: label || undefined,
+                        parentId: "switch-context",
+                        perform() {
+                            openContext(option.name);
+                        },
+                    }))
+                ),
+            ];
         }, [groupedContextOptions, openContext]);
         useAppCommands(commands);
 
