@@ -52,6 +52,7 @@ import { useAppSearch } from "../../context/search";
 import { ScrollBox } from "../../component/main/ScrollBox";
 import { useK8sVersionGetter, useLastKnownK8sVersion } from "../../k8s/version";
 import { Selectable } from "../../component/main/Selectable";
+import { AppCommand, useAppCommands } from "../app/AppCommandBar";
 
 type ContextOption = K8sContext &
     Partial<CloudK8sContextInfo> & {
@@ -256,6 +257,20 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
                 })),
             [filteredContextOptions]
         );
+
+        const commands: AppCommand[] = useMemo(() => {
+            return groupedContextOptions.flatMap(({ label, options }) =>
+                options.map((option) => ({
+                    id: `switch-context:${option.name}`,
+                    text: `Switch context to: ${option.label}`,
+                    detailText: label || undefined,
+                    perform() {
+                        openContext(option.name);
+                    },
+                }))
+            );
+        }, [groupedContextOptions, openContext]);
+        useAppCommands(commands);
 
         const onChangeSearchInput = useCallback(
             (e: ChangeEvent<HTMLInputElement>) => {
