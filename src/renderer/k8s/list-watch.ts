@@ -123,7 +123,7 @@ export function useK8sListWatchStore<T extends K8sObject = K8sObject>(
             minUpdateCoalesceInterval,
             updateCoalesceInterval
         );
-        const lists: Array<Array<T>> = specsArray.map(() => []);
+        let lists: Array<Array<T>> = specsArray.map(() => []);
         const isLoading: boolean[] = specsArray.map(() => true);
         let isStopped = false;
 
@@ -200,13 +200,11 @@ export function useK8sListWatchStore<T extends K8sObject = K8sObject>(
                             }
                         } else {
                             // A new list.
-                            const listedIdentifiers = new Set<string>();
 
                             // Add/update resources.
                             for (const object of list.items) {
                                 const identifier =
                                     toK8sObjectIdentifierString(object);
-                                listedIdentifiers.add(identifier);
 
                                 if (!newIdentifiers.has(identifier)) {
                                     updateIdentifiers((s) => {
@@ -218,9 +216,15 @@ export function useK8sListWatchStore<T extends K8sObject = K8sObject>(
                                 });
                             }
 
+                            const allIdentifiers = new Set<string>(
+                                lists.flatMap((l) =>
+                                    l.map((i) => toK8sObjectIdentifierString(i))
+                                )
+                            );
+
                             // Remove resources that are no longer in the list.
                             for (const identifier of oldValue.identifiers) {
-                                if (!listedIdentifiers.has(identifier)) {
+                                if (!allIdentifiers.has(identifier)) {
                                     // This item is no longer in the list.
                                     updateIdentifiers((s) => {
                                         s.delete(identifier);
@@ -251,6 +255,9 @@ export function useK8sListWatchStore<T extends K8sObject = K8sObject>(
             },
             boundedUpdateCoalesceInterval
         );
+
+        // Empty the lists.
+        lists = specsArray.map(() => []);
 
         const listWatches = specsArray.map((spec, listWatchIndex) =>
             client.listWatch<T>(spec, (error, message) => {
