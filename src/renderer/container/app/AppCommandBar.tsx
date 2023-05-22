@@ -14,7 +14,7 @@ import React, {
     KeyboardEvent,
     MouseEvent,
     PropsWithChildren,
-    ReactNode,
+    ReactElement,
     useCallback,
     useEffect,
     useMemo,
@@ -39,7 +39,7 @@ export type AppCommand = {
     detailText?: string;
     perform: () => void;
     parentId?: string;
-    icon?: ReactNode;
+    icon?: ReactElement;
     searchText?: string;
 };
 
@@ -443,7 +443,11 @@ const AppCommandBar: React.FC = () => {
                             colorScheme="gray"
                             size="sm"
                         />
-                        <Text>{parentCommand?.text ?? parentCommandId}:</Text>
+                        <Text>
+                            {parentCommand?.text
+                                ? `${parentCommand.text}:`
+                                : ""}
+                        </Text>
                     </HStack>
                 )}
                 {availableCommands.length > 0 && (
@@ -465,6 +469,7 @@ const AppCommandBar: React.FC = () => {
                                 textColor={buttonTextColor}
                                 borderRadius={0}
                                 onClick={onClick[c.id]}
+                                pe="20px"
                             >
                                 <VStack
                                     w="100%"
@@ -473,15 +478,22 @@ const AppCommandBar: React.FC = () => {
                                     textAlign="start"
                                     spacing={0}
                                 >
-                                    <Box>
-                                        {!parentCommand && c.parent
-                                            ? `${c.parent.text} `
-                                            : ""}
-                                        {c.text}
-                                        {c.isParent && "..."}
-                                    </Box>
+                                    <HStack spacing={0} alignItems="stretch">
+                                        <Box w="20px" alignSelf="center">
+                                            {c.icon}
+                                        </Box>
+                                        <Box>
+                                            {!parentCommand && c.parent
+                                                ? `${c.parent.text} `
+                                                : ""}
+                                            {c.text}
+                                            {c.isParent && "..."}
+                                        </Box>
+                                    </HStack>
+
                                     {c.detailText && (
                                         <Box
+                                            ps="20px"
                                             textColor={mutedColor}
                                             fontSize="xs"
                                         >

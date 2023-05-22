@@ -263,7 +263,6 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
         );
 
         const commands: AppCommand[] = useMemo(() => {
-            console.log("update commands");
             return [
                 {
                     id: "switch-context",
@@ -276,6 +275,7 @@ export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
                         text: option.label,
                         detailText: label || undefined,
                         parentId: "switch-context",
+                        icon: <ContextIcon option={option} />,
                         perform() {
                             openContext(option.name);
                         },
@@ -441,24 +441,28 @@ const ContextMenuItem: React.FC<ContextMenuItemProps> = (props) => {
         onSelectContext(option.name);
     }, [onSelectContext, option]);
 
-    const { colorScheme } = k8sAccountIdColor(option.bestAccountId ?? null);
-
     return (
         <MenuItem
             onClick={onClick}
             fontSize="sm"
             px={4}
-            icon={
-                <Box
-                    w="11px"
-                    h="11px"
-                    borderRadius="sm"
-                    bg={colorScheme + ".500"}
-                ></Box>
-            }
+            icon={<ContextIcon option={option} />}
         >
             {option.label}
         </MenuItem>
+    );
+};
+
+const ContextIcon: React.FC<{ option: ContextOption }> = (props) => {
+    const { option } = props;
+    const { colorScheme } = k8sAccountIdColor(option.bestAccountId ?? null);
+    return (
+        <Box
+            w="11px"
+            h="11px"
+            borderRadius="sm"
+            bg={colorScheme + ".500"}
+        ></Box>
     );
 };
 
