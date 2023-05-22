@@ -290,9 +290,10 @@ export const ContextSelectMenu: React.FC<{}> = () => {
                     {isLoadingWithDelay && <Spinner />}
                     {!isLoading && (
                         <Fragment>
-                            {currentContextInfo?.localClusterName ??
-                                kubeContext ??
-                                "(no context)"}
+                            {currentContextInfo
+                                ? currentContextInfo.localClusterName ??
+                                  currentContextInfo.name
+                                : ""}
                         </Fragment>
                     )}
                 </HStack>
