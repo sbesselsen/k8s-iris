@@ -84,7 +84,7 @@ export const ClusterEventsOverview: React.FC<ClusterEventsOverviewProps> = (
         >
             {isLoadingEvents && <Spinner />}
             {!isLoadingEvents && timelineEvents.length === 0 && (
-                <Box fontSize="sm" textColor="gray">
+                <Box fontSize="sm" px={2} textColor="gray">
                     No events.
                 </Box>
             )}
