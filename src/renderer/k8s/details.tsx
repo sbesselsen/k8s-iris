@@ -98,7 +98,7 @@ function generateSetSizeDetails(
     resourceType: K8sResourceTypeIdentifier
 ): ResourceDetail[] {
     const output: ResourceDetail[] = [];
-    if (isSetLike(resourceType) && resourceType.kind !== "DaemonSet") {
+    if (isSetLike(resourceType)) {
         output.push({
             id: "resource-set-scale",
             header: "Scale",
@@ -107,41 +107,61 @@ function generateSetSizeDetails(
             widthUnits: 1,
             valueFor(resource) {
                 const r = resource as any;
-                if (r.spec?.replicas === undefined) {
-                    return null;
-                }
-                const scales: string[] = [];
-                scales.push(`target: ${r.spec?.replicas}`);
-                if (
-                    r.metadata.annotations?.[
-                        "irisapp.dev/original-replicas"
-                    ] !== undefined
-                ) {
-                    scales.push(
-                        `original: ${r.metadata.annotations["irisapp.dev/original-replicas"]}`
+                if (resource.kind === "DaemonSet") {
+                    if (r.status?.desiredNumberScheduled === undefined) {
+                        return null;
+                    }
+                    const target = r.status?.desiredNumberScheduled ?? 0;
+                    const scales: string[] = [];
+                    scales.push(`target: ${target}`);
+                    if (r.status?.numberReady !== undefined) {
+                        scales.push(`ready: ${r.status?.numberReady}`);
+                    }
+                    const current = r.status?.currentNumberScheduled ?? 0;
+                    return (
+                        <AppTooltip label={<Box>{scales.join(", ")}</Box>}>
+                            <Box>
+                                {current}/{target}
+                            </Box>
+                        </AppTooltip>
+                    );
+                } else {
+                    if (r.spec?.replicas === undefined) {
+                        return null;
+                    }
+                    const scales: string[] = [];
+                    scales.push(`target: ${r.spec?.replicas}`);
+                    if (
+                        r.metadata.annotations?.[
+                            "irisapp.dev/original-replicas"
+                        ] !== undefined
+                    ) {
+                        scales.push(
+                            `original: ${r.metadata.annotations["irisapp.dev/original-replicas"]}`
+                        );
+                    }
+                    if (r.status?.readyReplicas !== undefined) {
+                        scales.push(`ready: ${r.status?.readyReplicas}`);
+                    }
+                    if (r.status?.unavailableReplicas !== undefined) {
+                        scales.push(
+                            `unavailable: ${r.status?.unavailableReplicas}`
+                        );
+                    }
+                    const current =
+                        (r.status?.replicas ?? 0) -
+                        (r.status?.unavailableReplicas ?? 0);
+                    if (r.status?.replicas !== undefined) {
+                        scales.push(`total: ${r.status?.replicas}`);
+                    }
+                    return (
+                        <AppTooltip label={<Box>{scales.join(", ")}</Box>}>
+                            <Box>
+                                {current ?? 0}/{r.spec?.replicas ?? 0}
+                            </Box>
+                        </AppTooltip>
                     );
                 }
-                if (r.status?.readyReplicas !== undefined) {
-                    scales.push(`ready: ${r.status?.readyReplicas}`);
-                }
-                if (r.status?.unavailableReplicas !== undefined) {
-                    scales.push(
-                        `unavailable: ${r.status?.unavailableReplicas}`
-                    );
-                }
-                const current =
-                    (r.status?.replicas ?? 0) -
-                    (r.status?.unavailableReplicas ?? 0);
-                if (r.status?.replicas !== undefined) {
-                    scales.push(`total: ${r.status?.replicas}`);
-                }
-                return (
-                    <AppTooltip label={<Box>{scales.join(", ")}</Box>}>
-                        <Box>
-                            {current ?? 0}/{r.spec?.replicas ?? 0}
-                        </Box>
-                    </AppTooltip>
-                );
             },
         });
     }
