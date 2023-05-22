@@ -137,6 +137,10 @@ export function createKvDiskStore(options: KvDiskStoreOptions): KvDiskStore {
             onChange(values[key]);
             return {
                 stop() {
+                    if (!subscribers[key]) {
+                        // Already stopped.
+                        return;
+                    }
                     subscribers[key] = subscribers[key].filter(
                         (s) => s !== onChange
                     );
