@@ -49,7 +49,7 @@ export function useK8sListWatch<T extends K8sObject = K8sObject>(
             loadingValue
         );
 
-    const store = useK8sListWatchStore<T>(spec, opts, deps);
+    const store = useK8sListWatchStore<T>(spec, opts, [kubeContext, ...deps]);
 
     useEffect(() => {
         const listener = (v: K8sListWatchStoreValue<T>) => {
@@ -125,11 +125,15 @@ export function useK8sListWatchStore<T extends K8sObject = K8sObject>(
         );
         const lists: Array<Array<T>> = specsArray.map(() => []);
         const isLoading: boolean[] = specsArray.map(() => true);
+        let isStopped = false;
 
         const updateStore = coalesceValues(
             (
                 messages: Array<K8sObjectListWatcherMessage<T> | { error: any }>
             ) => {
+                if (isStopped) {
+                    return;
+                }
                 if (messages.length === 0) {
                     return;
                 }
@@ -196,9 +200,14 @@ export function useK8sListWatchStore<T extends K8sObject = K8sObject>(
                             }
                         } else {
                             // A new list.
+                            const listedIdentifiers = new Set<string>();
+
+                            // Add/update resources.
                             for (const object of list.items) {
                                 const identifier =
                                     toK8sObjectIdentifierString(object);
+                                listedIdentifiers.add(identifier);
+
                                 if (!newIdentifiers.has(identifier)) {
                                     updateIdentifiers((s) => {
                                         s.add(identifier);
@@ -207,6 +216,19 @@ export function useK8sListWatchStore<T extends K8sObject = K8sObject>(
                                 updateResources((r) => {
                                     r[identifier] = object;
                                 });
+                            }
+
+                            // Remove resources that are no longer in the list.
+                            for (const identifier of oldValue.identifiers) {
+                                if (!listedIdentifiers.has(identifier)) {
+                                    // This item is no longer in the list.
+                                    updateIdentifiers((s) => {
+                                        s.delete(identifier);
+                                    });
+                                    updateResources((r) => {
+                                        delete r[identifier];
+                                    });
+                                }
                             }
                         }
                     }
@@ -254,6 +276,9 @@ export function useK8sListWatchStore<T extends K8sObject = K8sObject>(
             })
         );
         return () => {
+            // Don't send out any more coalesced updates.
+            isStopped = true;
+
             // Stop all the listWatches.
             listWatches.forEach((l) => l.stop());
         };
