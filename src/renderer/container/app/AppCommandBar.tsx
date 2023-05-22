@@ -63,17 +63,24 @@ const { useStore, useStoreValue } = create<AppCommandBarData>({
 });
 
 export type AppCommandBarController = {
-    toggle(visible?: boolean): void;
+    toggle(options?: {
+        isVisible?: boolean;
+        search?: string;
+        parentCommandId?: string;
+    }): void;
 };
 
 export function useAppCommandBar(): AppCommandBarController {
     const store = useStore();
     return useMemo(
         () => ({
-            toggle(visible = true) {
+            toggle(options = {}) {
                 store.set((v) => ({
                     ...v,
-                    isVisible: visible,
+                    breadcrumbCommandIds: undefined,
+                    parentCommandId: undefined,
+                    isVisible: true,
+                    ...options,
                 }));
             },
         }),
@@ -149,22 +156,27 @@ const AppCommandBarContainer: React.FC<PropsWithChildren> = ({ children }) => {
                         }
                         if (v.parentCommandId) {
                             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                            const { parentCommandId, ...newV } = v;
-                            if (
-                                v.breadcrumbCommandIds &&
-                                v.breadcrumbCommandIds.length > 0
-                            ) {
-                                const breadcrumbCommandIds = [
+                            const newV = { ...v };
+                            if (!v.breadcrumbCommandIds) {
+                                // Nothing to go back to. Clear out.
+                                return {
+                                    ...v,
+                                    search: "",
+                                    parentCommandId: undefined,
+                                    isVisible: false,
+                                };
+                            }
+                            if (v.breadcrumbCommandIds.length > 0) {
+                                // Pop one level up.
+                                newV.breadcrumbCommandIds = [
                                     ...v.breadcrumbCommandIds,
                                 ];
                                 (newV as AppCommandBarData).parentCommandId =
-                                    breadcrumbCommandIds.pop();
-                                if (breadcrumbCommandIds.length > 0) {
-                                    newV.breadcrumbCommandIds =
-                                        breadcrumbCommandIds;
-                                } else {
-                                    delete newV.breadcrumbCommandIds;
-                                }
+                                    newV.breadcrumbCommandIds.pop();
+                            } else {
+                                // Go to top level.
+                                delete newV.parentCommandId;
+                                delete newV.breadcrumbCommandIds;
                             }
                             return newV;
                         }
@@ -195,7 +207,13 @@ const AppCommandBarContainer: React.FC<PropsWithChildren> = ({ children }) => {
 const AppCommandBar: React.FC = () => {
     const store = useStore();
     const onClickBackground = useCallback(() => {
-        store.set((v) => ({ ...v, isVisible: false }));
+        store.set((v) => ({
+            ...v,
+            search: "",
+            parentCommandId: undefined,
+            breadcrumbCommandIds: undefined,
+            isVisible: false,
+        }));
     }, [store]);
 
     const bg = useColorModeValue("white", "gray.700");
@@ -223,13 +241,13 @@ const AppCommandBar: React.FC = () => {
                                 search: "",
                                 parentCommandId: c.id,
                             };
-                            if (v.parentCommandId) {
-                                // Add to the breadcrumb.
-                                newV.breadcrumbCommandIds = [
-                                    ...(v.breadcrumbCommandIds ?? []),
-                                    v.parentCommandId,
-                                ];
-                            }
+                            // Add to the breadcrumb.
+                            newV.breadcrumbCommandIds = [
+                                ...(v.breadcrumbCommandIds ?? []),
+                                ...(v.parentCommandId
+                                    ? [v.parentCommandId]
+                                    : []),
+                            ];
                             return newV;
                         });
                     } else {
@@ -378,20 +396,28 @@ const AppCommandBar: React.FC = () => {
     const onClickBack = useCallback(() => {
         store.set((v) => {
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const { parentCommandId, ...newV } = v;
-            if (v.breadcrumbCommandIds && v.breadcrumbCommandIds.length > 0) {
-                const breadcrumbCommandIds = [...v.breadcrumbCommandIds];
+            const newV = { ...v };
+            if (!v.breadcrumbCommandIds) {
+                // Nothing to go back to. Clear out.
+                return { ...v, search: "", isVisible: false };
+            }
+            if (v.breadcrumbCommandIds.length > 0) {
+                // Pop one level up.
+                newV.breadcrumbCommandIds = [...v.breadcrumbCommandIds];
                 (newV as AppCommandBarData).parentCommandId =
-                    breadcrumbCommandIds.pop();
-                if (breadcrumbCommandIds.length > 0) {
-                    newV.breadcrumbCommandIds = breadcrumbCommandIds;
-                } else {
-                    delete newV.breadcrumbCommandIds;
-                }
+                    newV.breadcrumbCommandIds.pop();
+            } else {
+                // Go to top level.
+                delete newV.parentCommandId;
+                delete newV.breadcrumbCommandIds;
             }
             return newV;
         });
     }, [store]);
+
+    const hasBreadcrumb = useStoreValue(
+        (v) => v.breadcrumbCommandIds !== undefined
+    );
 
     return (
         <VStack
@@ -434,15 +460,18 @@ const AppCommandBar: React.FC = () => {
                     />
                 </Box>
                 {parentCommandId && (
-                    <HStack px={2} py={2} fontWeight="bold" fontSize="md">
-                        <IconButton
-                            icon={<ArrowLeftIcon />}
-                            aria-label="Back"
-                            onClick={onClickBack}
-                            variant="ghost"
-                            colorScheme="gray"
-                            size="sm"
-                        />
+                    <HStack px={3} py={2} fontWeight="bold" fontSize="md">
+                        {hasBreadcrumb && (
+                            <IconButton
+                                icon={<ArrowLeftIcon />}
+                                aria-label="Back"
+                                onClick={onClickBack}
+                                variant="ghost"
+                                colorScheme="gray"
+                                size="sm"
+                                ms={-1}
+                            />
+                        )}
                         <Text>
                             {parentCommand?.text
                                 ? `${parentCommand.text}:`

@@ -2,13 +2,10 @@ import {
     Badge,
     Box,
     Button,
+    ButtonGroup,
     HStack,
+    IconButton,
     Link,
-    Menu,
-    MenuButton,
-    MenuGroup,
-    MenuItem,
-    MenuList,
     Spinner,
     Table,
     TableCellProps,
@@ -19,22 +16,18 @@ import {
     Thead,
     Tr,
     useColorModeValue,
-    useDisclosure,
     useToken,
 } from "@chakra-ui/react";
-import React, {
-    ChangeEvent,
-    Fragment,
-    useCallback,
-    useMemo,
-    useState,
-} from "react";
-import { MenuInput } from "../../component/MenuInput";
+import React, { Fragment, useCallback, useMemo, useState } from "react";
 import { useOptionalK8sContext } from "../../context/k8s-context";
 import { useIpcCall } from "../../hook/ipc";
-import { useAppRouteGetter, useAppRouteSetter } from "../../context/route";
+import {
+    useAppRoute,
+    useAppRouteGetter,
+    useAppRouteSetter,
+} from "../../context/route";
 import { useModifierKeyRef } from "../../hook/keyboard";
-import { ChevronDownIcon, InfoOutlineIcon } from "@chakra-ui/icons";
+import { ChevronDownIcon, HamburgerIcon } from "@chakra-ui/icons";
 import { K8sContext } from "../../../common/k8s/client";
 import { CloudK8sContextInfo } from "../../../common/cloud/k8s";
 import { useK8sContextsInfo } from "../../hook/k8s-contexts-info";
@@ -46,13 +39,16 @@ import { k8sAccountIdColor } from "../../util/k8s-context-color";
 import { emptyAppRoute } from "../../../common/route/app-route";
 import { useAppEditorsStore } from "../../context/editors";
 import { useDialog } from "../../hook/dialog";
-import { useWindowFocus } from "../../hook/window-focus";
 import { usePersistentState } from "../../hook/persistent-state";
 import { useAppSearch } from "../../context/search";
 import { ScrollBox } from "../../component/main/ScrollBox";
 import { useK8sVersionGetter, useLastKnownK8sVersion } from "../../k8s/version";
 import { Selectable } from "../../component/main/Selectable";
-import { AppCommand, useAppCommands } from "../app/AppCommandBar";
+import {
+    AppCommand,
+    useAppCommandBar,
+    useAppCommands,
+} from "../app/AppCommandBar";
 
 type ContextOption = K8sContext &
     Partial<CloudK8sContextInfo> & {
@@ -146,310 +142,158 @@ function useOpenContext(): (
     );
 }
 
-export const ContextSelectMenu = React.forwardRef<HTMLButtonElement, {}>(
-    (_props, ref) => {
-        const kubeContext = useOptionalK8sContext();
-        const getAppRoute = useAppRouteGetter();
-        const setAppRoute = useAppRouteSetter();
+export const ContextSelectMenu: React.FC<{}> = () => {
+    const kubeContext = useOptionalK8sContext();
+    const getAppRoute = useAppRouteGetter();
+    const setAppRoute = useAppRouteSetter();
 
-        const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
+    const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
 
-        const metaKeyPressedRef = useModifierKeyRef("Meta");
+    const metaKeyPressedRef = useModifierKeyRef("Meta");
 
-        const [searchValue, setSearchValue] = useState("");
+    const [isLoading, contextsInfo] = useK8sContextsInfo();
+    const isLoadingWithDelay = useWithDelay(isLoading, 1000);
 
-        const {
-            isOpen,
-            onOpen: onDisclosureOpen,
-            onClose: onDisclosureClose,
-        } = useDisclosure();
+    const openContext = useOpenContext();
 
-        const [isLoading, contextsInfo] = useK8sContextsInfo();
-        const isLoadingWithDelay = useWithDelay(isLoading, 1000);
-
-        const onOpen = useCallback(() => {
-            onDisclosureOpen();
-        }, [onDisclosureOpen]);
-
-        const onClose = useCallback(() => {
-            setSearchValue("");
-            onDisclosureClose();
-        }, [onDisclosureClose, setSearchValue]);
-
-        const openContext = useOpenContext();
-
-        const onSelectContext = useCallback(
-            (context: string) => {
-                openContext(context, metaKeyPressedRef.current);
-                onClose();
-            },
-            [metaKeyPressedRef, openContext, onClose]
-        );
-
-        const onClickList = useCallback(() => {
-            if (metaKeyPressedRef.current) {
-                createWindow({
-                    route: {
-                        ...emptyAppRoute,
-                        menuItem: "contexts",
-                    },
-                });
-            } else {
-                setAppRoute((route) => ({
-                    ...route,
-                    activeEditor: null,
+    const onClickList = useCallback(() => {
+        if (metaKeyPressedRef.current) {
+            createWindow({
+                route: {
+                    ...emptyAppRoute,
                     menuItem: "contexts",
-                }));
-            }
-            onClose();
-        }, [
-            createWindow,
-            onClose,
-            getAppRoute,
-            metaKeyPressedRef,
-            setAppRoute,
-        ]);
-
-        const contextOptions: ContextOption[] = useMemo(
-            () =>
-                contextsInfo?.map((context) => ({
-                    ...context,
-                    ...(context.cloudInfo ?? null),
-                    bestAccountId: context.cloudInfo?.accounts?.[0].accountId,
-                    bestAccountName:
-                        context.cloudInfo?.accounts?.[0].accountName,
-                    value: context.name,
-                    label: context.cloudInfo?.localClusterName ?? context.name,
-                })) ?? [],
-            [contextsInfo]
-        );
-
-        const currentContextInfo = useMemo(
-            () =>
-                contextOptions?.find((option) => option.value === kubeContext),
-            [contextOptions, kubeContext]
-        );
-
-        const filteredContextOptions = useMemo(
-            () =>
-                contextOptions.filter((option) =>
-                    filterOption(option, searchValue)
-                ),
-            [contextOptions, searchValue]
-        );
-
-        const groupedContextOptions = useMemo(
-            () =>
-                groupByKeys(
-                    filteredContextOptions,
-                    [
-                        "cloudProvider",
-                        "cloudService",
-                        "bestAccountName",
-                        "bestAccountId",
-                        "region",
-                    ],
-                    (_, a, b) => k8sSmartCompare(a, b)
-                ).map(([group, contexts]) => ({
-                    label: groupLabel(group),
-                    options: contexts.sort((a, b) =>
-                        k8sSmartCompare(
-                            a.localClusterName ?? a.name,
-                            b.localClusterName ?? b.name
-                        )
-                    ),
-                })),
-            [filteredContextOptions]
-        );
-
-        const commands: AppCommand[] = useMemo(() => {
-            return [
-                {
-                    id: "switch-context",
-                    text: "Switch context to",
-                    perform() {},
                 },
-                ...groupedContextOptions.flatMap(({ label, options }) =>
-                    options.map((option) => ({
-                        id: `switch-context:${option.name}`,
-                        text: option.label,
-                        detailText: label || undefined,
-                        parentId: "switch-context",
-                        icon: <ContextIcon option={option} />,
-                        perform() {
-                            openContext(option.name);
-                        },
-                    }))
-                ),
-            ];
-        }, [groupedContextOptions, openContext]);
-        useAppCommands(commands);
+            });
+        } else {
+            setAppRoute((route) => ({
+                ...route,
+                activeEditor: null,
+                menuItem: "contexts",
+            }));
+        }
+    }, [createWindow, getAppRoute, metaKeyPressedRef, setAppRoute]);
+    const commandBar = useAppCommandBar();
 
-        const onChangeSearchInput = useCallback(
-            (e: ChangeEvent<HTMLInputElement>) => {
-                setSearchValue(e.target.value);
-            },
-            [setSearchValue]
-        );
+    const onClickContext = useCallback(() => {
+        commandBar.toggle({
+            isVisible: true,
+            parentCommandId: "switch-context",
+            search: "",
+        });
+    }, [commandBar]);
 
-        const onPressSearchEnter = useCallback(() => {
-            if (filteredContextOptions.length === 1) {
-                onSelectContext(filteredContextOptions[0].name);
-            }
-        }, [filteredContextOptions, onSelectContext]);
-
-        const popupSearchPlaceholderColor = useColorModeValue(
-            "gray.500",
-            "gray.400"
-        );
-
-        const focusBoxShadow = useToken("shadows", "outline");
-        const isWindowFocused = useWindowFocus();
-
-        return (
-            <Menu
-                isOpen={isOpen && isWindowFocused}
-                onOpen={onOpen}
-                onClose={onClose}
-                matchWidth={true}
-                orientation="horizontal"
-                gutter={1}
-            >
-                <MenuButton
-                    as={Button}
-                    rightIcon={<ChevronDownIcon />}
-                    width="100%"
-                    textAlign="start"
-                    colorScheme="contextClue"
-                    bg="contextClue.500"
-                    textColor="white"
-                    size="sm"
-                    flex="1 0 0"
-                    _active={{
-                        bg: "",
-                    }}
-                    _focus={{}}
-                    _focusVisible={{
-                        boxShadow: focusBoxShadow,
-                    }}
-                    ref={ref}
-                >
-                    <HStack h="100%" alignItems="center" isTruncated>
-                        {isLoadingWithDelay && <Spinner />}
-                        {!isLoading && (
-                            <Fragment>
-                                {currentContextInfo?.localClusterName ??
-                                    kubeContext ??
-                                    "(no context)"}
-                            </Fragment>
-                        )}
-                    </HStack>
-                </MenuButton>
-                <MenuList
-                    maxHeight="calc(100vh - 100px)"
-                    overflowY="scroll"
-                    boxShadow="xl"
-                    zIndex={40}
-                >
-                    <MenuInput
-                        placeholder="Search"
-                        value={searchValue}
-                        onChange={onChangeSearchInput}
-                        onPressEnter={onPressSearchEnter}
-                        size="sm"
-                        borderRadius="md"
-                        bg="rgba(0, 0, 0, 0.1)"
-                        _placeholder={{
-                            textColor: popupSearchPlaceholderColor,
-                        }}
-                        border="0"
-                        mb={2}
-                        autoCapitalize="off"
-                        autoCorrect="off"
-                        autoComplete="off"
-                        spellCheck="false"
-                    />
-                    {!searchValue && (
-                        <MenuItem
-                            onClick={onClickList}
-                            fontSize="sm"
-                            px={4}
-                            icon={<InfoOutlineIcon />}
-                        >
-                            List all contexts
-                        </MenuItem>
-                    )}
-                    {isLoadingWithDelay && (
-                        <Box p={4}>
-                            <Spinner />
-                        </Box>
-                    )}
-                    {groupedContextOptions.map((group, index) => (
-                        <ContextMenuGroup
-                            group={group}
-                            key={index}
-                            onSelectContext={onSelectContext}
-                        />
-                    ))}
-                </MenuList>
-            </Menu>
-        );
-    }
-);
-
-type ContextMenuGroupProps = {
-    group: {
-        label: string;
-        options: ContextOption[];
-    };
-    onSelectContext: (context: string) => void;
-};
-
-const ContextMenuGroup: React.FC<ContextMenuGroupProps> = (props) => {
-    const { group, onSelectContext } = props;
-    return (
-        <Fragment>
-            <MenuGroup
-                title={group.label}
-                pt={0}
-                mb={0}
-                color="gray.500"
-                fontWeight="semibold"
-                fontSize="xs"
-                textTransform="uppercase"
-            >
-                {group.options.map((contextOption) => (
-                    <ContextMenuItem
-                        key={contextOption.name}
-                        option={contextOption}
-                        onSelectContext={onSelectContext}
-                    />
-                ))}
-            </MenuGroup>
-        </Fragment>
+    const contextOptions: ContextOption[] = useMemo(
+        () =>
+            contextsInfo?.map((context) => ({
+                ...context,
+                ...(context.cloudInfo ?? null),
+                bestAccountId: context.cloudInfo?.accounts?.[0].accountId,
+                bestAccountName: context.cloudInfo?.accounts?.[0].accountName,
+                value: context.name,
+                label: context.cloudInfo?.localClusterName ?? context.name,
+            })) ?? [],
+        [contextsInfo]
     );
-};
 
-type ContextMenuItemProps = {
-    option: ContextOption;
-    onSelectContext: (context: string) => void;
-};
+    const currentContextInfo = useMemo(
+        () => contextOptions?.find((option) => option.value === kubeContext),
+        [contextOptions, kubeContext]
+    );
 
-const ContextMenuItem: React.FC<ContextMenuItemProps> = (props) => {
-    const { onSelectContext, option } = props;
-    const onClick = useCallback(() => {
-        onSelectContext(option.name);
-    }, [onSelectContext, option]);
+    const groupedContextOptions = useMemo(
+        () =>
+            groupByKeys(
+                contextOptions,
+                [
+                    "cloudProvider",
+                    "cloudService",
+                    "bestAccountName",
+                    "bestAccountId",
+                    "region",
+                ],
+                (_, a, b) => k8sSmartCompare(a, b)
+            ).map(([group, contexts]) => ({
+                label: groupLabel(group),
+                options: contexts.sort((a, b) =>
+                    k8sSmartCompare(
+                        a.localClusterName ?? a.name,
+                        b.localClusterName ?? b.name
+                    )
+                ),
+            })),
+        [contextOptions]
+    );
+
+    const commands: AppCommand[] = useMemo(() => {
+        return [
+            {
+                id: "switch-context",
+                text: "Switch context to",
+                perform() {},
+            },
+            ...groupedContextOptions.flatMap(({ label, options }) =>
+                options.map((option) => ({
+                    id: `switch-context:${option.name}`,
+                    text: option.label,
+                    detailText: label || undefined,
+                    parentId: "switch-context",
+                    icon: <ContextIcon option={option} />,
+                    perform() {
+                        openContext(option.name);
+                    },
+                }))
+            ),
+        ];
+    }, [groupedContextOptions, openContext]);
+    useAppCommands(commands);
+
+    const focusBoxShadow = useToken("shadows", "outline");
+
+    const listIsActive = useAppRoute((r) => r.menuItem === "contexts");
 
     return (
-        <MenuItem
-            onClick={onClick}
-            fontSize="sm"
-            px={4}
-            icon={<ContextIcon option={option} />}
-        >
-            {option.label}
-        </MenuItem>
+        <ButtonGroup width="100%" isAttached>
+            <IconButton
+                size="sm"
+                icon={<HamburgerIcon />}
+                aria-label="List all contexts"
+                title="List all contexts"
+                onClick={onClickList}
+                colorScheme="contextClue"
+                isActive={listIsActive}
+            />
+
+            <Button
+                as={Button}
+                rightIcon={<ChevronDownIcon />}
+                width="100%"
+                textAlign="start"
+                colorScheme="contextClue"
+                bg="contextClue.500"
+                textColor="white"
+                size="sm"
+                flex="1 0 0"
+                _active={{
+                    bg: "",
+                }}
+                _focus={{}}
+                _focusVisible={{
+                    boxShadow: focusBoxShadow,
+                }}
+                onClick={onClickContext}
+            >
+                <HStack h="100%" w="100%" alignItems="center" isTruncated>
+                    {isLoadingWithDelay && <Spinner />}
+                    {!isLoading && (
+                        <Fragment>
+                            {currentContextInfo?.localClusterName ??
+                                kubeContext ??
+                                "(no context)"}
+                        </Fragment>
+                    )}
+                </HStack>
+            </Button>
+        </ButtonGroup>
     );
 };
 

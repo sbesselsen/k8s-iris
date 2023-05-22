@@ -125,7 +125,6 @@ export const RootAppUI: React.FunctionComponent = () => {
     const [namespacesError, setNamespacesError] = useState<Error | undefined>();
 
     const searchBoxRef = useRef<HTMLInputElement>();
-    const contextSelectMenuRef = useRef<HTMLButtonElement>();
 
     const ctrlKeyRef = useModifierKeyRef("Control");
     const metaKeyRef = useModifierKeyRef("Meta");
@@ -139,21 +138,6 @@ export const RootAppUI: React.FunctionComponent = () => {
                     key === "f"
                 ) {
                     searchBoxRef.current?.focus();
-                }
-                if (
-                    eventType === "keydown" &&
-                    metaKeyRef.current &&
-                    shiftKeyRef.current &&
-                    key === "o"
-                ) {
-                    contextSelectMenuRef.current?.click();
-                }
-                if (
-                    eventType === "keydown" &&
-                    ctrlKeyRef.current &&
-                    key === "r"
-                ) {
-                    contextSelectMenuRef.current?.click();
                 }
                 if (
                     eventType === "keydown" &&
@@ -298,11 +282,7 @@ export const RootAppUI: React.FunctionComponent = () => {
                 }
                 title={
                     <HStack p={2} spacing="2px" maxWidth="300px" mx="auto">
-                        <ContextSelectMenu
-                            ref={
-                                contextSelectMenuRef as MutableRefObject<HTMLButtonElement>
-                            }
-                        />
+                        <ContextSelectMenu />
                     </HStack>
                 }
                 search={
