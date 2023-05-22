@@ -1,8 +1,11 @@
 import {
     Box,
     Button,
+    HStack,
+    IconButton,
     Input,
     Portal,
+    Text,
     useColorModeValue,
     VStack,
 } from "@chakra-ui/react";
@@ -20,6 +23,7 @@ import React, {
 import escapeStringRegexp from "escape-string-regexp";
 import { useKeyListener, useModifierKeyRef } from "../../hook/keyboard";
 import { create } from "../../util/state";
+import { ArrowLeftIcon } from "@chakra-ui/icons";
 
 export type AppCommandSource = {
     fetchCommand(id: string): Promise<AppCommand | null>;
@@ -49,6 +53,7 @@ type AppCommandBarData = {
     isVisible: boolean;
     search: string;
     parentCommandId?: string;
+    breadcrumbCommandIds?: string[];
 };
 
 const { useStore, useStoreValue } = create<AppCommandBarData>({
@@ -144,8 +149,24 @@ const AppCommandBarContainer: React.FC<PropsWithChildren> = ({ children }) => {
                         }
                         if (v.parentCommandId) {
                             // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                            const { parentCommandId, ...vWithoutParent } = v;
-                            return vWithoutParent;
+                            const { parentCommandId, ...newV } = v;
+                            if (
+                                v.breadcrumbCommandIds &&
+                                v.breadcrumbCommandIds.length > 0
+                            ) {
+                                const breadcrumbCommandIds = [
+                                    ...v.breadcrumbCommandIds,
+                                ];
+                                (newV as AppCommandBarData).parentCommandId =
+                                    breadcrumbCommandIds.pop();
+                                if (breadcrumbCommandIds.length > 0) {
+                                    newV.breadcrumbCommandIds =
+                                        breadcrumbCommandIds;
+                                } else {
+                                    delete newV.breadcrumbCommandIds;
+                                }
+                            }
+                            return newV;
                         }
                         return { ...v, isVisible: false };
                     });
@@ -183,8 +204,9 @@ const AppCommandBar: React.FC = () => {
     const [availableCommands, setAvailableCommands] = useState<
         AugmentedAppCommand[]
     >([]);
-    const [[isLoadingParentCommand, parentCommand], setParentCommand] =
-        useState<[boolean, AppCommand | undefined]>([true, undefined]);
+    const [[, parentCommand], setParentCommand] = useState<
+        [boolean, AppCommand | undefined]
+    >([true, undefined]);
     const [selectedId, setSelectedId] = useState<string | null>(null);
 
     // TODO: accessibility through aria- attributes.
@@ -195,11 +217,21 @@ const AppCommandBar: React.FC = () => {
                 c.id,
                 () => {
                     if (c.isParent) {
-                        store.set((v) => ({
-                            ...v,
-                            search: "",
-                            parentCommandId: c.id,
-                        }));
+                        store.set((v) => {
+                            const newV: AppCommandBarData = {
+                                ...v,
+                                search: "",
+                                parentCommandId: c.id,
+                            };
+                            if (v.parentCommandId) {
+                                // Add to the breadcrumb.
+                                newV.breadcrumbCommandIds = [
+                                    ...(v.breadcrumbCommandIds ?? []),
+                                    v.parentCommandId,
+                                ];
+                            }
+                            return newV;
+                        });
                     } else {
                         store.set((v) => ({
                             ...v,
@@ -343,6 +375,24 @@ const AppCommandBar: React.FC = () => {
         e.stopPropagation();
     }, []);
 
+    const onClickBack = useCallback(() => {
+        store.set((v) => {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            const { parentCommandId, ...newV } = v;
+            if (v.breadcrumbCommandIds && v.breadcrumbCommandIds.length > 0) {
+                const breadcrumbCommandIds = [...v.breadcrumbCommandIds];
+                (newV as AppCommandBarData).parentCommandId =
+                    breadcrumbCommandIds.pop();
+                if (breadcrumbCommandIds.length > 0) {
+                    newV.breadcrumbCommandIds = breadcrumbCommandIds;
+                } else {
+                    delete newV.breadcrumbCommandIds;
+                }
+            }
+            return newV;
+        });
+    }, [store]);
+
     return (
         <VStack
             position="fixed"
@@ -367,11 +417,6 @@ const AppCommandBar: React.FC = () => {
                 maxHeight="calc(100vh - 40px)"
                 onClick={onClickBar}
             >
-                {parentCommandId && (
-                    <Box px={6} pt={4} pb={2} fontWeight="bold" fontSize="sm">
-                        {parentCommand?.text ?? parentCommandId}:
-                    </Box>
-                )}
                 <Box p={2}>
                     <Input
                         bg={inputBg}
@@ -388,6 +433,19 @@ const AppCommandBar: React.FC = () => {
                         onKeyDown={onKeyDown}
                     />
                 </Box>
+                {parentCommandId && (
+                    <HStack px={2} py={2} fontWeight="bold" fontSize="md">
+                        <IconButton
+                            icon={<ArrowLeftIcon />}
+                            aria-label="Back"
+                            onClick={onClickBack}
+                            variant="ghost"
+                            colorScheme="gray"
+                            size="sm"
+                        />
+                        <Text>{parentCommand?.text ?? parentCommandId}:</Text>
+                    </HStack>
+                )}
                 {availableCommands.length > 0 && (
                     <VStack
                         flex="1 1 100%"
@@ -407,7 +465,6 @@ const AppCommandBar: React.FC = () => {
                                 textColor={buttonTextColor}
                                 borderRadius={0}
                                 onClick={onClick[c.id]}
-                                sx={{ _hover: {} }}
                             >
                                 <VStack
                                     w="100%"
