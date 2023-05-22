@@ -261,6 +261,10 @@ export const ContextSelectMenu: React.FC<{}> = () => {
                 onClick={onClickList}
                 colorScheme="contextClue"
                 isActive={listIsActive}
+                _focus={{}}
+                _focusVisible={{
+                    boxShadow: focusBoxShadow,
+                }}
             />
 
             <Button

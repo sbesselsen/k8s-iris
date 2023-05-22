@@ -18,6 +18,7 @@ import React, {
     useCallback,
     useEffect,
     useMemo,
+    useRef,
     useState,
 } from "react";
 import escapeStringRegexp from "escape-string-regexp";
@@ -227,6 +228,8 @@ const AppCommandBar: React.FC = () => {
     >([true, undefined]);
     const [selectedId, setSelectedId] = useState<string | null>(null);
 
+    const commandsContainerRef = useRef<HTMLDivElement | null>(null);
+
     // TODO: accessibility through aria- attributes.
 
     const onClick = useMemo(() => {
@@ -419,6 +422,16 @@ const AppCommandBar: React.FC = () => {
         (v) => v.breadcrumbCommandIds !== undefined
     );
 
+    useEffect(() => {
+        commandsContainerRef.current
+            ?.querySelectorAll("*[data-active]")
+            .forEach((b) => {
+                b.scrollIntoView({
+                    block: "nearest",
+                });
+            });
+    }, [commandsContainerRef, selectedId]);
+
     return (
         <VStack
             position="fixed"
@@ -485,6 +498,7 @@ const AppCommandBar: React.FC = () => {
                         alignItems="stretch"
                         overflowY="scroll"
                         spacing={0}
+                        ref={commandsContainerRef}
                     >
                         {availableCommands.map((c) => (
                             <Button
@@ -523,7 +537,11 @@ const AppCommandBar: React.FC = () => {
                                     {c.detailText && (
                                         <Box
                                             ps="20px"
-                                            textColor={mutedColor}
+                                            textColor={
+                                                selectedId === c.id
+                                                    ? "white"
+                                                    : mutedColor
+                                            }
                                             fontSize="xs"
                                         >
                                             {c.detailText}
