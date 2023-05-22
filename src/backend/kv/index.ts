@@ -95,15 +95,23 @@ export function createKvDiskStore(options: KvDiskStoreOptions): KvDiskStore {
     }
     watchForChanges();
 
+    let writeIndex = 0;
     const commit = coalesce(() => {
         // Commit data synchronously to prevent race conditions.
         console.log("Write KV", storageFilePath);
         isWriting = true;
+        writeIndex++;
+        const myWriteIndex = writeIndex;
         fs.writeFileSync(
             storageFilePath,
             JSON.stringify(values, undefined, "  ")
         );
-        isWriting = false;
+        setTimeout(() => {
+            // Wait 1 second to set isWriting to false, so we don't read our own write back unnecessarily.
+            if (writeIndex === myWriteIndex) {
+                isWriting = false;
+            }
+        }, 1000);
 
         // Create a change watcher if we don't have one already (if the file didnt' exist before this write).
         watchForChanges();
