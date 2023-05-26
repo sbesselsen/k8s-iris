@@ -88,7 +88,7 @@ function useOpenContext(): (
             function open() {
                 setAppCurrentContext(context);
 
-                setAppRoute((r) => ({
+                setAppRoute(() => ({
                     ...emptyAppRoute,
                     context,
                 }));
