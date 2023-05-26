@@ -17,6 +17,7 @@ export type AppFrameProps = {
     content: ReactNode;
     title: ReactNode;
     toolbar: ReactNode;
+    footer: ReactNode;
     isSidebarVisible?: boolean;
     onRequestSidebarVisibilityChange?: (visible: boolean) => void;
 };
@@ -27,6 +28,7 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
         sidebar,
         content,
         toolbar,
+        footer,
         title,
         isSidebarVisible = true,
         onRequestSidebarVisibilityChange,
@@ -160,6 +162,8 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
     );
     const headerBackground = contentBackground;
     const headerOpacity = useWindowFocusValue(1.0, 0.7);
+
+    const footerBorderColor = useColorModeValue("gray.100", "gray.950");
 
     // TODO: make button offset work in Windows as well, on the other side
 
@@ -322,6 +326,18 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                     <Box flex="1 0 0" overflow="hidden">
                         {content}
                     </Box>
+                    {footer && (
+                        <HStack
+                            flex="0 0 24px"
+                            borderTop="1px solid"
+                            borderTopColor={footerBorderColor}
+                            justifyContent="end"
+                            spacing={0}
+                            pe={2}
+                        >
+                            {footer}
+                        </HStack>
+                    )}
                 </VStack>
             </VStack>
         </HStack>

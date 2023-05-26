@@ -25,7 +25,10 @@ import {
     useAppRouteSetter,
 } from "../../context/route";
 import { usePageTitle } from "../../hook/page-title";
-import { ContextSelectMenu } from "../k8s-context/ContextSelectMenu";
+import {
+    ContextFooterButton,
+    ContextSelectMenu,
+} from "../k8s-context/ContextSelectMenu";
 import { AppFrame } from "../../component/main/AppFrame";
 import { useColorThemeStore } from "../../context/color-theme";
 import {
@@ -66,6 +69,8 @@ import { HibernateContainer } from "../../context/hibernate";
 import { ErrorBoundary } from "../../component/util/ErrorBoundary";
 import { useLocalShellEditorOpener } from "../../hook/shell-opener";
 import { NoContextError } from "./NoContextError";
+import { FooterButton } from "../../component/main/FooterButton";
+import { useK8sVersion } from "../../k8s/version";
 
 const PodLogsEditor = React.lazy(async () => ({
     default: (await import("../editor/PodLogsEditor")).PodLogsEditor,
@@ -328,8 +333,27 @@ export const RootAppUI: React.FunctionComponent = () => {
                         <NoContextError />
                     )
                 }
+                footer={<AppFooter />}
             />
         </Fragment>
+    );
+};
+
+const AppFooter: React.FC<{}> = () => {
+    return (
+        <>
+            <ContextFooterButton />
+            <AppContextVersion />
+        </>
+    );
+};
+
+const AppContextVersion: React.FC<{}> = () => {
+    const [, version] = useK8sVersion();
+    return (
+        <FooterButton>
+            {version ? `${version.major}.${version.minor}` : ""}
+        </FooterButton>
     );
 };
 

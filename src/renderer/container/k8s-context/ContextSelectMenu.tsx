@@ -49,6 +49,7 @@ import {
     useAppCommandBar,
     useAppCommands,
 } from "../app/AppCommandBar";
+import { FooterButton } from "../../component/main/FooterButton";
 
 type ContextOption = K8sContext &
     Partial<CloudK8sContextInfo> & {
@@ -172,6 +173,7 @@ export const ContextSelectMenu: React.FC<{}> = () => {
             }));
         }
     }, [createWindow, getAppRoute, metaKeyPressedRef, setAppRoute]);
+
     const commandBar = useAppCommandBar();
 
     const onClickContext = useCallback(() => {
@@ -300,6 +302,35 @@ export const ContextSelectMenu: React.FC<{}> = () => {
             </Button>
         </ButtonGroup>
     );
+};
+
+export const ContextFooterButton: React.FC<{}> = () => {
+    const kubeContext = useOptionalK8sContext();
+
+    const [, contextsInfo] = useK8sContextsInfo();
+
+    const commandBar = useAppCommandBar();
+
+    const onClick = useCallback(() => {
+        commandBar.toggle({
+            isVisible: true,
+            parentCommandId: "switch-context",
+            search: "",
+        });
+    }, [commandBar]);
+
+    const contextName = useMemo(() => {
+        if (!kubeContext) {
+            return "none";
+        }
+        const context = contextsInfo.find((c) => c.name === kubeContext);
+        if (!context) {
+            return "";
+        }
+        return context.cloudInfo?.localClusterName ?? context.name;
+    }, [contextsInfo, kubeContext]);
+
+    return <FooterButton onClick={onClick}>{contextName}</FooterButton>;
 };
 
 const ContextIcon: React.FC<{ option: ContextOption }> = (props) => {
