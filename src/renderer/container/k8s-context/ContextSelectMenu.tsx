@@ -2,11 +2,9 @@ import {
     Badge,
     Box,
     Button,
-    ButtonGroup,
     HStack,
     IconButton,
     Link,
-    Spinner,
     Table,
     TableCellProps,
     Tbody,
@@ -18,7 +16,7 @@ import {
     useColorModeValue,
     useToken,
 } from "@chakra-ui/react";
-import React, { Fragment, useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { useOptionalK8sContext } from "../../context/k8s-context";
 import { useIpcCall } from "../../hook/ipc";
 import {
@@ -27,14 +25,13 @@ import {
     useAppRouteSetter,
 } from "../../context/route";
 import { useModifierKeyRef } from "../../hook/keyboard";
-import { ChevronDownIcon, HamburgerIcon } from "@chakra-ui/icons";
+import { HamburgerIcon } from "@chakra-ui/icons";
 import { K8sContext } from "../../../common/k8s/client";
 import { CloudK8sContextInfo } from "../../../common/cloud/k8s";
 import { useK8sContextsInfo } from "../../hook/k8s-contexts-info";
 import { groupByKeys } from "../../../common/util/group";
 import { k8sSmartCompare } from "../../../common/util/sort";
 import { searchMatch } from "../../../common/util/search";
-import { useWithDelay } from "../../hook/async";
 import { k8sAccountIdColor } from "../../util/k8s-context-color";
 import { emptyAppRoute } from "../../../common/route/app-route";
 import { useAppEditorsStore } from "../../context/editors";
@@ -150,8 +147,7 @@ export const ContextSelectMenu: React.FC<{}> = () => {
 
     const metaKeyPressedRef = useModifierKeyRef("Meta");
 
-    const [isLoading, contextsInfo] = useK8sContextsInfo();
-    const isLoadingWithDelay = useWithDelay(isLoading, 1000);
+    const [, contextsInfo] = useK8sContextsInfo();
 
     const openContext = useOpenContext();
 
@@ -251,53 +247,43 @@ export const ContextSelectMenu: React.FC<{}> = () => {
     const listIsActive = useAppRoute((r) => r.menuItem === "contexts");
 
     return (
-        <ButtonGroup width="100%" isAttached>
-            <IconButton
-                size="sm"
-                icon={<HamburgerIcon />}
-                aria-label="List all contexts"
-                title="List all contexts"
-                onClick={onClickList}
-                colorScheme="contextClue"
-                isActive={listIsActive}
-                _focus={{}}
-                _focusVisible={{
-                    boxShadow: focusBoxShadow,
-                }}
-            />
-
+        <HStack spacing={0}>
             <Button
-                as={Button}
-                rightIcon={<ChevronDownIcon />}
-                width="100%"
-                textAlign="start"
-                colorScheme="contextClue"
-                bg="contextClue.500"
-                textColor="white"
-                size="sm"
                 flex="1 0 0"
-                _active={{
-                    bg: "",
-                }}
+                variant="sidebarGhost"
+                leftIcon={
+                    currentContextInfo && (
+                        <Box ps="3px" pe="2px">
+                            <ContextIcon option={currentContextInfo} />
+                        </Box>
+                    )
+                }
                 _focus={{}}
                 _focusVisible={{
                     boxShadow: focusBoxShadow,
                 }}
                 onClick={onClickContext}
             >
-                <HStack h="100%" w="100%" alignItems="center" isTruncated>
-                    {isLoadingWithDelay && <Spinner />}
-                    {!isLoading && (
-                        <Fragment>
-                            {currentContextInfo
-                                ? currentContextInfo.localClusterName ??
-                                  currentContextInfo.name
-                                : ""}
-                        </Fragment>
-                    )}
-                </HStack>
+                {currentContextInfo
+                    ? currentContextInfo.localClusterName ??
+                      currentContextInfo.name
+                    : ""}
             </Button>
-        </ButtonGroup>
+            <IconButton
+                flex="0 0 auto"
+                variant="sidebarGhost"
+                icon={<HamburgerIcon />}
+                justifyContent="center"
+                aria-label="List all contexts"
+                title="List all contexts"
+                onClick={onClickList}
+                isActive={listIsActive}
+                _focus={{}}
+                _focusVisible={{
+                    boxShadow: focusBoxShadow,
+                }}
+            />
+        </HStack>
     );
 };
 

@@ -71,7 +71,7 @@ export const SidebarMainMenu: React.FC<SidebarMainMenuProps> = (props) => {
     );
 
     return (
-        <VStack px={2} spacing={0} alignItems="stretch">
+        <VStack spacing={0} alignItems="stretch">
             {items.map((item) => (
                 <SidebarMenuButton
                     key={item.id}
@@ -309,7 +309,7 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
 
     return (
         <VStack flex="1 0 0" alignItems="stretch" spacing={0}>
-            <HStack ps={4} pe={2} alignItems="center">
+            <HStack ps={2} alignItems="center">
                 <Heading
                     textColor={headingColor}
                     fontWeight="semibold"
@@ -335,7 +335,7 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                 </ContextMenuButton>
             </HStack>
 
-            <FormLabel px={2}>
+            <FormLabel>
                 <HStack
                     w="100%"
                     spacing={0}
@@ -380,7 +380,7 @@ export const SidebarNamespacesMenu: React.FC<SidebarNamespacesMenuProps> = (
                     value={selectedNamespaces}
                     onChange={onChangeSelectedNamespaces}
                 >
-                    <VStack alignItems="start" spacing={0} pt={1} pb={4} px={2}>
+                    <VStack alignItems="start" spacing={0} pt={1} pb={4}>
                         {filteredNamespaces.map(buildMenuItem)}
                     </VStack>
                 </CheckboxGroup>
@@ -437,7 +437,7 @@ export const SidebarEditorsMenu: React.FC<SidebarEditorsMenuProps> = (
                 fontWeight="semibold"
                 fontSize="xs"
                 textTransform="uppercase"
-                px={4}
+                px={2}
             >
                 Resources
             </Heading>
@@ -448,7 +448,6 @@ export const SidebarEditorsMenu: React.FC<SidebarEditorsMenuProps> = (
                 sx={{ scrollbarGutter: "stable" }}
                 maxHeight="210px"
                 spacing={0}
-                px={2}
                 py={1}
                 alignItems="stretch"
             >
@@ -462,7 +461,7 @@ export const SidebarEditorsMenu: React.FC<SidebarEditorsMenuProps> = (
                     />
                 ))}
             </VStack>
-            <VStack px={2} spacing={0} alignItems="stretch">
+            <VStack spacing={0} alignItems="stretch">
                 <SidebarEditorsCustomMenuButton
                     onClick={onPressCreate}
                     leftIcon={<AddIcon w={2} h={2} />}

@@ -60,7 +60,7 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                     opacity={headerOpacity}
                     spacing={0}
                     ps="85px"
-                    pe={2}
+                    pe={3}
                     justifyContent="end"
                 >
                     {toolbar}

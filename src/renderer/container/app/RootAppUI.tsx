@@ -241,11 +241,7 @@ export const RootAppUI: React.FunctionComponent = () => {
         <Fragment>
             <AppFrame
                 toolbar={<AppToolbar />}
-                title={
-                    <HStack p={2} spacing="2px" maxWidth="300px">
-                        <ContextSelectMenu />
-                    </HStack>
-                }
+                title={null}
                 search={
                     <Box px={2} py={2}>
                         <AppSearchBox
@@ -258,11 +254,13 @@ export const RootAppUI: React.FunctionComponent = () => {
                 sidebar={
                     kubeContext && (
                         <VStack
+                            px={2}
                             h="100%"
                             spacing={6}
                             position="relative"
                             alignItems="stretch"
                         >
+                            <ContextSelectMenu />
                             <AppMainMenu />
                             <AppEditors />
                             <AppNamespaces
