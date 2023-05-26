@@ -241,16 +241,6 @@ export const RootAppUI: React.FunctionComponent = () => {
         <Fragment>
             <AppFrame
                 toolbar={<AppToolbar />}
-                title={null}
-                search={
-                    <Box px={2} py={2}>
-                        <AppSearchBox
-                            ref={
-                                searchBoxRef as MutableRefObject<HTMLInputElement>
-                            }
-                        />
-                    </Box>
-                }
                 sidebar={
                     kubeContext && (
                         <VStack
@@ -291,29 +281,6 @@ export const RootAppUI: React.FunctionComponent = () => {
         </Fragment>
     );
 };
-
-const AppSearchBox = React.forwardRef<HTMLInputElement, {}>((props, ref) => {
-    const searchStore = useAppSearchStore();
-    const searchValue = useAppSearch();
-
-    const setSearchValue = useCallback(
-        (query: string) => {
-            searchStore.set({ query });
-        },
-        [searchStore]
-    );
-
-    const shouldShowIcon = useBreakpointValue({ base: false, sm: true });
-
-    return (
-        <SearchInput
-            shouldShowIcon={shouldShowIcon}
-            value={searchValue.query}
-            onChange={setSearchValue}
-            ref={ref}
-        />
-    );
-});
 
 const AppMainMenu: React.FC<{}> = () => {
     const createWindow = useIpcCall((ipc) => ipc.app.createWindow);

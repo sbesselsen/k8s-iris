@@ -2,8 +2,6 @@ import {
     Badge,
     Box,
     Button,
-    HStack,
-    IconButton,
     Link,
     Table,
     TableCellProps,
@@ -19,13 +17,8 @@ import {
 import React, { useCallback, useMemo, useState } from "react";
 import { useOptionalK8sContext } from "../../context/k8s-context";
 import { useIpcCall } from "../../hook/ipc";
-import {
-    useAppRoute,
-    useAppRouteGetter,
-    useAppRouteSetter,
-} from "../../context/route";
+import { useAppRouteGetter, useAppRouteSetter } from "../../context/route";
 import { useModifierKeyRef } from "../../hook/keyboard";
-import { HamburgerIcon } from "@chakra-ui/icons";
 import { K8sContext } from "../../../common/k8s/client";
 import { CloudK8sContextInfo } from "../../../common/cloud/k8s";
 import { useK8sContextsInfo } from "../../hook/k8s-contexts-info";
@@ -140,33 +133,11 @@ function useOpenContext(): (
 
 export const ContextSelectMenu: React.FC<{}> = () => {
     const kubeContext = useOptionalK8sContext();
-    const getAppRoute = useAppRouteGetter();
-    const setAppRoute = useAppRouteSetter();
-
-    const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
-
-    const metaKeyPressedRef = useModifierKeyRef("Meta");
 
     const [, contextsInfo] = useK8sContextsInfo();
 
     const openContext = useOpenContext();
 
-    const onClickList = useCallback(() => {
-        if (metaKeyPressedRef.current) {
-            createWindow({
-                route: {
-                    ...emptyAppRoute,
-                    menuItem: "contexts",
-                },
-            });
-        } else {
-            setAppRoute((route) => ({
-                ...route,
-                activeEditor: null,
-                menuItem: "contexts",
-            }));
-        }
-    }, [createWindow, getAppRoute, metaKeyPressedRef, setAppRoute]);
     const commandBar = useAppCommandBar();
 
     const onClickContext = useCallback(() => {
@@ -244,46 +215,26 @@ export const ContextSelectMenu: React.FC<{}> = () => {
 
     const focusBoxShadow = useToken("shadows", "outline");
 
-    const listIsActive = useAppRoute((r) => r.menuItem === "contexts");
-
     return (
-        <HStack spacing={0}>
-            <Button
-                flex="1 0 0"
-                variant="sidebarGhost"
-                leftIcon={
-                    currentContextInfo && (
-                        <Box ps="3px" pe="2px">
-                            <ContextIcon option={currentContextInfo} />
-                        </Box>
-                    )
-                }
-                _focus={{}}
-                _focusVisible={{
-                    boxShadow: focusBoxShadow,
-                }}
-                onClick={onClickContext}
-            >
-                {currentContextInfo
-                    ? currentContextInfo.localClusterName ??
-                      currentContextInfo.name
-                    : ""}
-            </Button>
-            <IconButton
-                flex="0 0 auto"
-                variant="sidebarGhost"
-                icon={<HamburgerIcon />}
-                justifyContent="center"
-                aria-label="List all contexts"
-                title="List all contexts"
-                onClick={onClickList}
-                isActive={listIsActive}
-                _focus={{}}
-                _focusVisible={{
-                    boxShadow: focusBoxShadow,
-                }}
-            />
-        </HStack>
+        <Button
+            variant="sidebarGhost"
+            leftIcon={
+                currentContextInfo && (
+                    <Box ps="3px" pe="2px">
+                        <ContextIcon option={currentContextInfo} />
+                    </Box>
+                )
+            }
+            _focus={{}}
+            _focusVisible={{
+                boxShadow: focusBoxShadow,
+            }}
+            onClick={onClickContext}
+        >
+            {currentContextInfo
+                ? currentContextInfo.localClusterName ?? currentContextInfo.name
+                : ""}
+        </Button>
     );
 };
 
