@@ -90,7 +90,6 @@ function useOpenContext(): (
 
                 setAppRoute((r) => ({
                     ...emptyAppRoute,
-                    isSidebarVisible: r.isSidebarVisible,
                     context,
                 }));
             }

@@ -3,13 +3,8 @@ import { ButtonGroup, HStack, Icon, IconButton } from "@chakra-ui/react";
 
 import { MdArrowBackIosNew, MdArrowForwardIos } from "react-icons/md";
 import { FiLock, FiUnlock } from "react-icons/fi";
-import {
-    useAppRoute,
-    useAppRouteHistory,
-    useAppRouteSetter,
-} from "../../context/route";
+import { useAppRouteHistory } from "../../context/route";
 import { useKeyListener, useModifierKeyRef } from "../../hook/keyboard";
-import { HamburgerIcon } from "@chakra-ui/icons";
 import {
     useContextLock,
     useContextLockSetter,
@@ -22,20 +17,8 @@ import { useOptionalK8sContext } from "../../context/k8s-context";
 
 export const AppToolbar: React.FC = () => {
     const { canGoBack, canGoForward, goBack, goForward } = useAppRouteHistory();
-    const isSidebarVisible = useAppRoute((route) => route.isSidebarVisible);
-    const setAppRoute = useAppRouteSetter();
 
     const kubeContext = useOptionalK8sContext();
-
-    const toggleSidebarVisible = useCallback(() => {
-        setAppRoute(
-            (route) => ({
-                ...route,
-                isSidebarVisible: !route.isSidebarVisible,
-            }),
-            true
-        );
-    }, [setAppRoute]);
 
     const metaKeyRef = useModifierKeyRef("Meta");
     useKeyListener(
@@ -71,16 +54,6 @@ export const AppToolbar: React.FC = () => {
                     icon={<Icon as={MdArrowForwardIos} />}
                     aria-label="Forward"
                     title="Forward"
-                    _focus={{}}
-                    _focusVisible={{ boxShadow: "outline" }}
-                />
-            </ButtonGroup>
-            <ButtonGroup variant="toolbar" size="sm">
-                <IconButton
-                    onClick={toggleSidebarVisible}
-                    icon={<HamburgerIcon />}
-                    aria-label={isSidebarVisible ? "Hide menu" : "Show menu"}
-                    title={isSidebarVisible ? "Hide menu" : "Show menu"}
                     _focus={{}}
                     _focusVisible={{ boxShadow: "outline" }}
                 />

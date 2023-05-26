@@ -17,20 +17,10 @@ export type AppFrameProps = {
     content: ReactNode;
     title: ReactNode;
     toolbar: ReactNode;
-    isSidebarVisible?: boolean;
-    onRequestSidebarVisibilityChange?: (visible: boolean) => void;
 };
 
 export const AppFrame: React.FC<AppFrameProps> = (props) => {
-    const {
-        search,
-        sidebar,
-        content,
-        toolbar,
-        title,
-        isSidebarVisible = true,
-        onRequestSidebarVisibilityChange,
-    } = props;
+    const { search, sidebar, content, toolbar, title } = props;
 
     const [sidebarWidth, setSidebarWidth] = useState("250px");
     const floatingSidebarWidth = "300px";
@@ -133,26 +123,14 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
         if (newSidebarFloating !== isSidebarFloating) {
             // Make the window floating.
             setSidebarFloating(newSidebarFloating);
-            onRequestSidebarVisibilityChange?.(!newSidebarFloating);
         }
-    }, [
-        isSidebarFloating,
-        onRequestSidebarVisibilityChange,
-        setSidebarFloating,
-        shouldSidebarBeFloating,
-    ]);
+    }, [isSidebarFloating, setSidebarFloating, shouldSidebarBeFloating]);
 
     const sidebarOwnBackground = useColorModeValue("gray.100", "gray.800");
     const isFocused = useWindowFocus();
     const sidebarBackground =
         isSidebarFloating || isFocused ? "transparent" : sidebarOwnBackground;
     const sidebarFloatingBrightness = useColorModeValue("95%", "150%");
-
-    const onClickContent = useCallback(() => {
-        if (isSidebarFloating) {
-            onRequestSidebarVisibilityChange?.(false);
-        }
-    }, [isSidebarFloating, onRequestSidebarVisibilityChange]);
 
     const sidebarOpacity = useWindowFocusValue(
         1.0,
@@ -176,7 +154,7 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
             <Box
                 flexGrow={0}
                 flexShrink={0}
-                flexBasis={isSidebarVisible ? sidebarWidth : 0}
+                flexBasis={sidebarWidth}
                 overflow={isSidebarFloating ? "visible" : "hidden"}
                 bg={sidebarBackground}
                 ref={sidebarBoxRef as MutableRefObject<HTMLDivElement>}
@@ -184,13 +162,7 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                 top={isSidebarFloating ? headerHeight : "initial"}
                 bottom={isSidebarFloating ? 0 : "initial"}
                 left={isSidebarFloating ? 0 : "initial"}
-                w={
-                    isSidebarFloating
-                        ? isSidebarVisible
-                            ? floatingSidebarWidth
-                            : 0
-                        : "initial"
-                }
+                w={isSidebarFloating ? floatingSidebarWidth : "initial"}
                 zIndex={20}
                 transitionDuration={isSidebarFloating ? "100ms" : "200ms"}
                 transitionTimingFunction="ease-out"
@@ -219,9 +191,7 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                     zIndex={1}
                 ></Box>
                 <Box
-                    display={
-                        isSidebarFloating && isSidebarVisible ? "block" : "none"
-                    }
+                    display={isSidebarFloating ? "block" : "none"}
                     position="absolute"
                     w={2}
                     bgGradient="linear(to-r, blackAlpha.300, transparent)"
@@ -277,7 +247,7 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                         flexShrink={10}
                         flexBasis={0}
                         pr={2}
-                        pl={!isSidebarVisible || isSidebarFloating ? "80px" : 2}
+                        pl={isSidebarFloating ? "80px" : 2}
                         opacity={headerOpacity}
                     >
                         {toolbar}
@@ -308,12 +278,11 @@ export const AppFrame: React.FC<AppFrameProps> = (props) => {
                     bg={contentBackground}
                     alignItems="stretch"
                 >
-                    {isSidebarVisible && isSidebarFloating && (
+                    {isSidebarFloating && (
                         <Box
                             position="absolute"
                             w="100%"
                             h="100%"
-                            onClick={onClickContent}
                             opacity={0.9}
                             bg={contentBackground}
                             zIndex={10}

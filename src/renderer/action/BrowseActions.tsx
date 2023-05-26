@@ -30,7 +30,6 @@ export const BrowseActions: React.FC<{}> = () => {
                     route: {
                         ...route,
                         activeEditor: null,
-                        isSidebarVisible: false,
                         namespaces: {
                             mode: "selected",
                             selected: [identifier.name],

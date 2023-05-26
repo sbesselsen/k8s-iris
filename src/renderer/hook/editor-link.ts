@@ -47,7 +47,6 @@ export function useEditorOpener(): (
                     route: {
                         ...getAppRoute(),
                         activeEditor: editor,
-                        isSidebarVisible: false,
                     },
                 });
             } else {

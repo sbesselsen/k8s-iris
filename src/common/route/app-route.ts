@@ -3,7 +3,6 @@ export type AppRoute = {
     namespaces: AppNamespacesSelection;
     menuItem: string | null;
     menuTab: Record<string, string>;
-    isSidebarVisible: boolean;
     params: Record<string, unknown>;
     activeEditor: AppEditor | null;
 };
@@ -57,7 +56,6 @@ export const emptyAppRoute: AppRoute = {
     },
     menuItem: null,
     menuTab: {},
-    isSidebarVisible: true,
     params: {},
     activeEditor: null,
 };

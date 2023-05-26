@@ -27,7 +27,6 @@ export const EditActions: React.FC<{}> = () => {
                         route: {
                             ...getAppRoute(),
                             activeEditor: newEditors[0],
-                            isSidebarVisible: false,
                         },
                     });
                 } else {

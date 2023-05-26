@@ -270,7 +270,7 @@ const ResourceViewer: React.FC<ResourceViewerProps> = React.memo((props) => {
     const onClickEdit = useCallback(() => {
         if (metaKeyPressedRef.current) {
             createWindow({
-                route: { ...setMode.asRoute("edit"), isSidebarVisible: false },
+                route: { ...setMode.asRoute("edit") },
             });
         } else {
             setMode("edit");

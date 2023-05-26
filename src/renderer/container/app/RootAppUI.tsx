@@ -116,7 +116,6 @@ export const RootAppUI: React.FunctionComponent = () => {
     usePageTitle(kubeContext ?? "Iris");
 
     const [isLoadingContextsInfo, contextsInfo] = useK8sContextsInfo();
-    const isSidebarVisible = useAppRoute((route) => route.isSidebarVisible);
 
     const getAppRoute = useAppRouteGetter();
     const setAppRoute = useAppRouteSetter();
@@ -155,30 +154,9 @@ export const RootAppUI: React.FunctionComponent = () => {
                 if (
                     eventType === "keydown" &&
                     metaKeyRef.current &&
-                    key === "b"
-                ) {
-                    setAppRoute(
-                        (route) => ({
-                            ...route,
-                            isSidebarVisible: !route.isSidebarVisible,
-                        }),
-                        true
-                    );
-                }
-                if (
-                    eventType === "keydown" &&
-                    metaKeyRef.current &&
                     key === "w"
                 ) {
                     const activeEditorId = getAppRoute().activeEditor?.id;
-                    if (
-                        activeEditorId &&
-                        editorsStore.get().length === 1 &&
-                        !getAppRoute().isSidebarVisible
-                    ) {
-                        // This is a "one-issue window" which is only here to edit this one resource. Just let it close.
-                        return;
-                    }
                     if (activeEditorId) {
                         // Close the current editor.
                         let nextActiveEditor: AppEditor;
@@ -208,12 +186,6 @@ export const RootAppUI: React.FunctionComponent = () => {
                             );
                             return updatedEditors;
                         });
-                        // Show the sidebar after closing a resource to make it clear what the fuck is happening.
-                        setAppRoute((route) =>
-                            route.isSidebarVisible
-                                ? route
-                                : { ...route, isSidebarVisible: true }
-                        );
                         e.preventDefault();
                     }
                 }
@@ -244,13 +216,6 @@ export const RootAppUI: React.FunctionComponent = () => {
         return k8sAccountIdColor(accountId ?? null);
     }, [contextsInfo, isLoadingContextsInfo, kubeContext]);
 
-    const onRequestSidebarVisibilityChange = useCallback(
-        (visible: boolean) => {
-            setAppRoute((route) => ({ ...route, isSidebarVisible: visible }));
-        },
-        [setAppRoute]
-    );
-
     useEffect(() => {
         if (
             contextualColorTheme !== null &&
@@ -276,10 +241,6 @@ export const RootAppUI: React.FunctionComponent = () => {
         <Fragment>
             <AppFrame
                 toolbar={<AppToolbar />}
-                isSidebarVisible={isSidebarVisible}
-                onRequestSidebarVisibilityChange={
-                    onRequestSidebarVisibilityChange
-                }
                 title={
                     <HStack p={2} spacing="2px" maxWidth="300px" mx="auto">
                         <ContextSelectMenu />
@@ -410,7 +371,6 @@ const AppEditors: React.FC<{}> = () => {
                     createWindow({
                         route: {
                             ...getAppRoute(),
-                            isSidebarVisible: false,
                             activeEditor:
                                 editors.find((editor) => editor.id === id) ??
                                 null,
@@ -444,7 +404,6 @@ const AppEditors: React.FC<{}> = () => {
                 route: {
                     ...getAppRoute(),
                     activeEditor: editor,
-                    isSidebarVisible: false,
                 },
             });
         } else {
@@ -563,7 +522,6 @@ const AppNamespaces: React.FC<{
                 createWindow({
                     route: {
                         ...getAppRoute(),
-                        isSidebarVisible: false,
                         activeEditor: editor,
                     },
                 });

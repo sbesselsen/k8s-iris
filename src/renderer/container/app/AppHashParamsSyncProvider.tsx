@@ -28,9 +28,6 @@ export const AppHashParamsSyncProvider: React.FC<PropsWithChildren> = ({
             if (route.activeEditor) {
                 appRoute.activeEditor = route.activeEditor;
             }
-            if ("isSidebarVisible" in route) {
-                appRoute.isSidebarVisible = route.isSidebarVisible;
-            }
             store.setCurrent(appRoute, true);
         }
 
