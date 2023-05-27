@@ -6,6 +6,7 @@ import { AppHashParamsSyncProvider } from "./container/app/AppHashParamsSyncProv
 import { AppEditorsSyncProvider } from "./container/app/AppEditorsSyncProvider";
 import { AppActionsProvider } from "./container/app/AppActionsProvider";
 import { AppCommandBarProvider } from "./container/app/AppCommandBar";
+import { AppContextualColorThemeProvider } from "./container/app/AppContextualColorThemeProvider";
 
 export const App: React.FunctionComponent = () => {
     return (
@@ -14,7 +15,9 @@ export const App: React.FunctionComponent = () => {
                 <AppEditorsSyncProvider>
                     <AppActionsProvider>
                         <AppCommandBarProvider>
-                            <RootAppUI />
+                            <AppContextualColorThemeProvider>
+                                <RootAppUI />
+                            </AppContextualColorThemeProvider>
                         </AppCommandBarProvider>
                     </AppActionsProvider>
                 </AppEditorsSyncProvider>

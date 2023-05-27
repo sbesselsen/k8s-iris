@@ -6,7 +6,6 @@ import React, {
     Suspense,
     useCallback,
     useEffect,
-    useMemo,
     useRef,
     useState,
 } from "react";
@@ -17,13 +16,10 @@ import {
 } from "../../context/route";
 import { usePageTitle } from "../../hook/page-title";
 import { AppFrame } from "../../component/main/AppFrame";
-import { useColorThemeStore } from "../../context/color-theme";
 import {
     useK8sContext,
     useOptionalK8sContext,
 } from "../../context/k8s-context";
-import { useK8sContextsInfo } from "../../hook/k8s-contexts-info";
-import { k8sAccountIdColor } from "../../util/k8s-context-color";
 import { FaBomb } from "react-icons/fa";
 import {
     K8sListWatchStoreValue,
@@ -74,12 +70,8 @@ const LocalShellEditor = React.lazy(async () => ({
 export const RootAppUI: React.FunctionComponent = () => {
     console.log("Render root");
 
-    const colorThemeStore = useColorThemeStore();
-
     const kubeContext = useOptionalK8sContext();
     usePageTitle(kubeContext ?? "Iris");
-
-    const [isLoadingContextsInfo, contextsInfo] = useK8sContextsInfo();
 
     const getAppRoute = useAppRouteGetter();
     const setAppRoute = useAppRouteSetter();
@@ -168,40 +160,11 @@ export const RootAppUI: React.FunctionComponent = () => {
         )
     );
 
-    const contextualColorTheme = useMemo(() => {
-        if (isLoadingContextsInfo) {
-            return null;
-        }
-        const contextInfo = contextsInfo?.find(
-            (ctx) => ctx.name === kubeContext
-        );
-        if (!contextInfo) {
-            return k8sAccountIdColor(null);
-        }
-        const accountId = contextInfo.cloudInfo?.accounts?.[0]?.accountId;
-        return k8sAccountIdColor(accountId ?? null);
-    }, [contextsInfo, isLoadingContextsInfo, kubeContext]);
-
-    useEffect(() => {
-        if (
-            contextualColorTheme !== null &&
-            colorThemeStore.get() !== contextualColorTheme
-        ) {
-            colorThemeStore.set(contextualColorTheme);
-        }
-    }, [colorThemeStore, contextualColorTheme]);
-
     const isContextsList = useAppRoute((r) => r.menuItem === "contexts");
 
-    const isReady = contextualColorTheme !== null;
-
     useEffect(() => {
-        document.body.classList.toggle("app-ui-mounted", isReady);
-    }, [isReady]);
-
-    if (!isReady) {
-        return null;
-    }
+        document.body.classList.toggle("app-ui-mounted");
+    }, []);
 
     return (
         <Fragment>

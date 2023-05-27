@@ -3,11 +3,18 @@ import { ChakraProvider } from "@chakra-ui/react";
 import Color from "color";
 
 import { theme } from "../../theme";
-import { useColorTheme } from "../../context/color-theme";
 import { useIpcCall } from "../../hook/ipc";
+import { create } from "../../util/state";
 
 const whiteColor = Color("#ffffff");
 const blackColor = Color("#000000");
+
+export type ColorTheme = {
+    colorScheme: string;
+};
+
+export const { useStoreValue: useColorTheme, useStore: useColorThemeStore } =
+    create<ColorTheme | null>(null);
 
 export const AppThemeProvider: React.FC<PropsWithChildren> = (props) => {
     const { children } = props;
@@ -40,7 +47,7 @@ export const AppThemeProvider: React.FC<PropsWithChildren> = (props) => {
         };
     }, [getAccentColor, watchAccentColor, setAccentColor]);
 
-    const colorScheme = useColorTheme((t) => t.colorScheme);
+    const colorScheme = useColorTheme((t) => t?.colorScheme ?? "gray");
     const currentTheme = useMemo(() => {
         const currentTheme = { ...theme };
         if (accentColor) {
