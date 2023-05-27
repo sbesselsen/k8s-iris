@@ -6,22 +6,19 @@ import { AppHashParamsSyncProvider } from "./container/app/AppHashParamsSyncProv
 import { AppEditorsSyncProvider } from "./container/app/AppEditorsSyncProvider";
 import { AppActionsProvider } from "./container/app/AppActionsProvider";
 import { AppCommandBarProvider } from "./container/app/AppCommandBar";
-import { AppContextualColorThemeProvider } from "./container/app/AppContextualColorThemeProvider";
 
 export const App: React.FunctionComponent = () => {
     return (
-        <AppThemeProvider>
-            <AppHashParamsSyncProvider>
+        <AppHashParamsSyncProvider>
+            <AppThemeProvider>
                 <AppEditorsSyncProvider>
                     <AppActionsProvider>
                         <AppCommandBarProvider>
-                            <AppContextualColorThemeProvider>
-                                <RootAppUI />
-                            </AppContextualColorThemeProvider>
+                            <RootAppUI />
                         </AppCommandBarProvider>
                     </AppActionsProvider>
                 </AppEditorsSyncProvider>
-            </AppHashParamsSyncProvider>
-        </AppThemeProvider>
+            </AppThemeProvider>
+        </AppHashParamsSyncProvider>
     );
 };

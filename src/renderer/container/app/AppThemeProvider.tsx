@@ -4,17 +4,9 @@ import Color from "color";
 
 import { theme } from "../../theme";
 import { useIpcCall } from "../../hook/ipc";
-import { create } from "../../util/state";
 
 const whiteColor = Color("#ffffff");
 const blackColor = Color("#000000");
-
-export type ColorTheme = {
-    colorScheme: string;
-};
-
-export const { useStoreValue: useColorTheme, useStore: useColorThemeStore } =
-    create<ColorTheme | null>(null);
 
 export const AppThemeProvider: React.FC<PropsWithChildren> = (props) => {
     const { children } = props;
@@ -47,7 +39,6 @@ export const AppThemeProvider: React.FC<PropsWithChildren> = (props) => {
         };
     }, [getAccentColor, watchAccentColor, setAccentColor]);
 
-    const colorScheme = useColorTheme((t) => t?.colorScheme ?? "gray");
     const currentTheme = useMemo(() => {
         const currentTheme = { ...theme };
         if (accentColor) {
@@ -64,11 +55,10 @@ export const AppThemeProvider: React.FC<PropsWithChildren> = (props) => {
                 900: Color(accentColor).mix(blackColor, 0.6).hex(),
             };
         }
-        currentTheme.colors.contextClue = theme.colors[colorScheme];
         currentTheme.colors.primary =
             currentTheme.colors.systemAccent ?? currentTheme.colors.gray;
         return currentTheme;
-    }, [accentColor, colorScheme, theme]);
+    }, [accentColor, theme]);
 
     if (accentColor === null) {
         return null;
