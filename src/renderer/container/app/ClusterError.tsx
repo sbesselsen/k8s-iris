@@ -48,7 +48,7 @@ export const ClusterError: React.FC<{ error: Error }> = (props) => {
     return (
         <VStack
             spacing={6}
-            mt={6}
+            mt={8}
             alignItems="start"
             ps={4}
             pe={12}
