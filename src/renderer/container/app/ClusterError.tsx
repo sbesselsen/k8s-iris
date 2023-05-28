@@ -46,14 +46,7 @@ export const ClusterError: React.FC<{ error: Error }> = (props) => {
     }
 
     return (
-        <VStack
-            spacing={6}
-            mt={8}
-            alignItems="start"
-            ps={4}
-            pe={12}
-            maxWidth="800px"
-        >
+        <VStack spacing={6} mt={10} alignItems="start" pe={8} maxWidth="800px">
             <Heading size="md">Error connecting to cluster</Heading>
             <Code variant="large" fontSize="sm" userSelect="text">
                 {error.message}

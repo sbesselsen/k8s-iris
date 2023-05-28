@@ -40,6 +40,7 @@ import { HibernateContainer } from "../../context/hibernate";
 import { ErrorBoundary } from "../../component/util/ErrorBoundary";
 import { NoContextError } from "./NoContextError";
 import { AppSidebar, defaultMenuItem } from "../sidebar/AppSidebar";
+import { ScrollBox } from "../../component/main/ScrollBox";
 
 const PodLogsEditor = React.lazy(async () => ({
     default: (await import("../editor/PodLogsEditor")).PodLogsEditor,
@@ -174,14 +175,9 @@ export const RootAppUI: React.FunctionComponent = () => {
                 content={
                     kubeContext ? (
                         namespacesError && !isContextsList ? (
-                            <Box
-                                w="100%"
-                                height="100%"
-                                overflow="hidden scroll"
-                                sx={{ scrollbarGutter: "stable" }}
-                            >
+                            <ScrollBox>
                                 <ClusterError error={namespacesError} />
-                            </Box>
+                            </ScrollBox>
                         ) : (
                             <AppContent />
                         )
