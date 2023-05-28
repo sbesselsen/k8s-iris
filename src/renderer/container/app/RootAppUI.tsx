@@ -39,7 +39,7 @@ import { LazyComponent } from "../../component/main/LazyComponent";
 import { HibernateContainer } from "../../context/hibernate";
 import { ErrorBoundary } from "../../component/util/ErrorBoundary";
 import { NoContextError } from "./NoContextError";
-import { AppSidebar, defaultMenuItem } from "./AppSidebar";
+import { AppSidebar, defaultMenuItem } from "../sidebar/AppSidebar";
 
 const PodLogsEditor = React.lazy(async () => ({
     default: (await import("../editor/PodLogsEditor")).PodLogsEditor,
@@ -54,8 +54,7 @@ const ResourcesOverview = React.lazy(async () => ({
     default: (await import("../resources/ResourcesOverview")).ResourcesOverview,
 }));
 const ContextsOverview = React.lazy(async () => ({
-    default: (await import("../k8s-context/ContextSelectMenu"))
-        .ContextsOverview,
+    default: (await import("../k8s-context/ContextsOverview")).ContextsOverview,
 }));
 const ResourceEditor = React.lazy(async () => ({
     default: (await import("../editor/ResourceEditor")).ResourceEditor,

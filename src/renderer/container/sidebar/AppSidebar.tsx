@@ -5,7 +5,6 @@ import {
     useAppRouteGetter,
     useAppRouteSetter,
 } from "../../context/route";
-import { ContextSelectMenu } from "../k8s-context/ContextSelectMenu";
 import {
     SidebarMainMenu,
     SidebarMainMenuItem,
@@ -25,6 +24,7 @@ import {
     useAppEditorsStore,
 } from "../../context/editors";
 import { useLocalShellEditorOpener } from "../../hook/shell-opener";
+import { AppContextButton } from "./AppContextButton";
 
 const sidebarMainMenuItems: SidebarMainMenuItem[] = [
     {
@@ -49,7 +49,7 @@ export const AppSidebar: React.FC<{}> = () => {
             position="relative"
             alignItems="stretch"
         >
-            <ContextSelectMenu />
+            <AppContextButton />
             <AppMainMenu />
             <AppEditors />
             <AppNamespaces />

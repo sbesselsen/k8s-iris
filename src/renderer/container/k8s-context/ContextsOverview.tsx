@@ -1,7 +1,5 @@
 import {
     Badge,
-    Box,
-    Button,
     Link,
     Table,
     TableCellProps,
@@ -12,12 +10,9 @@ import {
     Thead,
     Tr,
     useColorModeValue,
-    useToken,
 } from "@chakra-ui/react";
 import React, { useCallback, useMemo, useState } from "react";
-import { useOptionalK8sContext } from "../../context/k8s-context";
 import { useIpcCall } from "../../hook/ipc";
-import { useAppRouteGetter, useAppRouteSetter } from "../../context/route";
 import { useModifierKeyRef } from "../../hook/keyboard";
 import { K8sContext } from "../../../common/k8s/client";
 import { CloudK8sContextInfo } from "../../../common/cloud/k8s";
@@ -25,20 +20,12 @@ import { useK8sContextsInfo } from "../../hook/k8s-contexts-info";
 import { groupByKeys } from "../../../common/util/group";
 import { k8sSmartCompare } from "../../../common/util/sort";
 import { searchMatch } from "../../../common/util/search";
-import { k8sAccountIdColor } from "../../util/k8s-context-color";
-import { emptyAppRoute } from "../../../common/route/app-route";
-import { useAppEditorsStore } from "../../context/editors";
-import { useDialog } from "../../hook/dialog";
-import { usePersistentState } from "../../hook/persistent-state";
 import { useAppSearch } from "../../context/search";
 import { ScrollBox } from "../../component/main/ScrollBox";
 import { useK8sVersionGetter, useLastKnownK8sVersion } from "../../k8s/version";
 import { Selectable } from "../../component/main/Selectable";
-import {
-    AppCommand,
-    useAppCommandBar,
-    useAppCommands,
-} from "../app/AppCommandBar";
+import { useOpenContext } from "../../hook/context-opener";
+import { ContextIcon } from "../../component/k8s/ContextIcon";
 
 type ContextOption = K8sContext &
     Partial<CloudK8sContextInfo> & {
@@ -47,209 +34,6 @@ type ContextOption = K8sContext &
         value: string;
         label: string;
     };
-
-function useOpenContext(): (
-    context: string,
-    requestNewWindow?: boolean
-) => void {
-    const getAppRoute = useAppRouteGetter();
-    const setAppRoute = useAppRouteSetter();
-    const editorsStore = useAppEditorsStore();
-
-    const showDialog = useDialog();
-
-    const createWindow = useIpcCall((ipc) => ipc.app.createWindow);
-
-    const [, , setAppCurrentContext] = usePersistentState("currentContext");
-
-    return useCallback(
-        async (context: string, requestNewWindow = false) => {
-            function openInNewWindow() {
-                setAppCurrentContext(context);
-
-                createWindow({
-                    route: {
-                        ...emptyAppRoute,
-                        context,
-                    },
-                });
-            }
-
-            function open() {
-                setAppCurrentContext(context);
-
-                setAppRoute(() => ({
-                    ...emptyAppRoute,
-                    context,
-                }));
-            }
-
-            if (requestNewWindow) {
-                openInNewWindow();
-                return;
-            }
-            if (context === getAppRoute().context) {
-                // Do not switch at all if the context remains the same.
-                return;
-            }
-            const numEditors = editorsStore.get().length;
-            if (numEditors === 0) {
-                open();
-                return;
-            }
-            const result = await showDialog({
-                title: "Are you sure?",
-                type: "question",
-                message: `You have ${numEditors} editor${
-                    numEditors > 1 ? "s" : ""
-                } open.`,
-                detail: `Switching context will close all open editors and you will lose your changes.`,
-                buttons: [
-                    "Open in New Window",
-                    "Close Editors and Switch",
-                    "Cancel",
-                ],
-                defaultId: 0,
-            });
-            switch (result.response) {
-                case 0:
-                    openInNewWindow();
-                    break;
-                case 1:
-                    open();
-                    break;
-            }
-        },
-        [
-            createWindow,
-            editorsStore,
-            getAppRoute,
-            setAppRoute,
-            setAppCurrentContext,
-            showDialog,
-        ]
-    );
-}
-
-export const ContextSelectMenu: React.FC<{}> = () => {
-    const kubeContext = useOptionalK8sContext();
-
-    const [, contextsInfo] = useK8sContextsInfo();
-
-    const openContext = useOpenContext();
-
-    const commandBar = useAppCommandBar();
-
-    const onClickContext = useCallback(() => {
-        commandBar.toggle({
-            isVisible: true,
-            parentCommandId: "switch-context",
-            search: "",
-        });
-    }, [commandBar]);
-
-    const contextOptions: ContextOption[] = useMemo(
-        () =>
-            contextsInfo?.map((context) => ({
-                ...context,
-                ...(context.cloudInfo ?? null),
-                bestAccountId: context.cloudInfo?.accounts?.[0].accountId,
-                bestAccountName: context.cloudInfo?.accounts?.[0].accountName,
-                value: context.name,
-                label: context.cloudInfo?.localClusterName ?? context.name,
-            })) ?? [],
-        [contextsInfo]
-    );
-
-    const currentContextInfo = useMemo(
-        () => contextOptions?.find((option) => option.value === kubeContext),
-        [contextOptions, kubeContext]
-    );
-
-    const groupedContextOptions = useMemo(
-        () =>
-            groupByKeys(
-                contextOptions,
-                [
-                    "cloudProvider",
-                    "cloudService",
-                    "bestAccountName",
-                    "bestAccountId",
-                    "region",
-                ],
-                (_, a, b) => k8sSmartCompare(a, b)
-            ).map(([group, contexts]) => ({
-                label: groupLabel(group),
-                options: contexts.sort((a, b) =>
-                    k8sSmartCompare(
-                        a.localClusterName ?? a.name,
-                        b.localClusterName ?? b.name
-                    )
-                ),
-            })),
-        [contextOptions]
-    );
-
-    const commands: AppCommand[] = useMemo(() => {
-        return [
-            {
-                id: "switch-context",
-                text: "Switch context to",
-                perform() {},
-            },
-            ...groupedContextOptions.flatMap(({ label, options }) =>
-                options.map((option) => ({
-                    id: `switch-context:${option.name}`,
-                    text: option.label,
-                    detailText: label || undefined,
-                    parentId: "switch-context",
-                    icon: <ContextIcon option={option} />,
-                    perform() {
-                        openContext(option.name);
-                    },
-                }))
-            ),
-        ];
-    }, [groupedContextOptions, openContext]);
-    useAppCommands(commands);
-
-    const focusBoxShadow = useToken("shadows", "outline");
-
-    return (
-        <Button
-            variant="sidebarGhost"
-            leftIcon={
-                currentContextInfo && (
-                    <Box ps="3px" pe="2px">
-                        <ContextIcon option={currentContextInfo} />
-                    </Box>
-                )
-            }
-            _focus={{}}
-            _focusVisible={{
-                boxShadow: focusBoxShadow,
-            }}
-            onClick={onClickContext}
-        >
-            {currentContextInfo
-                ? currentContextInfo.localClusterName ?? currentContextInfo.name
-                : ""}
-        </Button>
-    );
-};
-
-const ContextIcon: React.FC<{ option: ContextOption }> = (props) => {
-    const { option } = props;
-    const { colorScheme } = k8sAccountIdColor(option.bestAccountId ?? null);
-    return (
-        <Box
-            w="11px"
-            h="11px"
-            borderRadius="sm"
-            bg={colorScheme + ".500"}
-        ></Box>
-    );
-};
 
 export const ContextsOverview: React.FC<{}> = () => {
     const [, contextsInfo] = useK8sContextsInfo();
@@ -343,8 +127,6 @@ export const ContextsOverviewRow: React.FC<{
     const { option, groupLabel } = props;
     const kubeContext = option.name;
 
-    const { colorScheme } = k8sAccountIdColor(option.bestAccountId ?? null);
-
     let parts: string[] = ["", ""];
     if (option.localClusterName) {
         parts = option.name.split(option.localClusterName);
@@ -414,14 +196,11 @@ export const ContextsOverviewRow: React.FC<{
         <Tr onAuxClick={onRightClick} sx={{ _hover: { bg: selectedBg } }}>
             <Td {...commonProps} w={4} px={0}></Td>
             <Td {...commonProps} px={2} verticalAlign="middle">
-                <Box
-                    w="11px"
-                    h="11px"
-                    borderRadius="sm"
-                    bg={colorScheme + ".500"}
+                <ContextIcon
+                    colorId={option.bestAccountId}
                     display="inline-block"
                     me={2}
-                ></Box>
+                />
             </Td>
             <Td ps={0} {...commonProps}>
                 <Link cursor="pointer" onClick={onClickLink} color={mutedColor}>
